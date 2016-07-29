@@ -7,9 +7,6 @@
  *
  */
 
-#ifndef ABSTRACT_DRIVER_H
-#define ABSTRACT_DRIVER_H
-
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -46,5 +43,3 @@ typedef struct {
 
 extern abstract_driver driver_empty;
 extern abstract_driver *drivers[];
-
-#endif // ABSTRACT_DRIVER_H
