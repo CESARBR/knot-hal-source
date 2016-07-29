@@ -15,6 +15,8 @@
 
 #define EMPTY_DRIVER_NAME	"Empty driver"
 
+static phy_driver driver_empty;
+
 int empty_probe()
 {
 	return KNOT_NET_ERROR;

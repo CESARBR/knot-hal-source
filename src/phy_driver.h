@@ -41,5 +41,4 @@ typedef struct {
 	size_t (*send) (int sockfd, const void *buffer, size_t len);
 } phy_driver;
 
-extern phy_driver driver_empty;
 extern phy_driver *drivers[];
