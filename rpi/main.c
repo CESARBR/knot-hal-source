@@ -7,8 +7,16 @@
  *
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+
 #include <glib.h>
 
 static GMainLoop *main_loop;
@@ -20,16 +28,48 @@ static void sig_term(int sig)
 	g_main_loop_quit(main_loop);
 }
 
+static int passthrough_init(void)
+{
+	struct sockaddr_in server;
+	int sk;
+
+	/* Create the TCP socket */
+	sk = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sk < 0) {
+		printf("Failed to create TCP socket\n");
+		return -errno;
+	}
+
+	memset(&server, 0, sizeof(server));
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = htonl(INADDR_ANY);
+	server.sin_port = htons(opt_port);
+
+	/* Bind the server socket */
+	if (bind(sk, (struct sockaddr *) &server, sizeof(server)) < 0) {
+		close(sk);
+		return -errno;
+	}
+
+	/* Listen on the server socket */
+	if (listen(sk, 1) < 0) {
+		close(sk);
+		return -errno;
+	}
+
+	return 0;
+}
+
 static GOptionEntry options[] = {
 	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port, "port", "passthrough port" },
 	{ NULL },
 };
 
-
 int main(int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *gerr = NULL;
+	int err;
 
 	printf("RPi SPI passthrough over TCP\n");
 
@@ -50,6 +90,12 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 
 	main_loop = g_main_loop_new(NULL, FALSE);
+
+	err = passthrough_init();
+	if (err < 0) {
+		printf("init: %s(%d)\n", strerror(-err), -err);
+		return -err;
+	}
 
 	g_main_loop_run(main_loop);
 
