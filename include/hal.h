@@ -29,6 +29,9 @@
 #define PROTO_NONE				0
 #define PROTO_TCP_FWD			1 /* Forward over TCP */
 
+int hal_init(void);
+void hal_exit(void);
+
 int ksocket(int domain, int type, int protocol);
 
 #endif /* __KNOT_HAL_H__ */
