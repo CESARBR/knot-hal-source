@@ -1,13 +1,13 @@
 AM_MAKEFLAGS = --no-print-directory
 
-AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
+AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS) @GLIB_CFLAGS@
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
 libexec_PROGRAMS = rpi/rpiptd
 
 rpi_rpiptd_SOURCES = rpi/main.c
 
-rpi_rpiptd_LDADD =
+rpi_rpiptd_LDADD = @GLIB_LIBS@
 rpi_rpiptd_LDFLAGS = $(AM_LDFLAGS)
 rpi_rpiptd_CFLAGS = $(AM_CFLAGS)
 
