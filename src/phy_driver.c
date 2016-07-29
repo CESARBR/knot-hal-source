@@ -7,7 +7,7 @@
  *
  */
 
-#include <abstract_driver.h>
+#include <phy_driver.h>
 #include <knot_proto_net.h>
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -55,7 +55,7 @@ size_t empty_send (int sockfd, const void *buffer, size_t len)
 	return 0;
 }
 
-abstract_driver driver_empty = {
+phy_driver driver_empty = {
 	.name = EMPTY_DRIVER_NAME,
 	.valid = 0,
 	.probe = empty_probe,
@@ -71,39 +71,38 @@ abstract_driver driver_empty = {
 };
 
 #ifdef HAVE_SERIAL
-extern abstract_driver driver_serial;
+extern phy_driver driver_serial;
 #endif
 
 #ifdef HAVE_NRF24
-extern abstract_driver driver_nrf24;
+extern phy_driver driver_nrf24;
 #endif
 
 #ifdef HAVE_NRF51
-extern abstract_driver driver_nrf51;
+extern phy_driver driver_nrf51;
 #endif
 
 #ifdef HAVE_NRF905
-extern abstract_driver driver_nrf905;
+extern phy_driver driver_nrf905;
 #endif
 
 #ifdef HAVE_RFM69
-extern abstract_driver driver_rfm69;
+extern phy_driver driver_rfm69;
 #endif
 
 #ifdef HAVE_ETH
-extern abstract_driver driver_eth;
+extern phy_driver driver_eth;
 #endif
 
 #ifdef HAVE_ESP8266
-extern abstract_driver driver_esp8266;
+extern phy_driver driver_esp8266;
 #endif
 
 #ifdef HAVE_ASK
-extern abstract_driver driver_ask;
+extern phy_driver driver_ask;
 #endif
 
-// This struct MUST have the same element order as knot_phy_t
-abstract_driver *drivers[] = {
+phy_driver *drivers[] = {
 #ifdef HAVE_SERIAL
 	&driver_serial,
 #else
@@ -153,4 +152,3 @@ abstract_driver *drivers[] = {
 #endif
 	NULL
 };
-

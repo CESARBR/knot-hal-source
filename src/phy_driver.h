@@ -12,7 +12,7 @@
 #endif
 
  /**
- * struct abstract_driver - driver abstraction for the physical layer
+ * struct phy_driver - driver abstraction for the physical layer
  * @name: driver name
  * @probe: function to initialize the driver
  * @remove: function to close the driver and free its resources
@@ -39,7 +39,7 @@ typedef struct {
 	int (*available) (int sockfd);
 	size_t (*recv) (int sockfd, void *buffer, size_t len);
 	size_t (*send) (int sockfd, const void *buffer, size_t len);
-} abstract_driver;
+} phy_driver;
 
-extern abstract_driver driver_empty;
-extern abstract_driver *drivers[];
+extern phy_driver driver_empty;
+extern phy_driver *drivers[];
