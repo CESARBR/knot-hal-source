@@ -7,9 +7,14 @@
  *
  */
 
+/* FIXME: Arduino */
+#include <stdint.h>
+#include <stdlib.h>
+
+#include <proto-net/knot_proto_net.h>
+
 #include "phy_driver.h"
 
-#include <knot_proto_net.h>
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
