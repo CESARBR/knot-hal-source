@@ -7,7 +7,8 @@
  *
  */
 
-#include <phy_driver.h>
+#include "phy_driver.h"
+
 #include <knot_proto_net.h>
 #ifdef ARDUINO
 #include <Arduino.h>
