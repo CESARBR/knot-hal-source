@@ -52,7 +52,7 @@ int ksocket(int domain, int type, int protocol)
 			continue;
 
 		/* TODO: track created 'sockets' */
-		return drv->socket(protocol);
+		return drv->socket(type, protocol);
 	}
 
 	return -1;
