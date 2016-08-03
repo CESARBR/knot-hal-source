@@ -37,3 +37,23 @@ void hal_exit(void)
 	for (i = 0, drv = drivers[i]; drv; i++)
 		drv->remove();
 }
+
+int ksocket(int domain, int type, int protocol)
+{
+	struct phy_driver *drv;
+	int i;
+	/* PF_NRF24L01: currently supported domain */
+
+	if (type != TYPE_SOCK_RAW)
+		return -1;
+
+	for (i = 0, drv = drivers[i]; drv; i++) {
+		if (domain != drv->domain)
+			continue;
+
+		/* TODO: track created 'sockets' */
+		return drv->socket(protocol);
+	}
+
+	return -1;
+}
