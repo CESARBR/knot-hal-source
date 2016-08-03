@@ -31,7 +31,7 @@ struct phy_driver {
 	int (*probe) (void);
 	void (*remove) (void);
 
-	int (*socket) (void);
+	int (*socket) (int protocol);
 	void (*close) (int sockfd);
 	int (*listen) (int srv_sockfd);
 	int (*accept) (int srv_sockfd);
