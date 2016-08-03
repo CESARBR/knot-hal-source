@@ -37,7 +37,6 @@ typedef struct {
 	int (*listen) (int srv_sockfd);
 	int (*accept) (int srv_sockfd);
 	int (*connect) (int cli_sockfd, uint8_t to_addr);
-	int (*available) (int sockfd);
 	size_t (*recv) (int sockfd, void *buffer, size_t len);
 	size_t (*send) (int sockfd, const void *buffer, size_t len);
 } phy_driver;
