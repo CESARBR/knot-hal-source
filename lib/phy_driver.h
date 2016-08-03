@@ -25,7 +25,7 @@
  * proxy for other services using TCP or any socket based communication.
  */
 
-typedef struct {
+struct phy_driver {
 	const char *name;
 	int domain;		/* Protocol domain: Radio nRF24L01, nRF905, ... */
 	const uint8_t valid;
@@ -39,4 +39,4 @@ typedef struct {
 	int (*connect) (int cli_sockfd, uint8_t to_addr);
 	size_t (*recv) (int sockfd, void *buffer, size_t len);
 	size_t (*send) (int sockfd, const void *buffer, size_t len);
-} phy_driver;
+};

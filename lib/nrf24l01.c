@@ -22,7 +22,7 @@ static void nrf24l01_remove(void)
 
 }
 
-static phy_driver nrf24l01 = {
+static struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.domain = PF_NRF24L01,
 	.probe = nrf24l01_probe,

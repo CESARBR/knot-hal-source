@@ -13,16 +13,16 @@
 #include "phy_driver.h"
 #include "hal.h"
 
-extern phy_driver nrf24l01;
+extern struct phy_driver nrf24l01;
 
-static const phy_driver *drivers[] = {
+static struct phy_driver *drivers[] = {
 	&nrf24l01,
 	NULL
 };
 
 int hal_init(void)
 {
-	const phy_driver *drv;
+	struct phy_driver *drv;
 	int i;
 
 	for (i = 0, drv = drivers[i]; drv; i++)
@@ -31,7 +31,7 @@ int hal_init(void)
 
 void hal_exit(void)
 {
-	const phy_driver *drv;
+	struct phy_driver *drv;
 	int i;
 
 	for (i = 0, drv = drivers[i]; drv; i++)
