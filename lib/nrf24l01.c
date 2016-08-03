@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "hal.h"
 #include "phy_driver.h"
 
 static int nrf24l01_probe(void)
@@ -23,6 +24,7 @@ static void nrf24l01_remove(void)
 
 static phy_driver nrf24l01 = {
 	.name = "nRF24L01",
+	.domain = PF_NRF24L01,
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove
 };

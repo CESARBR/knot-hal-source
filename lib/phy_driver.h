@@ -27,6 +27,7 @@
 
 typedef struct {
 	const char *name;
+	int domain;		/* Protocol domain: Radio nRF24L01, nRF905, ... */
 	const uint8_t valid;
 	int (*probe) (void);
 	void (*remove) (void);
