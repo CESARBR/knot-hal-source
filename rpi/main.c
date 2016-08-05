@@ -28,6 +28,16 @@ static void sig_term(int sig)
 	g_main_loop_quit(main_loop);
 }
 
+static gboolean idle_watch(gpointer user_data)
+{
+	/*
+	 * This function gets called frequently to verify
+	 * if there is SPI data to be read. Later GPIO
+	 * sys interface can be used to avoid busy loop.
+	 */
+	return TRUE;
+}
+
 static int passthrough_init(void)
 {
 	struct sockaddr_in server;
@@ -69,7 +79,7 @@ int main(int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *gerr = NULL;
-	int err;
+	int err, watch_id;
 
 	printf("RPi SPI passthrough over TCP\n");
 
@@ -97,7 +107,11 @@ int main(int argc, char *argv[])
 		return -err;
 	}
 
+	watch_id = g_idle_add(idle_watch, NULL);
+
 	g_main_loop_run(main_loop);
+
+	g_source_remove(watch_id);
 
 	g_main_loop_unref(main_loop);
 
