@@ -38,6 +38,33 @@ static gboolean idle_watch(gpointer user_data)
 	return TRUE;
 }
 
+static gboolean accept_watch(GIOChannel *io, GIOCondition cond,
+						gpointer user_data)
+{
+	struct sockaddr_in client;
+	int svr_sk, cli_sk, err;
+	socklen_t sklen;
+
+	if (cond & (G_IO_HUP | G_IO_ERR))
+		return FALSE;
+
+	svr_sk = g_io_channel_unix_get_fd(io);
+
+	sklen = sizeof(client);
+	memset(&client, 0, sklen);
+
+	cli_sk = accept(svr_sk, (struct sockaddr *) &client, &sklen);
+	if (cli_sk == -1) {
+		err = errno;
+		printf("accept(): %s(%d)\n", strerror(err), err);
+		return TRUE;
+	}
+
+	printf("Peer's IP address is: %s\n", inet_ntoa(client.sin_addr));
+
+	return TRUE;
+}
+
 static int passthrough_init(void)
 {
 	struct sockaddr_in server;
@@ -67,7 +94,7 @@ static int passthrough_init(void)
 		return -errno;
 	}
 
-	return 0;
+	return sk;
 }
 
 static GOptionEntry options[] = {
@@ -79,7 +106,9 @@ int main(int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *gerr = NULL;
-	int err, watch_id;
+	GIOChannel *tcp_io;
+	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
+	int tcp_id, watch_id, sock;
 
 	printf("RPi SPI passthrough over TCP\n");
 
@@ -101,16 +130,27 @@ int main(int argc, char *argv[])
 
 	main_loop = g_main_loop_new(NULL, FALSE);
 
-	err = passthrough_init();
-	if (err < 0) {
-		printf("init: %s(%d)\n", strerror(-err), -err);
-		return -err;
+	/* Creates TCP server socket */
+	sock = passthrough_init();
+	if (sock < 0) {
+		printf("init: %s(%d)\n", strerror(-sock), -sock);
+		return -sock;
 	}
+
+	tcp_io = g_io_channel_unix_new(sock);
+	g_io_channel_set_close_on_unref(tcp_io, TRUE);
+
+	/* Incoming connection handler */
+	tcp_id = g_io_add_watch(tcp_io, cond, accept_watch, NULL);
 
 	watch_id = g_idle_add(idle_watch, NULL);
 
 	g_main_loop_run(main_loop);
 
+	/* Closing TCP socket */
+	g_io_channel_unref(tcp_io);
+
+	g_source_remove(tcp_id);
 	g_source_remove(watch_id);
 
 	g_main_loop_unref(main_loop);
