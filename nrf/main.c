@@ -34,8 +34,6 @@ int main(int argc, char *argv[])
 	GOptionContext *context;
 	GError *gerr = NULL;
 
-	printf("KNOT nrfd\n");
-
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
 
@@ -53,6 +51,12 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 
 	main_loop = g_main_loop_new(NULL, FALSE);
+
+	printf("KNOT HAL nrfd\n");
+	if (opt_host)
+		printf("Development mode: %s:%u\n", opt_host, opt_port);
+	else
+		printf("Native SPI mode\n");
 
 	g_main_loop_run(main_loop);
 
