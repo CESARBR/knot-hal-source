@@ -37,10 +37,46 @@ static gboolean idle_watch(gpointer user_data)
 	 */
 	return TRUE;
 }
+static gboolean data_watch(GIOChannel *io, GIOCondition cond,
+						gpointer user_data)
+{
+	gsize rbytes;
+	char buffer[1024];
+	GIOStatus status;
+	GError *gerr = NULL;
+
+	/*
+	 * Manages TCP data from knotd. All traffic(raw data)
+	 * should be queued to be transferred over-the-air.
+	 */
+
+	if (cond & (G_IO_HUP | G_IO_ERR))
+		return FALSE;
+
+	memset(buffer, 0, sizeof(buffer));
+
+	/* Incoming data through TCP socket */
+	status = g_io_channel_read_chars(io, buffer, sizeof(buffer),
+						 &rbytes, &gerr);
+	if (status == G_IO_STATUS_ERROR) {
+		printf("read(): %s\n", gerr->message);
+		g_error_free(gerr);
+		return FALSE;
+	}
+
+	if (rbytes == 0)
+		return FALSE;
+
+	printf("read(): %lu bytes\n", rbytes);
+
+	return TRUE;
+}
 
 static gboolean accept_watch(GIOChannel *io, GIOCondition cond,
 						gpointer user_data)
 {
+	GIOChannel *cli_io;
+	GIOCondition cli_cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
 	struct sockaddr_in client;
 	int svr_sk, cli_sk, err;
 	socklen_t sklen;
@@ -61,6 +97,18 @@ static gboolean accept_watch(GIOChannel *io, GIOCondition cond,
 	}
 
 	printf("Peer's IP address is: %s\n", inet_ntoa(client.sin_addr));
+
+	cli_io = g_io_channel_unix_new(cli_sk);
+	g_io_channel_set_close_on_unref(cli_io, TRUE);
+
+	/* Ending 'NULL' for binary data */
+	g_io_channel_set_encoding(cli_io, NULL, NULL);
+	g_io_channel_set_buffered(cli_io, FALSE);
+
+	/* TCP client handler: incoming data from nrfd */
+	g_io_add_watch(cli_io, cli_cond, data_watch, NULL);
+
+	g_io_channel_unref(cli_io);
 
 	return TRUE;
 }
