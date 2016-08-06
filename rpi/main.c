@@ -158,8 +158,6 @@ int main(int argc, char *argv[])
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
 	int tcp_id, watch_id, sock;
 
-	printf("RPi SPI passthrough over TCP\n");
-
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
 
@@ -171,6 +169,9 @@ int main(int argc, char *argv[])
 	}
 
 	g_option_context_free(context);
+
+	printf("RPi SPI passthrough over TCP\n");
+	printf("\tRunning at port %u\n\n", opt_port);
 
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
