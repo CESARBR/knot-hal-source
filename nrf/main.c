@@ -15,13 +15,18 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
 #include <glib.h>
+#include <stdint.h>
+
+#include "spi.h"
+#include "nrf24l01.h"
 
 static GMainLoop *main_loop;
 
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
+static const char *opt_spi = "/dev/spidev0.0";
+
 
 static void sig_term(int sig)
 {
@@ -114,12 +119,13 @@ static int radio_init(void)
 	GIOChannel *io;
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
 	int sock;
-
+	int ret;
 	if (opt_host == NULL) {
-		/*
-		 * TODO: add RPi SPI init
-		 */
-		return -ENOSYS;
+		ret = spi_init(opt_spi);
+		if (ret < 0)
+			return ret;
+		nrf24l01_init();
+		return 0;
 	} else {
 		/*
 		 * TCP development mode: Linux connected to RPi(nrfd radio
@@ -152,8 +158,11 @@ static GOptionEntry options[] = {
 					"host", "Host exposing nRF24L01 SPI" },
 	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port,
 					"port", "Remote port" },
+	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
+					"spi", "SPI device path" },
 	{ NULL },
 };
+
 
 int main(int argc, char *argv[])
 {
@@ -197,3 +206,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+

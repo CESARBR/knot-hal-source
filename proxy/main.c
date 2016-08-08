@@ -16,12 +16,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
-
 #include <glib.h>
+#include "spi.h"
 
 static GMainLoop *main_loop;
 
 static unsigned int opt_port = 9000;
+static const char *opt_spi = "/dev/spidev0.0";
 
 static void sig_term(int sig)
 {
@@ -148,6 +149,8 @@ static int passthrough_init(void)
 static GOptionEntry options[] = {
 	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port, "port",
 						"Proxy (passthrough) port" },
+	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
+					"spi", "SPI device path" },
 	{ NULL },
 };
 
@@ -192,6 +195,8 @@ int main(int argc, char *argv[])
 
 	/* Incoming connection handler */
 	tcp_id = g_io_add_watch(tcp_io, cond, accept_watch, NULL);
+
+	// spi_init(opt_spi);
 
 	watch_id = g_idle_add(idle_watch, NULL);
 

@@ -5,7 +5,7 @@ if [ -f config.status ]; then
 fi
 
 ./bootstrap && \
-    ./configure --enable-maintainer-mode \
+    ./configure CFLAGS='-DRPI2_BOARD' --enable-maintainer-mode \
 		--enable-debug \
 		--prefix=/usr \
 		--sysconfdir=/etc $*
