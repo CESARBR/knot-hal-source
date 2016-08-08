@@ -3,13 +3,13 @@ AM_MAKEFLAGS = --no-print-directory
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS) @GLIB_CFLAGS@
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-libexec_PROGRAMS = rpi/rpiptd nrf/nrfd
+libexec_PROGRAMS = proxy/spiproxyd nrf/nrfd
 
-rpi_rpiptd_SOURCES = rpi/main.c
+proxy_spiproxyd_SOURCES = proxy/main.c
 
-rpi_rpiptd_LDADD = @GLIB_LIBS@
-rpi_rpiptd_LDFLAGS = $(AM_LDFLAGS)
-rpi_rpiptd_CFLAGS = $(AM_CFLAGS)
+proxy_spiproxyd_LDADD = @GLIB_LIBS@
+proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
+proxy_spiproxyd_CFLAGS = $(AM_CFLAGS)
 
 nrf_nrfd_SOURCES = nrf/main.c
 nrf_nrfd_LDADD = @GLIB_LIBS@
@@ -23,4 +23,4 @@ MAINTAINERCLEANFILES = Makefile.in \
 	ltmain.sh depcomp compile missing install-sh
 
 clean-local:
-	$(RM) -r rpi/rpiptd nrf/nrfd
+	$(RM) -r proxy/spiproxyd nrf/nrfd

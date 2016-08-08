@@ -46,7 +46,7 @@ static gboolean data_watch(GIOChannel *io, GIOCondition cond,
 	GError *gerr = NULL;
 
 	/*
-	 * Manages TCP data from knotd. All traffic(raw data)
+	 * Manages TCP data from nrfd. All traffic(raw data)
 	 * should be queued to be transferred over-the-air.
 	 */
 
@@ -146,7 +146,8 @@ static int passthrough_init(void)
 }
 
 static GOptionEntry options[] = {
-	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port, "port", "passthrough port" },
+	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port, "port",
+						"Proxy (passthrough) port" },
 	{ NULL },
 };
 
@@ -170,7 +171,7 @@ int main(int argc, char *argv[])
 
 	g_option_context_free(context);
 
-	printf("RPi SPI passthrough over TCP\n");
+	printf("RPi SPI proxy (passthrough) over TCP\n");
 	printf("\tRunning at port %u\n\n", opt_port);
 
 	signal(SIGTERM, sig_term);

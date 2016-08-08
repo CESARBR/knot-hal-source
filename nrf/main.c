@@ -37,7 +37,7 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 	gsize rbytes;
 
 	/*
-	 * Manages TCP data from rpiptd(nRF proxy). All traffic(raw
+	 * Manages TCP data from spiproxyd(nRF proxy). All traffic(raw
 	 * data) should be transferred using unix socket to knotd.
 	 */
 
@@ -71,7 +71,7 @@ static int tcp_init(void)
 {
 	struct hostent *host;			/* Host information */
 	struct in_addr h_addr;			/* Internet address */
-	struct sockaddr_in server;		/* nRF proxy: rpiptd */
+	struct sockaddr_in server;		/* nRF proxy: spiproxyd */
 	int err, sock;
 
 	host = gethostbyname(opt_host);
@@ -138,7 +138,7 @@ static int radio_init(void)
 	g_io_channel_set_encoding(io, NULL, NULL);
 	g_io_channel_set_buffered(io, FALSE);
 
-	/* TCP handler: incoming data from rpiptd (nRF proxy) */
+	/* TCP handler: incoming data from spiproxyd (nRF proxy) */
 	g_io_add_watch(io, cond, nrf_data_watch, NULL);
 
 	/* Keep only one reference: watch */
