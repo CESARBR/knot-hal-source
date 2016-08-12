@@ -15,6 +15,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include <glib.h>
 
@@ -33,6 +34,29 @@ static gboolean timeout_watch(gpointer user_data)
 	 * written. Later GPIO sys interface can be used
 	 * to avoid busy loop.
 	 */
+	uint8_t buffer[] = {
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+		0x18, 0x19, 0x1A, 0x1B, 0x00, 0x00, 0x00, 0x00
+	};
+
+	static uint32_t counter = 0;
+	int index;
+
+	counter++;
+
+	buffer[28] = counter >> 24;
+	buffer[29] = counter >> 16;
+	buffer[30] = counter >> 8;
+	buffer[31] = counter;
+
+	for (index = 0; index < 32; index++) {
+		if (index % 8 == 0)
+			printf("\n");
+
+		printf("0x%02x ", buffer[index]);
+	}
 
 	return TRUE;
 }
