@@ -20,5 +20,7 @@
 
 #define NRF24L01_PIPE0_ADDR		0
 
+#define _CONSTRAIN(x, l, h)	((x) < (l) ? (l) : ((x) > (h) ? (h) : (x)))
 
 int8_t nrf24l01_init(void);
+int8_t nrf24l01_set_channel(uint8_t ch);

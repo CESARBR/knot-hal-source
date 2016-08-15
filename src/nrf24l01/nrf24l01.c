@@ -101,6 +101,11 @@ static inline int8_t command(uint8_t cmd)
 	return (int8_t)cmd;
 }
 
+static int8_t set_standby1(void)
+{
+	disable();
+	return 0;
+}
 
 static void io_setup(void)
 {
@@ -196,5 +201,24 @@ int8_t nrf24l01_init(void)
 
 	m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 
+	return 0;
+}
+
+int8_t nrf24l01_set_channel(uint8_t ch)
+{
+	uint8_t max;
+
+	max = RF_DR(inr(RF_SETUP)) == DR_2MBPS ? CH_MAX_2MBPS : CH_MAX_1MBPS;
+	if (ch != _CONSTRAIN(ch, CH_MIN, max))
+		return -1;
+
+	if (ch != CH(inr(RF_CH))) {
+		set_standby1();
+		outr(STATUS, ST_RX_DR | ST_TX_DS | ST_MAX_RT);
+		command(FLUSH_TX);
+		command(FLUSH_RX);
+		// Set the device channel
+		outr(RF_CH, CH(_CONSTRAIN(ch, CH_MIN, max)));
+	}
 	return 0;
 }
