@@ -1,0 +1,11 @@
+	KNOT HAL for Linux and Arduino
+
+KNOT HAL is part of KNOT project. It aims to provide hardware abstraction
+layer for SPI and nRF24L01 radios. Allowing power constrained embedded
+devices to join a wireless network and exchange datagrams using nRF24L01
+radios.
+
+The initial target platforms are Arduino (nodes), and Raspiberry PI GW.
+nRF24L01 is a highly integrated, ultra low power (ULP) 2Mbps RF transceiver
+IC for the 2.4GHz ISM band. On a second project phase, other radio access
+technologies such as Bluetooth Low Energy, and Wi-Fi are planned.
