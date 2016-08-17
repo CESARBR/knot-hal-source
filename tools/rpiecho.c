@@ -10,7 +10,7 @@
 /*
  * Build instructions while a Makefile is not available:
  * gcc $(pkg-config --libs --cflags glib-2.0) -Iinclude -Itools \
- * tools/rpitxrx.c -o tools/rpitxrxd
+ * tools/rpiecho.c -o tools/rpiechod
  */
 
 #include <errno.h>
