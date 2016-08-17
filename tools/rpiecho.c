@@ -16,8 +16,11 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <glib.h>
+
+static char *opt_mode = "server";
 
 static GMainLoop *main_loop;
 
@@ -61,13 +64,33 @@ static gboolean timeout_watch(gpointer user_data)
 	return TRUE;
 }
 
+static GOptionEntry options[] = {
+	{ "mode", 'm', 0, G_OPTION_ARG_STRING, &opt_mode,
+					"mode", "Operation mode: server or client" },
+	{ NULL },
+};
+
 int main(int argc, char *argv[])
 {
+	GOptionContext *context;
+	GError *gerr = NULL;
 	int err, timeout_id;
 
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
 	signal(SIGPIPE, SIG_IGN);
+
+	context = g_option_context_new(NULL);
+	g_option_context_add_main_entries(context, options, NULL);
+
+	if (!g_option_context_parse(context, &argc, &argv, &gerr)) {
+		printf("Invalid arguments: %s\n", gerr->message);
+		g_error_free(gerr);
+		g_option_context_free(context);
+		return EXIT_FAILURE;
+	}
+
+	g_option_context_free(context);
 
 	main_loop = g_main_loop_new(NULL, FALSE);
 
