@@ -47,5 +47,6 @@ void io_setup(void)
 
 void io_reset(void)
 {
-
+	disable();
+	spi_deinit();
 }
