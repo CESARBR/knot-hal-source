@@ -30,7 +30,7 @@ void enable(void)
 
 void disable(void)
 {
-
+	PORTB &= ~(1 << CE);
 }
 
 void io_setup(void)
