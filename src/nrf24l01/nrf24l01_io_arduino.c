@@ -15,12 +15,12 @@
 
 void delay_us(float us)
 {
-
+	delayMicroseconds(us);
 }
 
 void delay_ms(float ms)
 {
-
+	delay(ms);
 }
 
 void enable(void)
