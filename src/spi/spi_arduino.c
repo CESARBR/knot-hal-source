@@ -18,11 +18,14 @@
 #define MISO	4
 #define SCK		5
 
+#define DELAY_US	5	// CSN delay in microseconds
+
 static bool	m_init = false;
 
 int spi_init(const char *dev)
 {
 	if (!m_init) {
+
 		m_init = true;
 
 		//Put CSN HIGH
@@ -51,3 +54,13 @@ int spi_init(const char *dev)
 	return 0;
 }
 
+void spi_deinit(void)
+{
+	if (m_init) {
+
+		m_init = false;
+		PORTB |= (1 << CSN);
+		//Disable SPI and reset master
+		SPCR &= ~((1 << SPE) | (1 << MSTR));
+	}
+}
