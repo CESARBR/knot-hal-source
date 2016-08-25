@@ -25,7 +25,7 @@ void delay_ms(float ms)
 
 void enable(void)
 {
-
+	PORTB |= (1 << CE);
 }
 
 void disable(void)
