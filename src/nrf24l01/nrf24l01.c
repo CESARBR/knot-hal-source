@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -55,6 +56,7 @@ static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 
 // time delay in microseconds (us)
 #define TPD2STBY	5000
+#define TSTBY2A	130//130us
 
 #define CE 25
 
@@ -126,6 +128,13 @@ static inline int8_t command(uint8_t cmd)
 	spi_transfer(NULL, 0, &cmd, DATA_SIZE);
 	// return device status register
 	return (int8_t)cmd;
+}
+
+static inline int8_t command_data(uint8_t cmd, void *pd, uint16_t len)
+{
+	spi_transfer(&cmd, DATA_SIZE, pd, len);
+	// return device status register
+	return command(NOP);
 }
 
 static void set_address_pipe(uint8_t reg, uint8_t pipe_addr)
@@ -288,5 +297,58 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 		outr(EN_RXADDR, inr(EN_RXADDR) | rpipe.en_rxaddr);
 		outr(EN_AA, inr(EN_AA) | rpipe.enaa);
 	}
+	return 0;
+}
+
+int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
+{
+	if (m_mode == UNKNOWN_MODE)
+		return -1;
+
+	set_standby1();
+	set_address_pipe(RX_ADDR_P0, pipe_addr);
+	set_address_pipe(TX_ADDR, pipe_addr);
+	#if (NRF24L01_ARC != ARC_DISABLE)
+		// set ARC and ARD by pipe index to different retry periods
+		//to reduce data collisions
+		// compute ARD range: 1500us <= ARD[pipe] <= 4000us
+		outr(SETUP_RETR, RETR_ARD(((pipe_addr * 2) + 5))
+			| RETR_ARC(NRF24L01_ARC));
+	#endif
+	outr(STATUS, ST_TX_DS | ST_MAX_RT);
+	outr(CONFIG, inr(CONFIG) & ~CFG_PRIM_RX);
+	// enable and delay time to Tstdby2a timing
+	enable();
+	DELAY_US(TSTBY2A);
+	m_mode = TX_MODE;
+	return 0;
+}
+
+
+int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
+{
+	if (m_mode != TX_MODE || pdata == NULL ||
+		len == 0 || len > NRF24L01_PAYLOAD_SIZE) {
+		return -1;
+	}
+
+	return command_data(!ack ? W_TX_PAYLOAD_NOACK : W_TX_PAYLOAD,
+			pdata, len);
+}
+
+int8_t nrf24l01_ptx_wait_datasent(void)
+{
+	if (m_mode == TX_MODE) {
+		uint16_t value;
+
+		while (!((value = inr(STATUS)) & ST_TX_DS)) {
+			if (value & ST_MAX_RT) {
+				outr(STATUS, ST_MAX_RT);
+				command(FLUSH_TX);
+				return -1;
+			}
+		}
+	}
+
 	return 0;
 }

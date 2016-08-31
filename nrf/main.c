@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <glib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "spi.h"
 #include "nrf24l01.h"
