@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -17,6 +18,26 @@
 #include <string.h>
 #include "spi.h"
 #include "nrf24l01.h"
+
+// Pipes addresses base
+#define PIPE0_ADDR_BASE 0x55aa55aa5aLL
+#define PIPE1_ADDR_BASE 0xaa55aa55a5LL
+
+typedef struct {
+	uint8_t enaa,
+	en_rxaddr,
+	rx_addr,
+	rx_pw;
+} pipe_reg_t;
+
+static const pipe_reg_t pipe_reg[] = {
+	{ AA_P0, EN_RXADDR_P0, RX_ADDR_P0, RX_PW_P0 },
+	{ AA_P1, EN_RXADDR_P1, RX_ADDR_P1, RX_PW_P1 },
+	{ AA_P2, EN_RXADDR_P2, RX_ADDR_P2, RX_PW_P2 },
+	{ AA_P3, EN_RXADDR_P3, RX_ADDR_P3, RX_PW_P3 },
+	{ AA_P4, EN_RXADDR_P4, RX_ADDR_P4, RX_PW_P4 },
+	{ AA_P5, EN_RXADDR_P5, RX_ADDR_P5, RX_PW_P5 }
+};
 
 typedef enum {
 	UNKNOWN_MODE,
@@ -94,11 +115,37 @@ static inline void outr(uint8_t reg, uint8_t value)
 	spi_transfer(&reg, DATA_SIZE, &value, DATA_SIZE);
 }
 
+static inline void outr_data(uint8_t reg, void *pd, uint16_t len)
+{
+	reg = W_REGISTER(reg);
+	spi_transfer(&reg, DATA_SIZE, pd, len);
+}
+
 static inline int8_t command(uint8_t cmd)
 {
 	spi_transfer(NULL, 0, &cmd, DATA_SIZE);
 	// return device status register
 	return (int8_t)cmd;
+}
+
+static void set_address_pipe(uint8_t reg, uint8_t pipe_addr)
+{
+	uint16_t len;
+	uint64_t  addr = (pipe_addr == NRF24L01_PIPE0_ADDR) ?
+					PIPE0_ADDR_BASE : PIPE1_ADDR_BASE;
+
+	switch (reg) {
+	case TX_ADDR:
+	case RX_ADDR_P0:
+	case RX_ADDR_P1:
+		len = AW_RD(inr(SETUP_AW));
+		break;
+	default:
+		len = DATA_SIZE;
+	}
+
+	addr += (pipe_addr << 4) + pipe_addr;
+	outr_data(reg, &addr, len);
 }
 
 static int8_t set_standby1(void)
@@ -219,6 +266,27 @@ int8_t nrf24l01_set_channel(uint8_t ch)
 		command(FLUSH_RX);
 		// Set the device channel
 		outr(RF_CH, CH(_CONSTRAIN(ch, CH_MIN, max)));
+	}
+	return 0;
+}
+
+int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
+{
+	pipe_reg_t rpipe;
+
+	if (m_mode == UNKNOWN_MODE || pipe > NRF24L01_PIPE_MAX
+		|| pipe_addr > NRF24L01_PIPE_ADDR_MAX)
+		return -1;
+
+	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
+
+	if (!(inr(EN_RXADDR) & rpipe.en_rxaddr)) {
+		if (rpipe.rx_addr == RX_ADDR_P0)
+			m_pipe0_addr = pipe_addr;
+
+		set_address_pipe(rpipe.rx_addr, pipe_addr);
+		outr(EN_RXADDR, inr(EN_RXADDR) | rpipe.en_rxaddr);
+		outr(EN_AA, inr(EN_AA) | rpipe.enaa);
 	}
 	return 0;
 }

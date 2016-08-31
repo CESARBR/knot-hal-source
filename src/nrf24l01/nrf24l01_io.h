@@ -178,9 +178,40 @@
 #define EN_AA		0x01
 #define EN_AA_RST	0b00111111
 #define EN_AA_MASK	0b00111111
+
 #define AA_P5		0b00100000
 #define AA_P4		0b00010000
 #define AA_P3		0b00001000
 #define AA_P2		0b00000100
 #define AA_P1		0b00000010
 #define AA_P0		0b00000001
+
+/* Receive address data pipe 0 (reset value: 0xe7e7e7e7e7) */
+#define RX_ADDR_P0		0x0a
+#define RX_ADDR_P0_RST	0xe7
+/* Receive address data pipe 1 (reset value: 0xc2c2c2c2c2) */
+#define RX_ADDR_P1		0x0b
+#define RX_ADDR_P1_RST	0xc2
+/* Receive address data pipe 2 (reset value: 0xc3) */
+#define RX_ADDR_P2		0x0c
+#define RX_ADDR_P2_RST	0xc3
+/* Receive address data pipe 3 (reset value: 0xc4) */
+#define RX_ADDR_P3		0x0d
+#define RX_ADDR_P3_RST	0xc4
+/* Receive address data pipe 4 (reset value: 0xc5) */
+#define RX_ADDR_P4		0x0e
+#define RX_ADDR_P4_RST	0xc5
+/* Receive address data pipe 5 (reset value: 0xc6) */
+#define RX_ADDR_P5				0x0f
+#define RX_ADDR_P5_RST	0xc6
+/* Transmit address (reset value: 0xe7e7e7e7e7) */
+#define TX_ADDR			0x10
+#define TX_ADDR_RST		0xe7
+
+/* Number of  bytes in RX payload in data pipe 0 (reset value: 0b00000000) */
+#define RX_PW_P0		0x11
+#define RX_PW_P1		0x12
+#define RX_PW_P2		0x13
+#define RX_PW_P3		0x14
+#define RX_PW_P4		0x15
+#define RX_PW_P5		0x16
