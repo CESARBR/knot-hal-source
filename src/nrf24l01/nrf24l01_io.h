@@ -209,9 +209,20 @@
 #define TX_ADDR_RST		0xe7
 
 /* Number of  bytes in RX payload in data pipe 0 (reset value: 0b00000000) */
+
 #define RX_PW_P0		0x11
 #define RX_PW_P1		0x12
 #define RX_PW_P2		0x13
 #define RX_PW_P3		0x14
 #define RX_PW_P4		0x15
 #define RX_PW_P5		0x16
+
+ /* FIFO status (reset value: 0b00010001) */
+#define FIFO_STATUS				0x17
+#define FIFO_STATUS_RST	0b00010001
+#define FIFO_STATUS_MASK	0b01110011
+#define FIFO_TX_REUSE			0b01000000
+#define FIFO_TX_FULL				0b00100000
+#define FIFO_TX_EMPTY			0b00010000
+#define FIFO_RX_FULL			0b00000010
+#define FIFO_RX_EMPTY			0b00000001

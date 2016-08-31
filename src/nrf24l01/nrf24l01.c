@@ -24,6 +24,9 @@
 #define PIPE0_ADDR_BASE 0x55aa55aa5aLL
 #define PIPE1_ADDR_BASE 0xaa55aa55a5LL
 
+#define TSTBY2A			130			//130us
+
+
 typedef struct {
 	uint8_t enaa,
 	en_rxaddr,
@@ -40,16 +43,6 @@ static const pipe_reg_t pipe_reg[] = {
 	{ AA_P5, EN_RXADDR_P5, RX_ADDR_P5, RX_PW_P5 }
 };
 
-typedef enum {
-	UNKNOWN_MODE,
-	POWER_DOWN_MODE,
-	STANDBY_I_MODE,
-	RX_MODE,
-	TX_MODE,
-	STANDBY_II_MODE,
-} en_modes_t;
-
-static en_modes_t m_mode = UNKNOWN_MODE;
 static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 
 #define DATA_SIZE	sizeof(uint8_t)
@@ -163,6 +156,13 @@ static int8_t set_standby1(void)
 	return 0;
 }
 
+int8_t nrf24l01_set_standby(void)
+{
+
+	set_standby1();
+	return command(NOP);
+}
+
 static void io_setup(void)
 {
 	//open /dev/mem
@@ -203,7 +203,6 @@ int8_t nrf24l01_init(void)
 	outr(CONFIG, CONFIG_RST);
 	// Delay to establish to operational timing of the nRF24L01
 	DELAY_US(TPD2STBY);
-	m_mode = POWER_DOWN_MODE;
 
 	// reset channel and TX observe registers
 	outr(RF_CH, inr(RF_CH) & ~RF_CH_MASK);
@@ -227,7 +226,6 @@ int8_t nrf24l01_init(void)
 	outr(CONFIG, value);
 
 	DELAY_US(TPD2STBY);
-	m_mode = STANDBY_I_MODE;
 
 	outr(SETUP_RETR, RETR_ARC(ARC_DISABLE));
 
@@ -283,8 +281,7 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 {
 	pipe_reg_t rpipe;
 
-	if (m_mode == UNKNOWN_MODE || pipe > NRF24L01_PIPE_MAX
-		|| pipe_addr > NRF24L01_PIPE_ADDR_MAX)
+	if (pipe > NRF24L01_PIPE_MAX || pipe_addr > NRF24L01_PIPE_ADDR_MAX)
 		return -1;
 
 	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
@@ -300,17 +297,15 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 	return 0;
 }
 
+
 int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 {
-	if (m_mode == UNKNOWN_MODE)
-		return -1;
-
 	set_standby1();
 	set_address_pipe(RX_ADDR_P0, pipe_addr);
 	set_address_pipe(TX_ADDR, pipe_addr);
 	#if (NRF24L01_ARC != ARC_DISABLE)
-		// set ARC and ARD by pipe index to different retry periods
-		//to reduce data collisions
+		// set ARC and ARD by pipe index to different
+		//retry periods to reduce data collisions
 		// compute ARD range: 1500us <= ARD[pipe] <= 4000us
 		outr(SETUP_RETR, RETR_ARD(((pipe_addr * 2) + 5))
 			| RETR_ARC(NRF24L01_ARC));
@@ -320,17 +315,16 @@ int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 	// enable and delay time to Tstdby2a timing
 	enable();
 	DELAY_US(TSTBY2A);
-	m_mode = TX_MODE;
+
 	return 0;
 }
 
 
 int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
 {
-	if (m_mode != TX_MODE || pdata == NULL ||
-		len == 0 || len > NRF24L01_PAYLOAD_SIZE) {
+
+	if (pdata == NULL || len == 0 || len > NRF24L01_PAYLOAD_SIZE)
 		return -1;
-	}
 
 	return command_data(!ack ? W_TX_PAYLOAD_NOACK : W_TX_PAYLOAD,
 			pdata, len);
@@ -338,17 +332,58 @@ int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
 
 int8_t nrf24l01_ptx_wait_datasent(void)
 {
-	if (m_mode == TX_MODE) {
-		uint16_t value;
+	uint16_t value;
 
-		while (!((value = inr(STATUS)) & ST_TX_DS)) {
-			if (value & ST_MAX_RT) {
-				outr(STATUS, ST_MAX_RT);
-				command(FLUSH_TX);
-				return -1;
-			}
+	while (!((value = inr(STATUS)) & ST_TX_DS)) {
+		if (value & ST_MAX_RT) {
+			outr(STATUS, ST_MAX_RT);
+			command(FLUSH_TX);
+			return -1;
 		}
 	}
-
 	return 0;
+}
+
+int8_t nrf24l01_set_prx(void)
+{
+	set_standby1();
+	set_address_pipe(RX_ADDR_P0, m_pipe0_addr);
+	outr(STATUS, ST_RX_DR);
+	outr(CONFIG, inr(CONFIG) | CFG_PRIM_RX);
+	// enable and delay time to Tstdby2a timing
+	enable();
+	DELAY_US(TSTBY2A);
+	return 0;
+}
+
+int8_t nrf24l01_prx_pipe_available(void)
+{
+	uint8_t pipe = NRF24L01_NO_PIPE;
+
+	if (!(inr(FIFO_STATUS) & FIFO_RX_EMPTY)) {
+		pipe = ST_RX_P_NO(inr(STATUS));
+		if (pipe > NRF24L01_PIPE_MAX)
+			pipe = NRF24L01_NO_PIPE;
+	}
+	return (int8_t)pipe;
+}
+
+int8_t nrf24l01_prx_data(void *pdata, uint16_t len)
+{
+	uint16_t		rxlen = 0;
+
+	outr(STATUS, ST_RX_DR);
+
+	command_data(R_RX_PL_WID, &rxlen, DATA_SIZE);
+	// note: flush RX FIFO if the read value is larger than 32 bytes.
+	if (rxlen > NRF24L01_PAYLOAD_SIZE) {
+		command(FLUSH_RX);
+		return 0;
+	}
+
+	if (rxlen != 0) {
+		rxlen = _MIN(len, rxlen);
+		command_data(R_RX_PAYLOAD, pdata, rxlen);
+	}
+	return (int8_t)rxlen;
 }
