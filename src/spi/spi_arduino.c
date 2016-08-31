@@ -64,3 +64,39 @@ void spi_deinit(void)
 		SPCR &= ~((1 << SPE) | (1 << MSTR));
 	}
 }
+
+int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
+{
+	const uint8_t *pd;
+
+	if (!m_init)
+		return -1;
+
+	PORTB &= ~(1 << CSN);
+	_delay_us(DELAY_US);
+
+	if (tx != NULL && ltx != 0) {
+
+		for (pd = tx; ltx != 0; --ltx, ++pd) {
+			SPDR = *pd;
+			asm volatile("nop");
+			while (!(SPSR & (1 << SPIF)));
+			SPDR;
+		}
+	}
+
+	if (rx != NULL && lrx != 0) {
+
+		for (pd = (uint8_t *)rx; lrx != 0; --lrx, ++pd) {
+			SPDR = *pd;
+			asm volatile("nop");
+			while (!(SPSR & (1 << SPIF)));
+			*pd = SPDR;
+		}
+	}
+
+	PORTB |= (1 << CSN);
+
+	return 0;
+
+}
