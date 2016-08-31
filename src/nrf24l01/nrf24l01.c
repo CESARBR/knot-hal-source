@@ -12,13 +12,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <string.h>
 #include "spi.h"
 #include "nrf24l01.h"
+#include "nrf24l01_io.h"
 
 // Pipes addresses base
 #define PIPE0_ADDR_BASE 0x55aa55aa5aLL
@@ -43,12 +39,24 @@ static const pipe_reg_t pipe_reg[] = {
 	{ AA_P5, EN_RXADDR_P5, RX_ADDR_P5, RX_PW_P5 }
 };
 
+typedef enum {
+	UNKNOWN_MODE,
+	POWER_DOWN_MODE,
+	STANDBY_I_MODE,
+	RX_MODE,
+	TX_MODE,
+	STANDBY_II_MODE,
+} en_modes_t;
+
+static en_modes_t m_mode = UNKNOWN_MODE;
+
 static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 
 #define DATA_SIZE	sizeof(uint8_t)
 
 // time delay in microseconds (us)
-#define TPD2STBY	5000
+
+#define TPD2STBY	5000	//5ms
 #define TSTBY2A	130//130us
 
 #define CE 25
@@ -58,9 +66,9 @@ static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 #define BCM2709_RPI2	0x3F000000
 
 #ifdef RPI2_BOARD
-#define BCM2708_PERI_BASE		BCM2709_RPI2
+#define BCM2708_PERI_BASE	BCM2709_RPI2
 #elif RPI_BOARD
-#define BCM2708_PERI_BASE		BCM2708_RPI
+#define BCM2708_PERI_BASE	BCM2708_RPI
 #else
 #error Board identifier required to BCM2708_PERI_BASE.
 #endif
@@ -71,22 +79,13 @@ static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 
 #define INP_GPIO(g)	(*(gpio+((g)/10)) &= ~(7<<(((g)%10)*3)))
 #define OUT_GPIO(g)	(*(gpio+((g)/10)) |=  (1<<(((g)%10)*3)))
-/// sets   bits which are 1 ignores bits which are 0
-#define GPIO_SET		(*(gpio+7))
-// clears bits which are 1 ignores bits which are 0
-#define GPIO_CLR		(*(gpio+10))
 
-static volatile unsigned	(*gpio);
+//sets bits which are 1 ignores bits which are 0
+#define GPIO_SET	(*(gpio+7))
+//clears bits which are 1 ignores bits which are 0
+#define GPIO_CLR	(*(gpio+10))
 
-static inline void enable(void)
-{
-	GPIO_SET = (1<<CE);
-}
-
-static inline void disable(void)
-{
-	GPIO_CLR = (1<<CE);
-}
+static volatile unsigned	*gpio;
 
 static inline int8_t inr(uint8_t reg)
 {
@@ -163,36 +162,6 @@ int8_t nrf24l01_set_standby(void)
 	return command(NOP);
 }
 
-static void io_setup(void)
-{
-	//open /dev/mem
-	int mem_fd = open("/dev/mem", O_RDWR|O_SYNC);
-
-	if (mem_fd < 0) {
-		printf("can't open /dev/mem\n");
-		exit(-1);
-	}
-
-	gpio = (volatile unsigned*)mmap(NULL,
-						BLOCK_SIZE,
-						PROT_READ | PROT_WRITE,
-						MAP_SHARED,
-						mem_fd,
-						GPIO_BASE);
-	close(mem_fd);
-	if (gpio == MAP_FAILED) {
-		printf("mmap error\n");
-		exit(-1);
-	}
-
-	GPIO_CLR = (1<<CE);
-	INP_GPIO(CE);
-	OUT_GPIO(CE);
-
-	disable();
-	spi_init("/dev/spidev0.0");
-}
-
 int8_t nrf24l01_init(void)
 {
 	uint8_t	value;
@@ -202,7 +171,7 @@ int8_t nrf24l01_init(void)
 	// reset device in power down mode
 	outr(CONFIG, CONFIG_RST);
 	// Delay to establish to operational timing of the nRF24L01
-	DELAY_US(TPD2STBY);
+	delay_us(TPD2STBY);
 
 	// reset channel and TX observe registers
 	outr(RF_CH, inr(RF_CH) & ~RF_CH_MASK);
@@ -225,7 +194,7 @@ int8_t nrf24l01_init(void)
 	value |= CFG_CRCO | CFG_PWR_UP;
 	outr(CONFIG, value);
 
-	DELAY_US(TPD2STBY);
+	delay_us(TPD2STBY);
 
 	outr(SETUP_RETR, RETR_ARC(ARC_DISABLE));
 
@@ -314,8 +283,7 @@ int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 	outr(CONFIG, inr(CONFIG) & ~CFG_PRIM_RX);
 	// enable and delay time to Tstdby2a timing
 	enable();
-	DELAY_US(TSTBY2A);
-
+	delay_us(TSTBY2A);
 	return 0;
 }
 
@@ -352,7 +320,7 @@ int8_t nrf24l01_set_prx(void)
 	outr(CONFIG, inr(CONFIG) | CFG_PRIM_RX);
 	// enable and delay time to Tstdby2a timing
 	enable();
-	DELAY_US(TSTBY2A);
+	delay_us(TSTBY2A);
 	return 0;
 }
 

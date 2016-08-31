@@ -6,7 +6,6 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
-
 #include "nrf24l01_io.h"
 
 // Output power in max power
@@ -22,13 +21,13 @@
 		// Delay factor
 #define NRF24L01_ARD_FACTOR_US	ARD_FACTOR_US
 /// Address width is 5 bytes
-#define NRF24L01_ADDR_WIDTHS		5
+#define NRF24L01_ADDR_WIDTHS	5
 
 #define NRF24L01_PIPE_MIN	0// pipe min
 #define NRF24L01_PIPE_MAX	5// pipe max
 #define NRF24L01_NO_PIPE	RX_FIFO_EMPTY// invalid pipe
 
-#define NRF24L01_PAYLOAD_SIZE				32
+#define NRF24L01_PAYLOAD_SIZE	32
 
 #define NRF24L01_PIPE0_ADDR		0
 #define NRF24L01_PIPE1_ADDR		1
@@ -41,6 +40,10 @@
 #define _CONSTRAIN(x, l, h)	((x) < (l) ? (l) : ((x) > (h) ? (h) : (x)))
 #define _MIN(a, b)	((a) < (b) ? (a) : (b))
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 int8_t nrf24l01_init(void);
 int8_t nrf24l01_set_channel(uint8_t ch);
 int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr);
@@ -51,3 +54,7 @@ int8_t nrf24l01_set_prx(void);
 int8_t nrf24l01_prx_pipe_available(void);
 int8_t nrf24l01_prx_data(void *pdata, uint16_t len);
 int8_t nrf24l01_set_standby(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
