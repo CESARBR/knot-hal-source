@@ -24,33 +24,34 @@ static bool	m_init = false;
 
 int spi_init(const char *dev)
 {
-	if (!m_init) {
+	if (m_init)
+		return 0;
 
-		m_init = true;
+	m_init = true;
 
-		//Put CSN HIGH
-		PORTB |= (1 << CSN);
+	//Put CSN HIGH
+	PORTB |= (1 << CSN);
 
-		//CSN as output
-		DDRB |= (1 << CSN);
+	//CSN as output
+	DDRB |= (1 << CSN);
 
-		//Enable SPI and set as master
-		SPCR |= (1 << SPE) | (1 << MSTR);
+	//Enable SPI and set as master
+	SPCR |= (1 << SPE) | (1 << MSTR);
 
-		//MISO as input, MOSI and SCK as output
-		DDRB &= ~(1 << MISO);
-		DDRB |= (1 << MOSI);
-		DDRB |= (1 << SCK);
+	//MISO as input, MOSI and SCK as output
+	DDRB &= ~(1 << MISO);
+	DDRB |= (1 << MOSI);
+	DDRB |= (1 << SCK);
 
-		//SPI mode 0
-		SPCR &= ~(1 << CPOL);
-		SPCR &= ~(1 << CPHA);
+	//SPI mode 0
+	SPCR &= ~(1 << CPOL);
+	SPCR &= ~(1 << CPHA);
 
-		//vel fosc/16 = 1MHz
-		SPCR &= ~(1 << SPI2X);
-		SPCR &= ~(1 << SPR1);
-		SPCR |= (1 << SPR0);
-	}
+	//vel fosc/16 = 1MHz
+	SPCR &= ~(1 << SPI2X);
+	SPCR &= ~(1 << SPR1);
+	SPCR |= (1 << SPR0);
+
 	return 0;
 }
 
