@@ -14,11 +14,12 @@
 #include "spi.h"
 
 #define CSN		2
-#define MOSI	3
-#define MISO	4
+#define MOSI		3
+#define MISO		4
 #define SCK		5
 
-#define DELAY_US	5	// CSN delay in microseconds
+/* CSN delay in microseconds */
+#define DELAY_US	5
 
 static bool	m_init = false;
 
@@ -29,25 +30,25 @@ int spi_init(const char *dev)
 
 	m_init = true;
 
-	//Put CSN HIGH
+	/* Put CSN HIGH */
 	PORTB |= (1 << CSN);
 
-	//CSN as output
+	/* CSN as output */
 	DDRB |= (1 << CSN);
 
-	//Enable SPI and set as master
+	/* Enable SPI and set as master */
 	SPCR |= (1 << SPE) | (1 << MSTR);
 
-	//MISO as input, MOSI and SCK as output
+	/* MISO as input, MOSI and SCK as output */
 	DDRB &= ~(1 << MISO);
 	DDRB |= (1 << MOSI);
 	DDRB |= (1 << SCK);
 
-	//SPI mode 0
+	/* SPI mode 0 */
 	SPCR &= ~(1 << CPOL);
 	SPCR &= ~(1 << CPHA);
 
-	//vel fosc/16 = 1MHz
+	/* vel fosc/16 = 1MHz */
 	SPCR &= ~(1 << SPI2X);
 	SPCR &= ~(1 << SPR1);
 	SPCR |= (1 << SPR0);
@@ -61,7 +62,8 @@ void spi_deinit(void)
 
 		m_init = false;
 		PORTB |= (1 << CSN);
-		//Disable SPI and reset master
+
+		/* Disable SPI and reset master */
 		SPCR &= ~((1 << SPE) | (1 << MSTR));
 	}
 }
@@ -87,7 +89,6 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 	}
 
 	if (rx != NULL && lrx != 0) {
-
 		for (pd = (uint8_t *)rx; lrx != 0; --lrx, ++pd) {
 			SPDR = *pd;
 			asm volatile("nop");
@@ -99,5 +100,4 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 	PORTB |= (1 << CSN);
 
 	return 0;
-
 }

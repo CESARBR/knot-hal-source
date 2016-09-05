@@ -6,7 +6,7 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
-//necessary to compile in arduino
+/* necessary to compile in arduino */
 #ifdef __cplusplus
 extern "C"{
 #endif

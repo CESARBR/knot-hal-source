@@ -21,12 +21,14 @@
 
 #include "spi.h"
 
-#define LOW						0
-#define HIGH					1
+#define LOW			0
+#define HIGH			1
 
-#define DELAY_US				5	// delay for CSN
-#define SPI_SPEED				1000000
-#define BITS_PER_WORD	8
+/* delay for CSN */
+#define DELAY_US		5
+
+#define SPI_SPEED		1000000
+#define BITS_PER_WORD		8
 
 static int	spi_fd = -1;
 
@@ -38,8 +40,7 @@ int spi_init(const char *dev)
 		return -1;
 
 #if defined(RPI_BOARD) || defined(RPI2_BOARD)
-
-		spi_fd = open(dev, O_RDWR);
+	spi_fd = open(dev, O_RDWR);
 #endif
 
 	if (spi_fd < 1) {
@@ -61,7 +62,6 @@ void spi_deinit(void)
 
 int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 {
-
 	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
 	uint8_t  mode;
 	uint8_t bits = 8;
@@ -77,7 +77,6 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 	memset(data_ioc, 0, sizeof(data_ioc));
 
 	if (tx != NULL && ltx != 0) {
-
 		pdummy = (uint8_t *) malloc(ltx);
 		if (pdummy == NULL)
 			return -ENOMEM;

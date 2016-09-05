@@ -16,12 +16,9 @@
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
 
-// Pipes addresses base
+/* Pipes addresses base */
 #define PIPE0_ADDR_BASE 0x55aa55aa5aLL
 #define PIPE1_ADDR_BASE 0xaa55aa55a5LL
-
-#define TSTBY2A			130			//130us
-
 
 typedef struct {
 	uint8_t enaa,
@@ -54,12 +51,10 @@ static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 
 #define DATA_SIZE	sizeof(uint8_t)
 
-// time delay in microseconds (us)
-
-#define TPD2STBY	5000	//5ms
-#define TSTBY2A	130//130us
-
-#define CE 25
+/* Time delay in microseconds (us) */
+#define TPD2STBY	5000
+#define TSTBY2A		130
+#define CE		25
 
 #define DELAY_US(us)	usleep(us)
 
@@ -80,9 +75,9 @@ static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 #define INP_GPIO(g)	(*(gpio+((g)/10)) &= ~(7<<(((g)%10)*3)))
 #define OUT_GPIO(g)	(*(gpio+((g)/10)) |=  (1<<(((g)%10)*3)))
 
-//sets bits which are 1 ignores bits which are 0
+/* Sets bits which are 1 ignores bits which are 0 */
 #define GPIO_SET	(*(gpio+7))
-//clears bits which are 1 ignores bits which are 0
+/* Clears bits which are 1 ignores bits which are 0 */
 #define GPIO_CLR	(*(gpio+10))
 
 static volatile unsigned	*gpio;
@@ -118,14 +113,14 @@ static inline void outr_data(uint8_t reg, void *pd, uint16_t len)
 static inline int8_t command(uint8_t cmd)
 {
 	spi_transfer(NULL, 0, &cmd, DATA_SIZE);
-	// return device status register
+	/* Return device status register */
 	return (int8_t)cmd;
 }
 
 static inline int8_t command_data(uint8_t cmd, void *pd, uint16_t len)
 {
 	spi_transfer(&cmd, DATA_SIZE, pd, len);
-	// return device status register
+	/* Return device status register */
 	return command(NOP);
 }
 
@@ -157,7 +152,6 @@ static int8_t set_standby1(void)
 
 int8_t nrf24l01_set_standby(void)
 {
-
 	set_standby1();
 	return command(NOP);
 }
@@ -168,26 +162,26 @@ int8_t nrf24l01_init(void)
 
 	io_setup();
 
-	// reset device in power down mode
+	/* Reset device in power down mode */
 	outr(CONFIG, CONFIG_RST);
-	// Delay to establish to operational timing of the nRF24L01
+	/* Delay to establish to operational timing of the nRF24L01 */
 	delay_us(TPD2STBY);
 
-	// reset channel and TX observe registers
+	/* Reset channel and TX observe registers */
 	outr(RF_CH, inr(RF_CH) & ~RF_CH_MASK);
-	// Set the device channel
+	/* Set the device channel */
 	outr(RF_CH, CH(NRF24L01_CHANNEL_DEFAULT));
 
-	// set RF speed and output power
+	/* Set RF speed and output power */
 	value = inr(RF_SETUP) & ~RF_SETUP_MASK;
 	outr(RF_SETUP, value | RF_DR(NRF24L01_DATA_RATE)\
 						| RF_PWR(NRF24L01_POWER));
 
-	// set address widths
+	/* Set address widths */
 	value = inr(SETUP_AW) & ~SETUP_AW_MASK;
 	outr(SETUP_AW, value | AW(NRF24L01_ADDR_WIDTHS));
 
-	// set device to standby-I mode
+	/* Set device to standby-I mode */
 	value = inr(CONFIG) & ~CONFIG_MASK;
 	value |= CFG_MASK_RX_DR | CFG_MASK_TX_DS;
 	value |= CFG_MASK_MAX_RT | CFG_EN_CRC;
@@ -198,13 +192,13 @@ int8_t nrf24l01_init(void)
 
 	outr(SETUP_RETR, RETR_ARC(ARC_DISABLE));
 
-	// disable all Auto Acknowledgment of pipes
+	/* Disable all Auto Acknowledgment of pipes */
 	outr(EN_AA, inr(EN_AA) & ~EN_AA_MASK);
 
-	// disable all RX addresses
+	/* Disable all RX addresses */
 	outr(EN_RXADDR, inr(EN_RXADDR) & ~EN_RXADDR_MASK);
 
-	// enable dynamic payload to all pipes
+	/* Enable dynamic payload to all pipes */
 	outr(FEATURE, (inr(FEATURE) & ~FEATURE_MASK)\
 		| FT_EN_DPL | FT_EN_ACK_PAY | FT_EN_DYN_ACK);
 
@@ -213,12 +207,11 @@ int8_t nrf24l01_init(void)
 
 	outr(DYNPD, value);
 
-	// reset pending status
+	/* Reset pending status */
 	value = inr(STATUS) & ~STATUS_MASK;
 	outr(STATUS, value | ST_RX_DR | ST_TX_DS | ST_MAX_RT);
 
-
-	// reset all the FIFOs
+	/* Reset all the FIFOs */
 	command(FLUSH_TX);
 	command(FLUSH_RX);
 
@@ -240,7 +233,7 @@ int8_t nrf24l01_set_channel(uint8_t ch)
 		outr(STATUS, ST_RX_DR | ST_TX_DS | ST_MAX_RT);
 		command(FLUSH_TX);
 		command(FLUSH_RX);
-		// Set the device channel
+		/* Set the device channel */
 		outr(RF_CH, CH(_CONSTRAIN(ch, CH_MIN, max)));
 	}
 	return 0;
@@ -273,15 +266,17 @@ int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 	set_address_pipe(RX_ADDR_P0, pipe_addr);
 	set_address_pipe(TX_ADDR, pipe_addr);
 	#if (NRF24L01_ARC != ARC_DISABLE)
-		// set ARC and ARD by pipe index to different
-		//retry periods to reduce data collisions
-		// compute ARD range: 1500us <= ARD[pipe] <= 4000us
+		/*
+		* Set ARC and ARD by pipe index to different
+		* retry periods to reduce data collisions
+		* compute ARD range: 1500us <= ARD[pipe] <= 4000us
+		*/
 		outr(SETUP_RETR, RETR_ARD(((pipe_addr * 2) + 5))
 			| RETR_ARC(NRF24L01_ARC));
 	#endif
 	outr(STATUS, ST_TX_DS | ST_MAX_RT);
 	outr(CONFIG, inr(CONFIG) & ~CFG_PRIM_RX);
-	// enable and delay time to Tstdby2a timing
+	/* Enable and delay time to TSTBY2A timing */
 	enable();
 	delay_us(TSTBY2A);
 	return 0;
@@ -318,9 +313,11 @@ int8_t nrf24l01_set_prx(void)
 	set_address_pipe(RX_ADDR_P0, m_pipe0_addr);
 	outr(STATUS, ST_RX_DR);
 	outr(CONFIG, inr(CONFIG) | CFG_PRIM_RX);
-	// enable and delay time to Tstdby2a timing
+
+	/* Enable and delay time to TSTBY2A timing */
 	enable();
 	delay_us(TSTBY2A);
+
 	return 0;
 }
 
@@ -343,7 +340,8 @@ int8_t nrf24l01_prx_data(void *pdata, uint16_t len)
 	outr(STATUS, ST_RX_DR);
 
 	command_data(R_RX_PL_WID, &rxlen, DATA_SIZE);
-	// note: flush RX FIFO if the read value is larger than 32 bytes.
+
+	/* Note: flush RX FIFO if the value read is larger than 32 bytes. */
 	if (rxlen > NRF24L01_PAYLOAD_SIZE) {
 		command(FLUSH_RX);
 		return 0;

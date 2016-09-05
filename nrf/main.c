@@ -124,7 +124,6 @@ static int radio_init(void)
 	int sock, ret;
 
 	if (opt_host == NULL) {
-
 		ret = spi_init(opt_spi);
 		if (ret < 0)
 			return ret;

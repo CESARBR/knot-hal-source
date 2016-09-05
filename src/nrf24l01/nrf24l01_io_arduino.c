@@ -35,10 +35,12 @@ void disable(void)
 
 void io_setup(void)
 {
-	// PB1 = 0 (digital PIN 9) => CE = 0
-	// standby-l mode
+	/*
+	* PB1 = 0 (digital PIN 9) => CE = 0
+	* standby-l mode
+	*/
 	PORTB &= ~(1 << CE);
-	// PB1 as output
+	/* PB1 as output */
 	DDRB |= (1 << CE);
 	disable();
 	spi_init("");
