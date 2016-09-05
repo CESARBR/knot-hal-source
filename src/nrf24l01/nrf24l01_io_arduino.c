@@ -33,7 +33,7 @@ void disable(void)
 	PORTB &= ~(1 << CE);
 }
 
-void io_setup(void)
+int io_setup(void)
 {
 	/*
 	* PB1 = 0 (digital PIN 9) => CE = 0
@@ -44,7 +44,7 @@ void io_setup(void)
 	DDRB |= (1 << CE);
 	disable();
 	spi_init("");
-
+	return 0;
 }
 
 void io_reset(void)

@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include "nrf24l01_io.h"
 #include "spi.h"
 
@@ -71,15 +72,18 @@ void disable(void)
 	GPIO_CLR = (1<<CE);
 }
 
-void io_setup(void)
+int io_setup(void)
 {
+	int err;
+
 	/* open /dev/mem */
 	int mem_fd = open("/dev/mem", O_RDWR|O_SYNC);
 
 	if (mem_fd < 0) {
 
-		printf("can't open /dev/mem \n");
-		exit(-1);
+		err = errno;
+		fprintf(stderr, "open error(%d): '%s'\n", err, strerror(err));
+		return -err;
 	}
 
 	gpio = (volatile unsigned *)mmap(NULL, BLOCK_SIZE,
@@ -87,9 +91,9 @@ void io_setup(void)
 						MAP_SHARED, mem_fd, GPIO_BASE);
 	close(mem_fd);
 	if (gpio == MAP_FAILED) {
-
-		printf("mmap error\n");
-		exit(-1);
+		err = errno;
+		fprintf(stderr, "mmap error: '%s'\n", strerror(err));
+		return -err;
 	}
 
 	GPIO_CLR = (1<<CE);
