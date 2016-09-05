@@ -3,7 +3,7 @@ SUBDIRS = src src/spi/ src/nrf24l01
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-libexec_PROGRAMS = proxy/spiproxyd nrf/nrfd
+bin_PROGRAMS = proxy/spiproxyd nrf/nrfd
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@

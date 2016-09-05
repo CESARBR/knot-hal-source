@@ -7,5 +7,4 @@ fi
 ./bootstrap && \
     ./configure CFLAGS='-DRPI2_BOARD' --enable-maintainer-mode \
 		--enable-debug \
-		--prefix=/usr \
 		--sysconfdir=/etc $*
