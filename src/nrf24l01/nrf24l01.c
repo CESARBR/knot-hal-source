@@ -7,7 +7,6 @@
  *
  */
 
-#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -54,33 +53,6 @@ static uint8_t m_pipe0_addr = NRF24L01_PIPE0_ADDR;
 /* Time delay in microseconds (us) */
 #define TPD2STBY	5000
 #define TSTBY2A		130
-#define CE		25
-
-#define DELAY_US(us)	usleep(us)
-
-#define BCM2709_RPI2	0x3F000000
-
-#ifdef RPI2_BOARD
-#define BCM2708_PERI_BASE	BCM2709_RPI2
-#elif RPI_BOARD
-#define BCM2708_PERI_BASE	BCM2708_RPI
-#else
-#error Board identifier required to BCM2708_PERI_BASE.
-#endif
-
-#define GPIO_BASE	(BCM2708_PERI_BASE + 0x200000)
-#define PAGE_SIZE	(4*1024)
-#define BLOCK_SIZE	(4*1024)
-
-#define INP_GPIO(g)	(*(gpio+((g)/10)) &= ~(7<<(((g)%10)*3)))
-#define OUT_GPIO(g)	(*(gpio+((g)/10)) |=  (1<<(((g)%10)*3)))
-
-/* Sets bits which are 1 ignores bits which are 0 */
-#define GPIO_SET	(*(gpio+7))
-/* Clears bits which are 1 ignores bits which are 0 */
-#define GPIO_CLR	(*(gpio+10))
-
-static volatile unsigned	*gpio;
 
 static inline int8_t inr(uint8_t reg)
 {
