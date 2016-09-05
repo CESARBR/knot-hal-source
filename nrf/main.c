@@ -28,11 +28,8 @@ static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
 
-char buffer[128];
-int stop;
 static void sig_term(int sig)
 {
-	stop = 1;
 	g_main_loop_quit(main_loop);
 }
 
