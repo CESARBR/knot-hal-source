@@ -32,5 +32,5 @@ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.28, dummy=no,
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-AC_CONFIG_FILES([Makefile src/spi/Makefile src/nrf24l01/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/spi/Makefile src/nrf24l01/Makefile])
 AC_OUTPUT
