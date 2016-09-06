@@ -70,7 +70,8 @@ void spi_deinit(void)
 
 int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 {
-	const uint8_t *pd;
+	const uint8_t *tpd;
+	uint8_t *rpd;
 
 	if (!m_init)
 		return -1;
@@ -80,8 +81,8 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 
 	if (tx != NULL && ltx != 0) {
 
-		for (pd = tx; ltx != 0; --ltx, ++pd) {
-			SPDR = *pd;
+		for (tpd = tx; ltx != 0; --ltx, ++tpd) {
+			SPDR = *tpd;
 			asm volatile("nop");
 			while (!(SPSR & (1 << SPIF)));
 			SPDR;
@@ -89,11 +90,12 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 	}
 
 	if (rx != NULL && lrx != 0) {
-		for (pd = (uint8_t *)rx; lrx != 0; --lrx, ++pd) {
-			SPDR = *pd;
+
+		for (rpd = rx; lrx != 0; --lrx, ++rpd) {
+			SPDR = *rpd;
 			asm volatile("nop");
 			while (!(SPSR & (1 << SPIF)));
-			*pd = SPDR;
+			*rpd = SPDR;
 		}
 	}
 
