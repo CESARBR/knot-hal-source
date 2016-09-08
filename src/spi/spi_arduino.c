@@ -8,7 +8,6 @@
  */
 #include <avr/io.h>
 #include <util/delay.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "spi.h"
@@ -21,14 +20,14 @@
 /* CSN delay in microseconds */
 #define DELAY_US	5
 
-static bool	m_init = false;
+static int m_init = 0;
 
 int spi_init(const char *dev)
 {
 	if (m_init)
 		return 0;
 
-	m_init = true;
+	m_init = 1;
 
 	/* Put CSN HIGH */
 	PORTB |= (1 << CSN);
@@ -60,7 +59,7 @@ void spi_deinit(void)
 {
 	if (m_init) {
 
-		m_init = false;
+		m_init = 0;
 		PORTB |= (1 << CSN);
 
 		/* Disable SPI and reset master */
