@@ -101,7 +101,7 @@ int io_setup(void)
 	OUT_GPIO(CE);
 
 	disable();
-	spi_init("/dev/spidev0.0");
+	return spi_init("/dev/spidev0.0");
 }
 
 void io_reset(void)
