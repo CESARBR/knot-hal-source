@@ -27,7 +27,6 @@
 
 struct phy_driver {
 	const char *name;
-	int domain;		/* Protocol domain: Radio nRF24L01, nRF905, ... */
 	int (*probe) (void);
 	void (*remove) (void);
 
