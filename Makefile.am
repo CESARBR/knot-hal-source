@@ -3,7 +3,7 @@ SUBDIRS = src src/spi/ src/nrf24l01
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd nrf/nrfd
+bin_PROGRAMS = proxy/spiproxyd src/phynrfd/phynrfd
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -13,10 +13,10 @@ proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/spi \
 				-I$(top_srcdir)/src/nrf24l01
 
-nrf_nrfd_SOURCES = nrf/main.c
-nrf_nrfd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
-nrf_nrfd_LDFLAGS = $(AM_LDFLAGS)
-nrf_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+src_phynrfd_phynrfd_SOURCES = src/phynrfd/main.c
+src_phynrfd_phynrfd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
+src_phynrfd_phynrfd_LDFLAGS = $(AM_LDFLAGS)
+src_phynrfd_phynrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/spi \
 				-I$(top_srcdir)/src/nrf24l01
 
