@@ -26,6 +26,22 @@
 extern struct phy_driver nrf24l01;
 static struct phy_driver *driver = &nrf24l01;
 static int nrf24_fd = -1;
+static guint listen_idle = 0;
+
+static void watch_accept_destroy(gpointer user_data)
+{
+}
+
+static gboolean watch_accept_cb(gpointer user_data)
+{
+	int cli_fd;
+
+	cli_fd = driver->accept(nrf24_fd);
+	if (cli_fd < 0)
+		return TRUE;
+
+	return TRUE;
+}
 
 static int radio_init(const char *spi)
 {
@@ -53,11 +69,21 @@ static int radio_init(const char *spi)
 
 	nrf24_fd = fd;
 
+	listen_idle = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,
+				      watch_accept_cb, NULL,
+				      watch_accept_destroy);
+
 	return 0;
 }
 
 static void radio_stop(void)
 {
+
+	if (listen_idle) {
+		g_source_remove(listen_idle);
+		listen_idle = 0;
+	}
+
 	/* nRF24: Stop listening pipe0 */
 	if (nrf24_fd >= 0)
 		driver->close(nrf24_fd);
