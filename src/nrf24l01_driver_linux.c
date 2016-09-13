@@ -21,7 +21,7 @@ static void nrf24l01_remove(void)
 
 }
 
-static int nrf24l01_socket(int type, int protocol)
+static int nrf24l01_open(const char *pathname)
 {
 	/* TODO: implement TCP forward and native (SPI)
 	 * TCP FW intends to be a development mechanism to allow
@@ -35,5 +35,5 @@ struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove,
-	.socket = nrf24l01_socket
+	.open = nrf24l01_open
 };
