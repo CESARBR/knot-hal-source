@@ -25,16 +25,46 @@
 /* FIXME: defined at nrf24l01_driver_linux.c */
 extern struct phy_driver nrf24l01;
 static struct phy_driver *driver = &nrf24l01;
+static int nrf24_fd = -1;
 
 static int radio_init(const char *spi)
 {
+	int retval, fd;
+
 	/* FIXME: pass 'spi' to driver */
-	return driver->probe();
+	retval= driver->probe();
+	if (retval < 0)
+		return retval;
+
+	/* nRF24 radio initialization */
+	fd = driver->open(NULL);
+	if (fd < 0) {
+		driver->remove();
+		return fd;
+	}
+
+	/* Blocking operation: waiting for available nRF24L01 channel */
+	retval = driver->listen(fd);
+	if (retval < 0) {
+		driver->close(fd);
+		driver->remove();
+		return retval;
+	}
+
+	nrf24_fd = fd;
+
+	return 0;
 }
 
 static void radio_stop(void)
 {
+	/* nRF24: Stop listening pipe0 */
+	if (nrf24_fd >= 0)
+		driver->close(nrf24_fd);
+
+	/* Stop nRF24 radio */
 	driver->remove();
+	nrf24_fd = -1;
 }
 
 static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
