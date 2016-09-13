@@ -18,10 +18,24 @@
 #include <netinet/in.h>
 #include <glib.h>
 
-#include "spi.h"
-#include "nrf24l01.h"
+#include "phy_driver.h"
 
 #include "manager.h"
+
+/* FIXME: defined at nrf24l01_driver_linux.c */
+extern struct phy_driver nrf24l01;
+static struct phy_driver *driver = &nrf24l01;
+
+static int radio_init(const char *spi)
+{
+	/* FIXME: pass 'spi' to driver */
+	return driver->probe();
+}
+
+static void radio_stop(void)
+{
+	driver->remove();
+}
 
 static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 						gpointer user_data)
@@ -64,6 +78,8 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 
 static int tcp_init(const char *host, int port)
 {
+	GIOChannel *io;
+	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
 	struct hostent *hostent;		/* Host information */
 	struct in_addr h_addr;			/* Internet address */
 	struct sockaddr_in server;		/* nRF proxy: spiproxyd */
@@ -101,33 +117,6 @@ static int tcp_init(const char *host, int port)
 
 	fprintf(stdout, "nRF Proxy address: %s\n", inet_ntoa(h_addr));
 
-	return sock;
-}
-
-
-int manager_start(const char *host, int port, const char *spi)
-{
-	GIOChannel *io;
-	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
-	int sock, ret;
-
-	if (host == NULL) {
-		ret = spi_init(spi);
-		if (ret < 0)
-			return ret;
-
-		return nrf24l01_init();
-	} else {
-		/*
-		 * TCP development mode: Linux connected to RPi(phynrfd radio
-		 * proxy). Connect to phynrfd routing all traffic over TCP.
-		 */
-		sock = tcp_init(host, port);
-	}
-
-	if (sock < 0)
-		return -EIO;
-
 	io = g_io_channel_unix_new(sock);
 	g_io_channel_set_close_on_unref(io, TRUE);
 
@@ -144,6 +133,19 @@ int manager_start(const char *host, int port, const char *spi)
 	return 0;
 }
 
+int manager_start(const char *host, int port, const char *spi)
+{
+	if (host == NULL)
+		return radio_init(spi);
+	else
+		/*
+		 * TCP development mode: Linux connected to RPi(phynrfd radio
+		 * proxy). Connect to phynrfd routing all traffic over TCP.
+		 */
+		return tcp_init(host, port);
+}
+
 void manager_stop(void)
 {
+	radio_stop();
 }
