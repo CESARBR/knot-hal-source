@@ -1,0 +1,14 @@
+KNoT HAL Communications module
+
+Copyright (c) 2016, CESAR.
+All rights reserved.
+
+This software may be modified and distributed under the terms
+of the BSD license. See the COPYING file for details.
+
+Description
+===========
+
+KNoT Hardware Abstraction Layer (HAL) communications module
+is responsible to provide a common interface and implementation 
+between all communications channels (radios, serial, ethernet, etc).
