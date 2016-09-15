@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "comm_private.h"
 #include "nrf24l01.h"
@@ -55,10 +56,41 @@ static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 	return length;
 }
 
+static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
+{
+	int err;
+
+	/* TODO: break the buffer in parts if the len > NRF24_MTU*/
+	if (len > NRF24_PAYLOAD_SIZE)
+		return -EINVAL;
+
+	/* Puts the radio in TX mode - sockfd address */
+	nrf24l01_set_ptx(sockfd);
+	/* Transmits the data disabling Acknowledgment */
+	err = nrf24l01_ptx_data((void *)buffer, len, false);
+
+	if (err == NRF24_TX_FIFO_FULL)
+		return -EAGAIN;
+	/*
+	 * The radio do not receive and send at the same time
+	 * It's a good practice to put the radio in RX mode
+	 * and only switch to TX mode when transmitting data.
+	 */
+
+	nrf24l01_set_prx();
+
+	/*
+	 * On success, the number of bytes written is returned
+	 * Otherwise, -1 is returned.
+	 */
+	return len;
+}
+
 struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove,
 	.open = nrf24l01_open,
-	.recv = nrf24l01_recv
+	.recv = nrf24l01_recv,
+	.send = nrf24l01_send
 };

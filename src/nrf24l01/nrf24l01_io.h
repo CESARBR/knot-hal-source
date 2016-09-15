@@ -35,8 +35,8 @@
 #define NRF24_RX_FIFO_EMPTY		0b111
 #define NRF24_ST_TX_FULL				0b00000001
 #define NRF24_TX_FIFO_FULL			0b1
-
-
+/* Read TX FIFO full flag */
+#define ST_TX_STATUS(v)			((v) & NRF24_ST_TX_FULL)
 /*
  * Enable dynamic payload length (reset value: 0b00000000)
  * (requires EN_DLL in FEATURE and AA_Px in ENAA enabled)

@@ -273,9 +273,14 @@ int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
 	if (pdata == NULL || len == 0 || len > NRF24_PAYLOAD_SIZE)
 		return -1;
 
-	return command_data(!ack ?
+	/*
+	 * Returns the current operating status
+	 * of NRF24L01 after entering data in TX FIFO
+	 * 1: TX FIFO full or 0: Available locations in TX FIFO.
+	 */
+	return ST_TX_STATUS(command_data(!ack ?
 			NRF24_W_TX_PAYLOAD_NOACK : NRF24_W_TX_PAYLOAD,
-			pdata, len);
+			pdata, len));
 }
 
 int8_t nrf24l01_ptx_wait_datasent(void)
