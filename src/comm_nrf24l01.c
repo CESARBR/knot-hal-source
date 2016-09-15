@@ -14,6 +14,9 @@
 #include "comm_private.h"
 #include "nrf24l01.h"
 
+#define NRF24_MTU		32
+#define NRF24_PIPE0		0
+
 static int nrf24l01_probe(void)
 {
 	return nrf24l01_init();
@@ -86,11 +89,39 @@ static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
 	return len;
 }
 
+static int nrf24l01_listen(int sockfd)
+{
+	if (sockfd < 0 || sockfd > NRF24_PIPE_ADDR_MAX)
+		return -EINVAL;
+
+	/* Set channel */
+	if (nrf24l01_set_channel(NRF24_CHANNEL_DEFAULT) == -1)
+		return -EINVAL;
+
+	/* Open pipe zero in the sockfd address */
+	nrf24l01_open_pipe(NRF24_PIPE0, sockfd);
+
+	/*
+	 * Standby mode is used to minimize average
+	 * current consumption while maintaining short
+	 * start up times. In this mode only
+	 * part of the crystal oscillator is active.
+	 * FIFO state: No ongoing packet transmission.
+	 */
+	nrf24l01_set_standby();
+
+	/* Put the radio in RX mode to start receiving packets.*/
+	nrf24l01_set_prx();
+
+	return 0;
+}
+
 struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove,
 	.open = nrf24l01_open,
 	.recv = nrf24l01_recv,
-	.send = nrf24l01_send
+	.send = nrf24l01_send,
+	.listen = nrf24l01_listen
 };
