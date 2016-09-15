@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "phy_driver.h"
+#include "comm_private.h"
 
 static int nrf24l01_probe(void)
 {

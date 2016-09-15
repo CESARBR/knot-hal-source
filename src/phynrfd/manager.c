@@ -18,7 +18,7 @@
 #include <netinet/in.h>
 #include <glib.h>
 
-#include "phy_driver.h"
+#include "comm_private.h"
 
 #include "manager.h"
 
