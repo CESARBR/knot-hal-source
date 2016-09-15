@@ -8,12 +8,14 @@
  */
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "comm_private.h"
+#include "nrf24l01.h"
 
 static int nrf24l01_probe(void)
 {
-	return 0;
+	return nrf24l01_init();
 }
 
 static void nrf24l01_remove(void)
