@@ -37,9 +37,28 @@ static int nrf24l01_open(const char *pathname)
 	return 0;
 }
 
+static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
+{
+	ssize_t length = -1;
+
+	/* TODO: check if the data received is fragmented or not */
+
+	/* If the pipe available */
+	if (nrf24l01_prx_pipe_available() == sockfd)
+		/* Copy data to buffer */
+		length = nrf24l01_prx_data(buffer, len);
+
+	/*
+	 * On success, the number of bytes read is returned
+	 * Otherwise, -1 is returned.
+	 */
+	return length;
+}
+
 struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove,
-	.open = nrf24l01_open
+	.open = nrf24l01_open,
+	.recv = nrf24l01_recv
 };
