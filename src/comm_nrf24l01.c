@@ -25,12 +25,16 @@ static void nrf24l01_remove(void)
 
 static int nrf24l01_open(const char *pathname)
 {
-	/* TODO: implement TCP forward and native (SPI)
-	 * TCP FW intends to be a development mechanism to allow
-	 * remote development. It should not be enabled by default.
-	 * RPi should expose SPI communication through a TCP socket
-	 * allowing an external machine to manage pipes and send data.
+	/*
+	 * Considering 16-bits to address adapter and logical
+	 * channels. The most significant 4-bits will be used to
+	 * address the local adapter, the remaining (12-bits) will
+	 * used to address logical channels(clients/pipes).
+	 * eg: For nRF24 '0' will be mapped to pipe0.
+	 * TODO: Implement addressing
 	 */
+
+	return 0;
 }
 
 struct phy_driver nrf24l01 = {
