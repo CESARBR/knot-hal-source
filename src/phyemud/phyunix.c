@@ -30,19 +30,12 @@ static void remove_unix(void)
 
 static int open_unix(const char *pathname)
 {
-	int sock;
+	struct sockaddr_un addr;
+	int err, sock;
 
 	sock = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
 	if (sock < 0)
 		return -errno;
-
-	return sock;
-}
-
-static int listen_unix(int sock)
-{
-	struct sockaddr_un addr;
-	int err;
 
 	/* Represents unix socket from thing to nrfd */
 	memset(&addr, 0, sizeof(addr));
@@ -53,6 +46,13 @@ static int listen_unix(int sock)
 		err = -errno;
 		return err;
 	}
+
+	return sock;
+}
+
+static int listen_unix(int sock)
+{
+	int err;
 
 	if (listen(sock, 1) == -1) {
 		err = -errno;
