@@ -54,6 +54,9 @@ static uint8_t m_pipe0_addr = NRF24_PIPE0_ADDR;
 #define TPD2STBY	5000
 #define TSTBY2A		130
 
+/* Send to spi transfer the read command
+* return the value that was read in reg
+*/
 static inline int8_t inr(uint8_t reg)
 {
 	uint8_t value = NRF24_NOP;
@@ -70,6 +73,9 @@ static inline void inr_data(uint8_t reg, void *pd, uint16_t len)
 	spi_transfer(&reg, DATA_SIZE, pd, len);
 }
 
+/* Send to spi transfer the write command
+ * and the data that will be written
+ */
 static inline void outr(uint8_t reg, uint8_t value)
 {
 	reg = NRF24_W_REGISTER(reg);
@@ -82,6 +88,9 @@ static inline void outr_data(uint8_t reg, void *pd, uint16_t len)
 	spi_transfer(&reg, DATA_SIZE, pd, len);
 }
 
+/* Send to spi transfer the write command
+* the commands are in pages 53-58 from datasheet
+*/
 static inline int8_t command(uint8_t cmd)
 {
 	spi_transfer(NULL, 0, &cmd, DATA_SIZE);
@@ -128,6 +137,11 @@ int8_t nrf24l01_set_standby(void)
 	return command(NRF24_NOP);
 }
 
+/*
+* nrf24l01_init:
+* Init spi
+* Configure the radio to data rate of 1Mbps
+*/
 int8_t nrf24l01_init(const char *dev)
 {
 	uint8_t	value;
@@ -166,6 +180,7 @@ int8_t nrf24l01_init(const char *dev)
 
 	delay_us(TPD2STBY);
 
+	/* Disable Auto Retransmit Count */
 	outr(NRF24_SETUP_RETR, NRF24_RETR_ARC(NRF24_ARC_DISABLE));
 
 	/* Disable all Auto Acknowledgment of pipes */
@@ -187,6 +202,7 @@ int8_t nrf24l01_init(const char *dev)
 
 	outr(NRF24_DYNPD, value);
 
+	/* Reset pending status */
 	value = inr(NRF24_STATUS) & ~NRF24_STATUS_MASK;
 	outr(NRF24_STATUS, value | NRF24_ST_RX_DR
 		| NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
@@ -201,6 +217,14 @@ int8_t nrf24l01_init(const char *dev)
 	return 0;
 }
 
+/*
+* nrf24l01_set_channel:
+* Bandwidth < 1MHz at 250kbps
+* Bandwidth < 1MHZ at 1Mbps
+* Bandwidth < 2MHz at 2Mbps
+* 2Mbps -> channel max is 54
+* 1Mbps -> channel max is 116
+*/
 int8_t nrf24l01_set_channel(uint8_t ch)
 {
 	uint8_t max;
@@ -224,6 +248,11 @@ int8_t nrf24l01_set_channel(uint8_t ch)
 	return 0;
 }
 
+/*
+* nrf24l01_open_pipe:
+* 0 <= pipe <= 5
+* Pipes are enabled with the bits in the EN_RXADDR
+*/
 int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 {
 	pipe_reg_t rpipe;
@@ -233,6 +262,7 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 
 	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
 
+	/* Enable pipe */
 	if (!(inr(NRF24_EN_RXADDR) & rpipe.en_rxaddr)) {
 		if (rpipe.rx_addr == NRF24_RX_ADDR_P0)
 			m_pipe0_addr = pipe_addr;
@@ -246,10 +276,16 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 	return 0;
 }
 
-
+/* nrf24l01_set_ptx:
+* set pipe to send data;
+* the radio will be the Primary Transmitter (PTX).
+* See page 31 of nRF24L01_Product_Specification_v2_0.pdf
+*/
 int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 {
+	/* put the radio in mode standby-1 */
 	set_standby1();
+	/* TX Settling */
 	set_address_pipe(NRF24_RX_ADDR_P0, pipe_addr);
 	set_address_pipe(NRF24_TX_ADDR, pipe_addr);
 	#if (NRF24_ARC != NRF24_ARC_DISABLE)
@@ -270,7 +306,11 @@ int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 	return 0;
 }
 
-
+/* nrf24l01_ptx_data:
+* TX mode Transmit Packet
+* See NRF24L01 datasheet table 20. 'ack' parameter selects
+* the SPI NRF24 command to be sent.
+*/
 int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
 {
 
@@ -287,11 +327,18 @@ int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
 			pdata, len));
 }
 
+/*nrf24l01_ptx_wait_datasent:
+* wait while data is being sent
+* check Data Sent TX FIFO interrupt
+*/
 int8_t nrf24l01_ptx_wait_datasent(void)
 {
 	uint16_t value;
 
 	while (!((value = inr(NRF24_STATUS)) & NRF24_ST_TX_DS)) {
+		/* if arrived in Maximum number of TX retransmits
+		 * the send failed
+		 */
 		if (value & NRF24_ST_MAX_RT) {
 			outr(NRF24_STATUS, NRF24_ST_MAX_RT);
 			command(NRF24_FLUSH_TX);
@@ -301,10 +348,16 @@ int8_t nrf24l01_ptx_wait_datasent(void)
 	return 0;
 }
 
+/* nrf24l01_set_prx:
+* set pipe to send data;
+* the radio will be the Primary Receiver (PRX).
+* See page 33 of nRF24L01_Product_Specification_v2_0.pdf
+*/
 int8_t nrf24l01_set_prx(void)
 {
 	set_standby1();
 	set_address_pipe(NRF24_RX_ADDR_P0, m_pipe0_addr);
+	/* RX Settings */
 	outr(NRF24_STATUS, NRF24_ST_RX_DR);
 	outr(NRF24_CONFIG, inr(NRF24_CONFIG) | NRF24_CFG_PRIM_RX);
 	/* Enable and delay time to TSTBY2A timing */
@@ -314,6 +367,10 @@ int8_t nrf24l01_set_prx(void)
 	return 0;
 }
 
+/*
+* nrf24l01_prx_pipe_available:
+* Return the pipe where the first data of the RX FIFO are.
+*/
 int8_t nrf24l01_prx_pipe_available(void)
 {
 	uint8_t pipe = NRF24_NO_PIPE;
@@ -326,6 +383,10 @@ int8_t nrf24l01_prx_pipe_available(void)
 	return (int8_t)pipe;
 }
 
+/*nrf24l01_prx_data:
+* return the len of data received
+* Send command to read data width for the RX FIFO
+*/
 int8_t nrf24l01_prx_data(void *pdata, uint16_t len)
 {
 	uint16_t		rxlen = 0;
@@ -333,7 +394,7 @@ int8_t nrf24l01_prx_data(void *pdata, uint16_t len)
 	outr(NRF24_STATUS, NRF24_ST_RX_DR);
 
 	command_data(NRF24_R_RX_PL_WID, &rxlen, DATA_SIZE);
-	/* Note: flush RX FIFO if the value read is larger than 32 bytes. */
+	/* Note: flush RX FIFO if the value read is larger than 32 bytes.*/
 	if (rxlen > NRF24_PAYLOAD_SIZE) {
 		command(NRF24_FLUSH_RX);
 		return 0;
