@@ -22,9 +22,8 @@
 
 #include "manager.h"
 
-/* FIXME: defined at nrf24l01_driver_linux.c */
-extern struct phy_driver nrf24l01;
 static struct phy_driver *driver = &nrf24l01;
+
 static int nrf24_fd = -1;
 static guint listen_idle = 0;
 
