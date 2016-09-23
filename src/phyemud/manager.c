@@ -94,7 +94,7 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 		printf("read_knotd() error\n\r");
 		return FALSE;
 	}
-	printf("RX_KNOTD: '%.*s'\n\r", (int)readbytes_knotd, buffer);
+	printf("RX_KNOTD: '%ld'\n\r", readbytes_knotd);
 
 	if (ops->send(thing_sock, buffer, readbytes_knotd) < 0) {
 		printf("send_thing() error\n\r");
@@ -129,7 +129,7 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	struct phy_driver *ops = session->ops;
 	char buffer[PACKET_SIZE_MAX];
 	ssize_t nbytes;
-	int sock, knotdfd;
+	int sock, knotdfd, offset, msg_size;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
 		return FALSE;
@@ -137,18 +137,48 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	sock = g_io_channel_unix_get_fd(io);
 
 	printf("Generic IO Watch, reading from (%d)\n\r", sock);
+
 	nbytes = ops->recv(sock, buffer, sizeof(buffer));
 	if (nbytes < 0) {
 		printf("read() error\n");
 		return FALSE;
 	}
+	printf("Read (%ld) bytes from thing\n\r", nbytes);
+
+	printf("Opt type = (%02X), Payload length = (%d)\n", buffer[0],
+								buffer[1]);
+
+	/*
+	 * At the moment there isn't a header describing the size of
+	 * the datagram. The field 'payload_len' (see buffer[1]) defined
+	 * at knot_protocol.h is being used to determine the expected
+	 * datagram length.
+	 */
+	msg_size = buffer[1] + 2;
+
+	offset = nbytes;
+	/* If payload + header (2 Bytes) < nbytes, keep reading */
+	while (offset < msg_size) {
+		nbytes = ops->recv(sock, buffer + offset,
+						sizeof(buffer - offset));
+		if (nbytes < 0) {
+			 /* Malformed datagram: ignore received data */
+			goto done;
+		}
+
+		offset += nbytes;
+	}
+
+	printf("Total bytes read = %d\n", offset);
 
 	knotdfd = g_io_channel_unix_get_fd(session->knotd_io);
 
-	if (write(knotdfd, buffer, nbytes) < 0) {
+	if (write(knotdfd, buffer, msg_size) < 0) {
 		printf("write_knotd() error\n\r");
 		return FALSE;
 	}
+
+done:
 
 	return TRUE;
 }
@@ -274,6 +304,7 @@ static int serial_start(const char *pathname)
 	g_io_channel_set_close_on_unref(io, TRUE);
 
 	session = g_new0(struct session, 1);
+
 	/* Watch knotd socket */
 	session->knotd_io = g_io_channel_unix_new(knotdfd);
 	g_io_channel_set_flags(session->knotd_io, G_IO_FLAG_NONBLOCK, NULL);

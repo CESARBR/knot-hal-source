@@ -32,7 +32,6 @@
 #include <termios.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
@@ -86,13 +85,22 @@ static int serial_listen(int sock)
 	int ttyfd;
 
 	memset(&term, 0, sizeof(term));
-
-	term.c_iflag = ~(IXON | IXOFF | IXANY);
-	term.c_oflag = ~OPOST;
-	term.c_cflag = CRTSCTS | CS8 | CLOCAL | CREAD;
-	term.c_lflag = ~(ICANON | ECHO | ECHOE | ISIG);
-	term.c_cc[VMIN] = serial_opts.vmin;
-	term.c_cc[VTIME] = 0;
+	/*
+	 * 8-bit characters, no parity bit,no Bit mask for data bits
+	 * only need 1 stop bit
+	 */
+	term.c_cflag &= ~PARENB;
+	term.c_cflag &= ~CSTOPB;
+	term.c_cflag &= ~CSIZE;
+	term.c_cflag |= CS8;
+	/* No flow control*/
+	term.c_cflag &= ~CRTSCTS;
+	/* Read block until 2 bytes arrives */
+	term.c_cc[VMIN] = 2;
+	/* Or 0.075 seconds read timeout */
+	term.c_cc[VTIME] = 0.75;
+	/* Turn on READ & ignore ctrl lines */
+	term.c_cflag |= CREAD | CLOCAL;
 
 	cfsetospeed(&term, B9600);
 	cfsetispeed(&term, B9600);
@@ -100,8 +108,8 @@ static int serial_listen(int sock)
 	ttyfd = open(serial_opts.tty, O_RDWR | O_NOCTTY);
 	if (ttyfd < 0)
 		return -errno;
-
-	tcsetattr(sock, TCSANOW, &term);
+	tcflush(ttyfd, TCIFLUSH);
+	tcsetattr(ttyfd, TCSANOW, &term);
 
 	return ttyfd;
 }
@@ -114,7 +122,7 @@ static int serial_accept(int srv_sockfd)
 
 static int serial_connect(int sock, uint8_t to_addr)
 {
-	/*TODO*/
+	/*TODO: Already implemented in ktool*/
 	return 0;
 }
 
