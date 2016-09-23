@@ -9,7 +9,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+#ifdef ARDUINO
+#include <avr_errno.h>
+#include <avr_unistd.h>
+#else
 #include <errno.h>
+#endif
 
 #include "comm_private.h"
 #include "nrf24l01.h"
