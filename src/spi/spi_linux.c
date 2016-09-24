@@ -76,6 +76,9 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 
 	memset(data_ioc, 0, sizeof(data_ioc));
 
+	/* If tx isn't empty, tx contains the command that will be send
+	 * to spi( read or write command)
+	 */
 	if (tx != NULL && ltx != 0) {
 		pdummy = (uint8_t *) malloc(ltx);
 		if (pdummy == NULL)
@@ -96,6 +99,9 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 
 	}
 
+	/* rx will receive from spi the value of the command that was
+	 * send previously
+	 */
 	if (rx != NULL && lrx != 0) {
 		pdata_ioc->tx_buf = (unsigned long) rx;
 		pdata_ioc->rx_buf = (unsigned long) rx;
