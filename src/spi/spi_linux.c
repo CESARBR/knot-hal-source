@@ -11,7 +11,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
@@ -43,11 +42,8 @@ int spi_init(const char *dev)
 	spi_fd = open(dev, O_RDWR);
 #endif
 
-	if (spi_fd < 1) {
-		err = errno;
-		fprintf(stderr, "open error(%d): '%s'\n", err, strerror(err));
-		return -err;
-	}
+	if (spi_fd < 1)
+		return -errno;
 
 	return 0;
 }
