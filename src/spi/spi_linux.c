@@ -125,5 +125,5 @@ int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
 	if (tx != NULL)
 		free(pdummy);
 
-	return ret ? 0 : -EIO;
+	return ret ? -errno : 0;
 }
