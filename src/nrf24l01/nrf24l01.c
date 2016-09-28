@@ -131,11 +131,12 @@ int8_t nrf24l01_set_standby(void)
 int8_t nrf24l01_init(const char *dev)
 {
 	uint8_t	value;
+	int8_t err;
 
 	/* example of dev = "/dev/spidev0.0" */
-	value = io_setup(dev);
-	if (value < 0)
-		return value;
+	err = io_setup(dev);
+	if (err < 0)
+		return err;
 
 	/* Reset device in power down mode */
 	outr(NRF24_CONFIG, NRF24_CONFIG_RST);
