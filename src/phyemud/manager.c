@@ -30,6 +30,7 @@
 #define KNOTD_UNIX_ADDRESS		"knot"
 
 static guint unix_watch_id = 0;
+static GSList *session_list = NULL;
 
 struct session {
 	unsigned int thing_id;	/* Thing event source */
@@ -67,9 +68,11 @@ static void knotd_io_destroy(gpointer user_data)
 {
 	struct session *session = user_data;
 
-	session->knotd_io = NULL;
-	session->knotd_id = 0;
 	printf("knotd_io_destroy\n\r");
+	session->knotd_id = 0;
+	session->knotd_io = NULL;
+
+
 }
 
 static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
@@ -103,23 +106,24 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 
 	return TRUE;
 }
-
+/* If thing initiated disconnection decrement ref count */
 static void generic_io_destroy(gpointer user_data)
 {
 	struct session *session = user_data;
 	GIOChannel *thing_io;
 
+	printf("generic_io_destroy\n\r");
 	thing_io = session->thing_io;
 
-	if (session->thing_id) {
+	if (session->thing_id > 0) {
 		g_source_remove(session->thing_id);
 
 		g_io_channel_shutdown(thing_io, FALSE, NULL);
 		g_io_channel_unref(thing_io);
 	}
 
+	session_list = g_slist_remove(session_list, session);
 	g_free(session);
-	printf("generic_io_destroy\n\r");
 }
 
 static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
@@ -131,8 +135,10 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	ssize_t nbytes;
 	int sock, knotdfd, offset, msg_size;
 
-	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
+	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
+		session->thing_id = 0;
 		return FALSE;
+	}
 
 	sock = g_io_channel_unix_get_fd(io);
 
@@ -172,6 +178,7 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	printf("Total bytes read = %d\n", offset);
 
 	knotdfd = g_io_channel_unix_get_fd(session->knotd_io);
+
 
 	if (write(knotdfd, buffer, msg_size) < 0) {
 		printf("write_knotd() error\n\r");
@@ -235,6 +242,8 @@ static gboolean generic_accept_cb(GIOChannel *io, GIOCondition cond,
 				knotd_io_watch, session, knotd_io_destroy);
 	g_io_channel_unref(knotd_io);
 
+	session_list = g_slist_prepend(session_list, session);
+
 	return TRUE;
 }
 
@@ -262,7 +271,7 @@ static int unix_start(void)
 
 	unix_watch_id = g_io_add_watch(io, cond, generic_accept_cb, &phy_unix);
 
-	/* Keep only one ref: server watch  */
+	/* Keep only one ref: server watch */
 	g_io_channel_unref(io);
 
 	return 0;
@@ -322,6 +331,8 @@ static int serial_start(const char *pathname)
 							generic_io_destroy);
 	g_io_channel_unref(io);
 
+	session_list = g_slist_prepend(session_list, session);
+
 	return 0;
 }
 
@@ -356,6 +367,20 @@ int manager_start(const char *serial, gboolean unix_sock)
 
 void manager_stop(void)
 {
+	GSList *list;
+	struct session *session;
+
 	unix_stop();
 	serial_stop();
+
+	printf("Manager stop\n");
+
+	for (list = session_list; list; list = g_slist_next(list)) {
+		session = list->data;
+
+		if (session->knotd_id > 0)
+			g_source_remove(session->knotd_id);
+	}
+	printf("freeing list\n");
+	g_slist_free(session_list);
 }
