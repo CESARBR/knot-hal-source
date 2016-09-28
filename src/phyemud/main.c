@@ -22,7 +22,7 @@
 #include "manager.h"
 
 static GMainLoop *main_loop;
-static const char *opt_serial = "/dev/ttyUSB0";
+static const char *opt_serial = NULL;
 static gboolean opt_unix = FALSE;
 
 static void sig_term(int sig)
@@ -55,6 +55,11 @@ int main(int argc, char *argv[])
 	}
 
 	g_option_context_free(context);
+
+	if (!opt_unix && opt_serial == NULL) {
+		printf("Missing arguments\n");
+		return EXIT_FAILURE;
+	}
 
 	err = manager_start(opt_serial, opt_unix);
 	if (err < 0)
