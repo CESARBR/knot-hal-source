@@ -132,7 +132,9 @@ int8_t nrf24l01_init(void)
 {
 	uint8_t	value;
 
-	io_setup();
+	value = io_setup();
+	if (value < 0)
+		return value;
 
 	/* Reset device in power down mode */
 	outr(NRF24_CONFIG, NRF24_CONFIG_RST);
