@@ -128,11 +128,12 @@ int8_t nrf24l01_set_standby(void)
 	return command(NRF24_NOP);
 }
 
-int8_t nrf24l01_init(void)
+int8_t nrf24l01_init(const char *dev)
 {
 	uint8_t	value;
 
-	value = io_setup();
+	/* example of dev = "/dev/spidev0.0" */
+	value = io_setup(dev);
 	if (value < 0)
 		return value;
 

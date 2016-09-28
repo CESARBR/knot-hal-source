@@ -252,7 +252,7 @@ void delay_us(float us);
 void delay_ms(float ms);
 void enable(void);
 void disable(void);
-int io_setup(void);
+int io_setup(const char *dev);
 void io_reset(void);
 
 

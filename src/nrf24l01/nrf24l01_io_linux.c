@@ -72,7 +72,7 @@ void disable(void)
 	GPIO_CLR = (1<<CE);
 }
 
-int io_setup(void)
+int io_setup(const char *dev)
 {
 	int err;
 
@@ -101,7 +101,7 @@ int io_setup(void)
 	OUT_GPIO(CE);
 
 	disable();
-	return spi_init("/dev/spidev0.0");
+	return spi_init(dev);
 }
 
 void io_reset(void)

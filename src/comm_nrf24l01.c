@@ -19,7 +19,7 @@
 
 static int nrf24l01_probe(void)
 {
-	return nrf24l01_init();
+	return nrf24l01_init("/dev/spidev0.0");
 }
 
 static void nrf24l01_remove(void)

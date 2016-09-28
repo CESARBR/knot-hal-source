@@ -33,7 +33,7 @@ void disable(void)
 	PORTB &= ~(1 << CE);
 }
 
-int io_setup(void)
+int io_setup(const char *dev)
 {
 	/*
 	* PB1 = 0 (digital PIN 9) => CE = 0
