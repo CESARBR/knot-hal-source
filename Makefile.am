@@ -1,5 +1,5 @@
 AM_MAKEFLAGS = --no-print-directory
-SUBDIRS = src src/spi/ src/nrf24l01 src/hal/storage
+SUBDIRS = src src/spi/ src/nrf24l01 src/hal/storage src/hal/time
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
@@ -24,8 +24,7 @@ src_phynrfd_phynrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
 				-I$(top_srcdir)/src/spi \
 				-I$(top_srcdir)/src/nrf24l01 \
-				-I$(top_srcdir)/nrf \
-				-I$(top_srcdir)/include
+				-I$(top_srcdir)/nrf
 
 src_phyemud_phyemud_SOURCES = src/phyemud/main.c \
 			src/comm_private.h \
