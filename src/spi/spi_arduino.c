@@ -12,6 +12,11 @@
 #include <stdlib.h>
 #include "spi.h"
 
+/*
+ * FIXME: This code works only with Arduino UNO e Pro Mini
+ * It's necessary change the values of pins to work with other Arduinos
+ * e.g., MEGA: CSN = 0, MOSI = 2, MISO = 3, SCK = 1.
+*/
 #define CSN		2
 #define MOSI		3
 #define MISO		4
