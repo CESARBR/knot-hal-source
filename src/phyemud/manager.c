@@ -133,7 +133,7 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	struct phy_driver *ops = session->ops;
 	char buffer[PACKET_SIZE_MAX];
 	ssize_t nbytes;
-	int sock, knotdfd, offset, msg_size;
+	int sock, knotdfd, offset, msg_size, err, remaining;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
 		session->thing_id = 0;
@@ -165,14 +165,18 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	offset = nbytes;
 	/* If payload + header (2 Bytes) < nbytes, keep reading */
 	while (offset < msg_size) {
-		nbytes = ops->recv(sock, buffer + offset,
-						sizeof(buffer - offset));
-		if (nbytes < 0) {
-			 /* Malformed datagram: ignore received data */
+		remaining = sizeof(buffer) - offset;
+		if (remaining > 0)
+			nbytes = ops->recv(sock, buffer + offset, remaining);
+		else
 			goto done;
-		}
-
-		offset += nbytes;
+		err = errno;
+		/* Only consider nbytes < 0 when errno is not EAGAIN*/
+		if (nbytes < 0 && err != EAGAIN) {
+			/* Malformed datagram: ignore received data */
+			goto done;
+		} else if (nbytes > 0)
+			offset += nbytes;
 	}
 
 	printf("Total bytes read = %d\n", offset);
