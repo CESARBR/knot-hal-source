@@ -188,8 +188,8 @@ static gboolean generic_accept_cb(GIOChannel *io, GIOCondition cond,
 {
 	GIOChannel *thing_io, *knotd_io;
 	int cli_sock, srv_sock, knotdfd;
-	struct session *session = user_data;
-	struct phy_driver *ops = session->ops;
+	struct session *session;
+	struct phy_driver *ops = user_data;
 
 	if (cond & (G_IO_NVAL | G_IO_HUP | G_IO_ERR))
 		return FALSE;
@@ -218,6 +218,7 @@ static gboolean generic_accept_cb(GIOChannel *io, GIOCondition cond,
 	g_io_channel_set_flags(thing_io, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_set_close_on_unref(thing_io, TRUE);
 
+	session = g_new0(struct session, 1);
 	session->knotd_io = knotd_io;
 	session->thing_io = thing_io;
 	session->ops = ops;
@@ -239,7 +240,6 @@ static gboolean generic_accept_cb(GIOChannel *io, GIOCondition cond,
 
 static int unix_start(void)
 {
-	struct session *session;
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	GIOChannel *io;
 	int sock;
@@ -260,10 +260,7 @@ static int unix_start(void)
 	g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_set_close_on_unref(io, TRUE);
 
-	session = g_new0(struct session, 1);
-	session->ops = &phy_unix;
-
-	unix_watch_id = g_io_add_watch(io, cond, generic_accept_cb, session);
+	unix_watch_id = g_io_add_watch(io, cond, generic_accept_cb, &phy_unix);
 
 	/* Keep only one ref: server watch  */
 	g_io_channel_unref(io);
