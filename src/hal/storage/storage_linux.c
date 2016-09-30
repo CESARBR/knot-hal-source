@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <glib.h>
 
-#include "storage.h"
+#include "include/storage.h"
 
 #define ADDR_LEN  7
 
