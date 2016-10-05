@@ -1,5 +1,5 @@
 AM_MAKEFLAGS = --no-print-directory
-SUBDIRS = src src/spi/ src/nrf24l01 src/hal/storage src/hal/time
+SUBDIRS = src src/spi/ src/nrf24l01 src/hal/storage src/hal/time src/hal/log
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
