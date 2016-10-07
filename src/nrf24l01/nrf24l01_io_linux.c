@@ -1,11 +1,9 @@
 #include <unistd.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <string.h>
 #include "nrf24l01_io.h"
 #include "spi.h"
 
@@ -74,27 +72,20 @@ void disable(void)
 
 int io_setup(const char *dev)
 {
-	int err;
+	int mem_fd;
 
-	/* open /dev/mem */
-	int mem_fd = open("/dev/mem", O_RDWR|O_SYNC);
+	mem_fd = open("/dev/mem", O_RDWR|O_SYNC);
 
-	if (mem_fd < 0) {
-
-		err = errno;
-		fprintf(stderr, "open error(%d): '%s'\n", err, strerror(err));
-		return -err;
-	}
+	if (mem_fd < 0)
+		return -errno;
 
 	gpio = (volatile unsigned *)mmap(NULL, BLOCK_SIZE,
 						PROT_READ | PROT_WRITE,
 						MAP_SHARED, mem_fd, GPIO_BASE);
 	close(mem_fd);
-	if (gpio == MAP_FAILED) {
-		err = errno;
-		fprintf(stderr, "mmap error: '%s'\n", strerror(err));
-		return -err;
-	}
+
+	if (gpio == MAP_FAILED)
+		return -errno;
 
 	GPIO_CLR = (1<<CE);
 	INP_GPIO(CE);
