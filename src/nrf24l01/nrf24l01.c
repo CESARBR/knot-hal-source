@@ -190,10 +190,23 @@ int8_t nrf24l01_init(const char *dev)
 	outr(NRF24_EN_RXADDR, inr(NRF24_EN_RXADDR)
 		& ~NRF24_EN_RXADDR_MASK);
 
-	/* Enable dynamic payload to all pipes */
+	/*
+	 * Features available:
+	 * EN_DPL Enable dynamic payload to all pipes -> Enable
+	 * EN_ACK_PAY: Enables Payload with ACK -> Disable
+	 * EN_DYN_ACK: Enables the W_TX_PAYLOAD_NOACK command -> Disable
+	 */
+
+	/*
+	 * A problem occurred when nrf2l01+PA+LNA communicates
+	 * with nrf2l01+ (without antenna), the ack packages was lost.
+	 * The feature EN_DYN_ACK was disable and the communicates now work.
+	 * As EN_DYN_ACK isn't enable all the pipe will work with
+	 * ack by default.
+	 * The option no ack can be set in function nrf24l01_set_ptx.
+	 */
 	outr(NRF24_FEATURE, (inr(NRF24_FEATURE) & ~NRF24_FEATURE_MASK)
-		| NRF24_FT_EN_DPL | NRF24_FT_EN_ACK_PAY
-		| NRF24_FT_EN_DYN_ACK);
+		| NRF24_FT_EN_DPL);
 
 	value = inr(NRF24_DYNPD) & ~NRF24_DYNPD_MASK;
 	value |= NRF24_DPL_P5 | NRF24_DPL_P4;
@@ -281,11 +294,23 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 * the radio will be the Primary Transmitter (PTX).
 * See page 31 of nRF24L01_Product_Specification_v2_0.pdf
 */
-int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
+int8_t nrf24l01_set_ptx(uint8_t pipe_addr, bool ack)
 {
 	/* put the radio in mode standby-1 */
 	set_standby1();
 	/* TX Settling */
+
+	/*
+	 * If the ack option is disable is necessary disable auto-ack in pipe 0
+	 * because ack always arrive in pipe 0
+	 * and the ack is enable for all pipe by default
+	 * as configured in init
+	 */
+	if (!ack)
+		outr(NRF24_EN_AA, inr(NRF24_EN_AA) & ~pipe_reg[0].enaa);
+	else
+		outr(NRF24_EN_AA, inr(NRF24_EN_AA) | pipe_reg[0].enaa);
+
 	set_address_pipe(NRF24_RX_ADDR_P0, pipe_addr);
 	set_address_pipe(NRF24_TX_ADDR, pipe_addr);
 	#if (NRF24_ARC != NRF24_ARC_DISABLE)
@@ -311,7 +336,7 @@ int8_t nrf24l01_set_ptx(uint8_t pipe_addr)
 * See NRF24L01 datasheet table 20. 'ack' parameter selects
 * the SPI NRF24 command to be sent.
 */
-int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
+int8_t nrf24l01_ptx_data(void *pdata, uint16_t len)
 {
 
 	if (pdata == NULL || len == 0 || len > NRF24_PAYLOAD_SIZE)
@@ -322,8 +347,7 @@ int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack)
 	 * of NRF24L01 after entering data in TX FIFO
 	 * 1: TX FIFO full or 0: Available locations in TX FIFO.
 	 */
-	return ST_TX_STATUS(command_data(!ack ?
-			NRF24_W_TX_PAYLOAD_NOACK : NRF24_W_TX_PAYLOAD,
+	return ST_TX_STATUS(command_data(NRF24_W_TX_PAYLOAD,
 			pdata, len));
 }
 

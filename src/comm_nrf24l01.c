@@ -74,9 +74,9 @@ static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
 		return -EINVAL;
 
 	/* Puts the radio in TX mode - sockfd address */
-	nrf24l01_set_ptx(sockfd);
-	/* Transmits the data disabling Acknowledgment */
-	err = nrf24l01_ptx_data((void *)buffer, len, false);
+	nrf24l01_set_ptx(sockfd, true);
+
+	err = nrf24l01_ptx_data((void *)buffer, len);
 
 	if (err == NRF24_TX_FIFO_FULL)
 		return -EAGAIN;
