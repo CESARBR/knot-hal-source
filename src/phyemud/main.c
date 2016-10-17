@@ -65,6 +65,9 @@ int main(int argc, char *argv[])
 	if (err < 0)
 		return EXIT_FAILURE;
 
+	/* Set user id to nobody */
+	setuid(65534);
+
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
 	signal(SIGPIPE, SIG_IGN);
