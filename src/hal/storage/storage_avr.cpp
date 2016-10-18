@@ -31,7 +31,7 @@ int hal_storage_write(uint16_t addr, const uint8_t *value, uint16_t len)
 
 	/* E2END represents the last EEPROM address */
 	for (i = 0; i < len; i++) {
-		if ((addr + i) > (E2END + 1)) {
+		if ((addr + i) > (E2END + 1))
 			break;
 
 		eeprom_write_byte(addr + i, value[i]);
