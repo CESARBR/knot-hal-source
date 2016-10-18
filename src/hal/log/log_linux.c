@@ -24,7 +24,8 @@ int hal_log_open(const char *pathname)
 {
 	setlocale(LC_ALL, "");
 
-	fd = open(pathname, O_CREAT | O_WRONLY | O_APPEND);
+	fd = open(pathname, O_CREAT | O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR |
+					S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 	if (fd == -1)
 		return -errno;
 
