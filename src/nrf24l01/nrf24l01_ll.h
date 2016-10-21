@@ -7,6 +7,8 @@
  *
  */
 
+#define NRF24_MTU					32
+
 /* Common to all devices */
 #define NRF24_AA_MGMT_CHANNEL		0xDE96BED98D /* Access Address used for management */
 
@@ -74,6 +76,11 @@ struct nrf24_ll_data_pdu {
 	uint8_t rfu;  /* Reserved for future use */
 	uint8_t payload[0];
 } __attribute__ ((packed));
+
+#define DATA_HDR_SIZE 			sizeof(struct nrf24_ll_data_pdu)
+#define NRF24_PW_MSG_SIZE		(NRF24_MTU - DATA_HDR_SIZE)
+/* 6 bits (64 packets) are reserved to sequence number*/
+#define NRF24_MAX_MSG_SIZE		(64 * NRF24_PW_MSG_SIZE)
 
 struct nrf14_ll_crtl_pdu {
 	uint8_t opcode;
