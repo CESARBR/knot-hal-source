@@ -33,6 +33,36 @@ static void nrf24l01_remove(void)
 
 }
 
+static ssize_t send_data(int sockfd, const void *buffer, size_t len)
+{
+	int err;
+	/* Puts the radio in TX mode  enabling Acknowledgment */
+	nrf24l01_set_ptx(sockfd, true);
+
+	/* Transmits the data */
+	nrf24l01_ptx_data((void *)buffer, len);
+
+	/* Waits for ACK */
+	err = nrf24l01_ptx_wait_datasent();
+
+	if (err < 0)
+		return err;
+	/*
+	 * The radio do not receive and send at the same time
+	 * It's a good practice to put the radio in RX mode
+	 * and only switch to TX mode when transmitting data.
+	 */
+
+	nrf24l01_set_prx();
+
+	/*
+	 * On success, the number of bytes written is returned
+	 * Otherwise, -1 is returned.
+	 */
+
+	return len;
+}
+
 static int nrf24l01_open(const char *pathname)
 {
 	/*
@@ -69,30 +99,13 @@ static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
 {
 	int err;
 
-	/* TODO: break the buffer in parts if the len > NRF24_MTU*/
+	/* TODO: Fragment buffer if the len > NRF24_MTU*/
 	if (len > NRF24_PAYLOAD_SIZE)
 		return -EINVAL;
 
-	/* Puts the radio in TX mode - sockfd address */
-	nrf24l01_set_ptx(sockfd, true);
+	err = send_data(sockfd, buffer, len);
 
-	err = nrf24l01_ptx_data((void *)buffer, len);
-
-	if (err == NRF24_TX_FIFO_FULL)
-		return -EAGAIN;
-	/*
-	 * The radio do not receive and send at the same time
-	 * It's a good practice to put the radio in RX mode
-	 * and only switch to TX mode when transmitting data.
-	 */
-
-	nrf24l01_set_prx();
-
-	/*
-	 * On success, the number of bytes written is returned
-	 * Otherwise, -1 is returned.
-	 */
-	return len;
+	return err;
 }
 
 static int nrf24l01_listen(int sockfd)
