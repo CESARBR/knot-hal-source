@@ -70,8 +70,6 @@ static ssize_t read_data(int sockfd, void *buffer, size_t len)
 {
 	ssize_t length = -1;
 
-	/* TODO: check if the data received is fragmented or not */
-
 	/* If the pipe available */
 	if (nrf24l01_prx_pipe_available() == sockfd)
 		/* Copy data to buffer */
@@ -101,8 +99,56 @@ static int nrf24l01_open(const char *pathname)
 
 static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 {
+	ssize_t ilen;
+	size_t plen;
+	uint8_t lid, datagram[NRF24_MTU];
+	const struct nrf24_ll_data_pdu *ipdu = (void *)datagram;
+	static int offset = 0;
+	static uint8_t seqnumber = 0;
 
-	return read_data(sockfd, buffer, len);
+	if (len < 0)
+		return -EINVAL;
+
+	do {
+
+		/*
+		 * Reads the data,
+		 * on success, the number of bytes read is returned
+		 */
+		ilen = read_data(sockfd, datagram, NRF24_MTU);
+
+		if (ilen < 0)
+			return -EAGAIN;	/* Try again */
+
+		if (seqnumber != ipdu->nseq)
+			return -EILSEQ; /* Illegal byte sequence */
+
+		if (seqnumber == 0)
+			offset = 0;
+
+		/* Payloag length = input length - header size */
+		plen = ilen - DATA_HDR_SIZE;
+		lid = ipdu->lid;
+
+		if (lid == NRF24_PDU_LID_DATA_FRAG && plen < NRF24_PW_MSG_SIZE)
+			return -EBADMSG; /* Not a data message */
+
+		/* Reads no more than len bytes */
+		if (offset + plen > len)
+			plen = len - offset;
+
+		memcpy(buffer + offset, ipdu->payload, plen);
+		offset += plen;
+		seqnumber++;
+
+	} while (lid != NRF24_PDU_LID_DATA_END && offset < len);
+
+	/* If the complete msg is received, resets the sequence number */
+	seqnumber = 0;
+
+	/* Returns de number of bytes received */
+	return offset;
+
 }
 
 static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)

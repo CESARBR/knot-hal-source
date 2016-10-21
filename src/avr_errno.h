@@ -9,3 +9,5 @@
 
 #define	EINVAL			22	/* Invalid argument */
 #define EAGAIN			11	/* Resource temporarily unavailable */
+#define EBADMSG			74	/* Not a data message */
+#define EILSEQ			84	/* Illegal byte sequence */
