@@ -63,6 +63,25 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 	return len;
 }
 
+static ssize_t read_data(int sockfd, void *buffer, size_t len)
+{
+	ssize_t length = -1;
+
+	/* TODO: check if the data received is fragmented or not */
+
+	/* If the pipe available */
+	if (nrf24l01_prx_pipe_available() == sockfd)
+		/* Copy data to buffer */
+		length = nrf24l01_prx_data(buffer, len);
+
+	/*
+	 * On success, the number of bytes read is returned
+	 * Otherwise, -1 is returned.
+	 */
+
+	return length;
+}
+
 static int nrf24l01_open(const char *pathname)
 {
 	/*
@@ -79,20 +98,8 @@ static int nrf24l01_open(const char *pathname)
 
 static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 {
-	ssize_t length = -1;
 
-	/* TODO: check if the data received is fragmented or not */
-
-	/* If the pipe available */
-	if (nrf24l01_prx_pipe_available() == sockfd)
-		/* Copy data to buffer */
-		length = nrf24l01_prx_data(buffer, len);
-
-	/*
-	 * On success, the number of bytes read is returned
-	 * Otherwise, -1 is returned.
-	 */
-	return length;
+	return read_data(sockfd, buffer, len);
 }
 
 static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
