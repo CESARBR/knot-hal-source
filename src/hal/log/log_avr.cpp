@@ -24,7 +24,7 @@ int hal_log_open(const char *pathname)
 }
 
 void logger(const char *file, const char *function, long line,
-				const char *args, const char *category);
+				const char *args, const char *category)
 {
 	Serial.print(category);
 	Serial.print(file);
