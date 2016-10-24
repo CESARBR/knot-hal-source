@@ -7,6 +7,7 @@
  *
  */
 
+#include <Arduino.h>
 #include "time.h"
 
 uint32_t hal_time_ms(void)
