@@ -3,7 +3,7 @@ lib_LIBRARIES = libhaltime.a
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 
 libhaltime_a_SOURCES = time_linux.c
-libhaltime_a_CPPFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
+libhaltime_a_CPPFLAGS = $(AM_CFLAGS)
 libhaltime_a_DEPENDENCIES = $(top_srcdir)/include/time.h
 
 all-local:
