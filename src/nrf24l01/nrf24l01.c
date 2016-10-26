@@ -15,10 +15,6 @@
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
 
-/* Pipes addresses base */
-#define PIPE0_ADDR_BASE 0x55aa55aa5aLL
-#define PIPE1_ADDR_BASE 0xaa55aa55a5LL
-
 typedef struct {
 	uint8_t enaa,
 	en_rxaddr,
@@ -109,7 +105,8 @@ static inline int8_t command_data(uint8_t cmd, void *pd, uint16_t len)
 static void set_address_pipe(uint8_t reg, uint8_t *pipe_addr)
 {
 	uint8_t addr[5];
-	/* memcpy is necessary because outr_data clean value after send */
+
+	/* memcpy is necessary because outr_data cleans value after send */
 	memcpy(addr, pipe_addr, sizeof(addr));
 	uint16_t len;
 	switch (reg) {

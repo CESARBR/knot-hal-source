@@ -41,6 +41,8 @@
 #define NRF24_PIPE5_ADDR		5
 #define NRF24_PIPE_ADDR_MAX		NRF24_PIPE5_ADDR
 
+#define PIPE_BROADCAST NRF24_PIPE0_ADDR
+
 #define _CONSTRAIN(x, l, h)	((x) < (l) ? (l) : ((x) > (h) ? (h) : (x)))
 #define _MIN(a, b)		((a) < (b) ? (a) : (b))
 
