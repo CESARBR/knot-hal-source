@@ -307,6 +307,13 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 	return cli_sockfd;
 }
 
+
+static int nrf24L01_accept(int sockfd)
+{
+
+	return -ENOSYS;
+}
+
 struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
@@ -315,5 +322,6 @@ struct phy_driver nrf24l01 = {
 	.recv = nrf24l01_recv,
 	.send = nrf24l01_send,
 	.listen = nrf24l01_listen,
-	.connect = nrf24l01_connect
+	.connect = nrf24l01_connect,
+	.accept = nrf24L01_accept
 };
