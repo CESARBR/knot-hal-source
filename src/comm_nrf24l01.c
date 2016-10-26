@@ -262,6 +262,15 @@ static int nrf24l01_listen(int sockfd)
 	return 0;
 }
 
+
+void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa, int8_t pipe)
+{
+
+	nrf24l01_set_channel(channel);
+	nrf24l01_open_pipe(pipe, aa);
+	nrf24l01_set_prx();
+}
+
 static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 {
 	uint8_t datagram[NRF24_MTU];
@@ -292,6 +301,9 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 	if (err < 0)
 		return -1;
 
+	/* This function changes the radio to listen client in data channel */
+	nrf24l01_set_data_settings(channel_data, aa_pipes[cli_sockfd],
+		cli_sockfd);
 	return cli_sockfd;
 }
 
