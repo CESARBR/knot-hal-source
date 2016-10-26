@@ -310,6 +310,30 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 
 static int nrf24L01_accept(int sockfd)
 {
+	uint8_t datagram[NRF24_MTU];
+	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *) datagram;
+	struct nrf24_ll_mgmt_connect *payload =
+				(struct nrf24_ll_mgmt_connect *) ipdu->payload;
+	ssize_t len;
+	int err;
+
+	/* read connect_request from pipe broadcast */
+	len = read_data(PIPE_BROADCAST, datagram, NRF24_MTU);
+	if (len < 0)
+		return -1;
+
+	if (ipdu->type != NRF24_PDU_TYPE_CONNECT_REQ)
+		return -1;
+
+	/* If this packet is not for me*/
+	if (payload->dst_addr != addr_thing)
+		return -1;
+
+	/*
+	 * Changes the radio to data channel.
+	 * open the pipe 1 with access address received.
+	 */
+	nrf24l01_set_data_settings(payload->channel, payload->aa, 1);
 
 	return -ENOSYS;
 }
