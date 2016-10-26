@@ -34,6 +34,8 @@ static uint8_t aa_pipes[6][5] = {
 	{0x6B, 0x96, 0xB6, 0xC1, 0xF0}
 };
 
+int8_t pipes_allocate[] = {0, 0, 0, 0, 0, 0};
+
 #define NRF24_PIPE0		0
 
 static int nrf24l01_probe(void)
@@ -104,6 +106,20 @@ static int nrf24l01_open(const char *pathname)
 	 * TODO: Implement addressing
 	 */
 
+	/*
+	 * Returns an identification for the available pipe.
+	 * Index '0' is reserved for pipe zero. Assigning '1'
+	 * means that the pipe 'i' is now allocated (busy).
+	 */
+	int i;
+
+	for (i = 1; i < sizeof(pipes_allocate); i++) {
+		if (pipes_allocate[i] == 0) {
+			/* one peer for pipe*/
+			pipes_allocate[i] = 1;
+			return i;
+		}
+	}
 	return 0;
 }
 
