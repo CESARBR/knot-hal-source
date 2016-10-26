@@ -11,3 +11,4 @@
 #define EAGAIN			11	/* Resource temporarily unavailable */
 #define EBADMSG			74	/* Not a data message */
 #define EILSEQ			84	/* Illegal byte sequence */
+#define ENOSYS			38	/*  Function not implemented */
