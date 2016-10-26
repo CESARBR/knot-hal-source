@@ -52,7 +52,7 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 {
 	int err;
 	/* Puts the radio in TX mode  enabling Acknowledgment */
-	nrf24l01_set_ptx(sockfd, true);
+	nrf24l01_set_ptx(aa_pipes[sockfd], true);
 
 	/* Transmits the data */
 	nrf24l01_ptx_data((void *)buffer, len);
@@ -240,7 +240,7 @@ static int nrf24l01_listen(int sockfd)
 		return -EINVAL;
 
 	/* Open pipe zero in the sockfd address */
-	nrf24l01_open_pipe(NRF24_PIPE0, sockfd);
+	nrf24l01_open_pipe(NRF24_PIPE0, aa_pipes[NRF24_PIPE0]);
 
 	/*
 	 * Standby mode is used to minimize average

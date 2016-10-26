@@ -46,7 +46,7 @@ typedef enum {
 
 static en_modes_t m_mode = UNKNOWN_MODE;
 
-static uint8_t m_pipe0_addr = NRF24_PIPE0_ADDR;
+static uint8_t m_pipe0_addr[5];
 
 #define DATA_SIZE	sizeof(uint8_t)
 
@@ -105,12 +105,13 @@ static inline int8_t command_data(uint8_t cmd, void *pd, uint16_t len)
 	return command(NRF24_NOP);
 }
 
-static void set_address_pipe(uint8_t reg, uint8_t pipe_addr)
+/* Set address in pipe */
+static void set_address_pipe(uint8_t reg, uint8_t *pipe_addr)
 {
+	uint8_t addr[5];
+	/* memcpy is necessary because outr_data clean value after send */
+	memcpy(addr, pipe_addr, sizeof(addr));
 	uint16_t len;
-	uint64_t  addr = (pipe_addr == NRF24_PIPE0_ADDR) ?
-					PIPE0_ADDR_BASE : PIPE1_ADDR_BASE;
-
 	switch (reg) {
 	case NRF24_TX_ADDR:
 	case NRF24_RX_ADDR_P0:
@@ -121,7 +122,6 @@ static void set_address_pipe(uint8_t reg, uint8_t pipe_addr)
 		len = DATA_SIZE;
 	}
 
-	addr += (pipe_addr << 4) + pipe_addr;
 	outr_data(reg, &addr, len);
 }
 
@@ -225,8 +225,6 @@ int8_t nrf24l01_init(const char *dev)
 	command(NRF24_FLUSH_TX);
 	command(NRF24_FLUSH_RX);
 
-	m_pipe0_addr = NRF24_PIPE0_ADDR;
-
 	return 0;
 }
 
@@ -279,19 +277,16 @@ int8_t nrf24l01_set_channel(uint8_t ch)
 * 0 <= pipe <= 5
 * Pipes are enabled with the bits in the EN_RXADDR
 */
-int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
+int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t *pipe_addr)
 {
 	pipe_reg_t rpipe;
-
-	if (pipe > NRF24_PIPE_MAX || pipe_addr > NRF24_PIPE_ADDR_MAX)
-		return -1;
 
 	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
 
 	/* Enable pipe */
 	if (!(inr(NRF24_EN_RXADDR) & rpipe.en_rxaddr)) {
 		if (rpipe.rx_addr == NRF24_RX_ADDR_P0)
-			m_pipe0_addr = pipe_addr;
+			memcpy(m_pipe0_addr, pipe_addr, sizeof(m_pipe0_addr));
 
 		set_address_pipe(rpipe.rx_addr, pipe_addr);
 		outr(NRF24_EN_RXADDR, inr(NRF24_EN_RXADDR)
@@ -307,7 +302,7 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr)
 * the radio will be the Primary Transmitter (PTX).
 * See page 31 of nRF24L01_Product_Specification_v2_0.pdf
 */
-int8_t nrf24l01_set_ptx(uint8_t pipe_addr, bool ack)
+int8_t nrf24l01_set_ptx(uint8_t *pipe_addr, bool ack)
 {
 	/* put the radio in mode standby-1 */
 	set_standby1();
@@ -328,12 +323,14 @@ int8_t nrf24l01_set_ptx(uint8_t pipe_addr, bool ack)
 	set_address_pipe(NRF24_TX_ADDR, pipe_addr);
 	#if (NRF24_ARC != NRF24_ARC_DISABLE)
 		/*
-		* Set ARC and ARD by pipe index to different
-		* retry periods to reduce data collisions
-		* compute ARD range: 1500us <= ARD[pipe] <= 4000us
+		* Set ARC and ARD retry periods
+		* ARD range is 1500us <= ARD <= 4000us
+		* the function NRF24_RETR_ARD receives v which
+		* 0 <= v <= 15 and
+		* 0 represents 250us and 15 represents 4000us
 		*/
 		outr(NRF24_SETUP_RETR,
-			NRF24_RETR_ARD(((pipe_addr * 2) + 5))
+			NRF24_RETR_ARD(5) /*1000us */
 			| NRF24_RETR_ARC(NRF24_ARC));
 	#endif
 	outr(NRF24_STATUS, NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
