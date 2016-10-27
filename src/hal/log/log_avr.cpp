@@ -13,14 +13,23 @@
 
 #define SERIAL_DATA_RATE 9600
 
+static bool status_enabled =  false;
+
 int hal_log_open(const char *pathname)
 {
 	/*
 	 * TODO: The pathname variable will be used
 	 * to set the serial port of the Arduino
 	 */
-	Serial.begin(SERIAL_DATA_RATE);
-	Serial.print("Serial communication enabled (");
+
+	if (!status_enabled) {
+		Serial.begin(SERIAL_DATA_RATE);
+
+		status_enabled = true;
+		Serial.print("Serial communication enabled (");
+	} else {
+		Serial.print("Serial communication already enabled (");
+	}
 	Serial.print(SERIAL_DATA_RATE);
 	Serial.println(")");
 
@@ -42,8 +51,12 @@ void logger(const char *file, const char *function, long line,
 
 void hal_log_close(void)
 {
-	Serial.print("Serial communication disabled (");
-	Serial.print(SERIAL_DATA_RATE);
-	Serial.println(")");
-	Serial.end();
+	if (status_enabled) {
+		Serial.print("Serial communication disabled (");
+		Serial.print(SERIAL_DATA_RATE);
+		Serial.println(")");
+		Serial.end();
+		status_enabled = false;
+	}
+
 }
