@@ -28,6 +28,7 @@ static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
 static int opt_channel_aux = CHANNEL_DEFAULT;
+static uint8_t opt_tx = NRF24_PWR_0DBM;
 static int opt_tx_aux = 0;	/* 0 dBm */
 
 static void sig_term(int sig)
@@ -77,6 +78,26 @@ static gboolean inotify_cb(GIOChannel *gio, GIOCondition condition,
 	return TRUE;
 }
 
+static uint8_t set_tx_input(int tx_pwr)
+{
+	switch (tx_pwr) {
+
+	case 0:
+		return NRF24_PWR_0DBM;
+
+	case -6:
+		return NRF24_PWR_6DBM;
+
+	case -12:
+		return NRF24_PWR_12DBM;
+
+	case -18:
+		return NRF24_PWR_18DBM;
+	}
+
+	return NRF24_PWR_0DBM;
+}
+
 int main(int argc, char *argv[])
 {
 	GOptionContext *context;
@@ -95,6 +116,8 @@ int main(int argc, char *argv[])
 		g_option_context_free(context);
 		return EXIT_FAILURE;
 	}
+
+	opt_tx = set_tx_input(opt_tx_aux);
 
 	g_option_context_free(context);
 
