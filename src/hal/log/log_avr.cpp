@@ -11,14 +11,18 @@
 
 #include "log.h"
 
+#define SERIAL_DATA_RATE 9600
+
 int hal_log_open(const char *pathname)
 {
 	/*
 	 * TODO: The pathname variable will be used
 	 * to set the serial port of the Arduino
 	 */
-	Serial.begin(9600);
-	Serial.println("Serial communication enabled (9600)");
+	Serial.begin(SERIAL_DATA_RATE);
+	Serial.print("Serial communication enabled (");
+	Serial.print(SERIAL_DATA_RATE);
+	Serial.println(")");
 
 	return 0;
 }
@@ -38,6 +42,8 @@ void logger(const char *file, const char *function, long line,
 
 void hal_log_close(void)
 {
-	Serial.println("Serial communication disabled (9600)");
+	Serial.print("Serial communication disabled (");
+	Serial.print(SERIAL_DATA_RATE);
+	Serial.println(")");
 	Serial.end();
 }
