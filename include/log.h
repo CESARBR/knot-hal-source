@@ -10,6 +10,10 @@
 #ifndef __HAL_LOG_H__
 #define __HAL_LOG_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int hal_log_open(const char *pathname);
 
 void logger(const char *file, const char *function, long line,
@@ -28,5 +32,9 @@ void logger(const char *file, const char *function, long line,
 }
 
 void hal_log_close(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HAL_LOG_H__ */
