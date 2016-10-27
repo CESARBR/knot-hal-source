@@ -33,6 +33,7 @@ src_nrfd_nrfd_LDADD = libs/libhallog.a \
 src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
 src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/nrf24l01 \
 				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm
 

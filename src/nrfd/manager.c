@@ -17,9 +17,10 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <glib.h>
+#include <json-c/json.h>
 
 #include "phy_driver_private.h"
-
+#include "nrf24l01_io.h"
 #include "manager.h"
 
 static struct phy_driver *driver = &nrf24l01;

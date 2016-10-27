@@ -14,28 +14,46 @@
 #include <glib.h>
 #include <sys/inotify.h>
 
+#include "nrf24l01_io.h"
 #include "manager.h"
 
 #define BUF_LEN (sizeof(struct inotify_event))
+#define CHANNEL_DEFAULT NRF24_CH_MIN
 
 static GMainLoop *main_loop;
 
+/* temporary default configuration file path */
+static const char *opt_cfg = "gatewayConfig.json";
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
+static int opt_channel_aux = CHANNEL_DEFAULT;
+static int opt_tx_aux = 0;	/* 0 dBm */
 
 static void sig_term(int sig)
 {
 	g_main_loop_quit(main_loop);
 }
 
+/*
+ * OPTIONAL: describe the valid values ranges
+ * for tx and channel
+ */
 static GOptionEntry options[] = {
+
+	{ "config", 'f', 0, G_OPTION_ARG_STRING, &opt_cfg,
+					"configuration file path", NULL },
 	{ "host", 'h', 0, G_OPTION_ARG_STRING, &opt_host,
 					"host", "Host exposing nRF24L01 SPI" },
 	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port,
 					"port", "Remote port" },
 	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
 					"spi", "SPI device path" },
+	{ "channel", 'c', 0, G_OPTION_ARG_INT, &opt_channel_aux,
+					"channel", "Broadcast channel" },
+	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_tx_aux,
+					"tx_power",
+		"TX power: transmition signal strength in dBm" },
 	{ NULL },
 };
 
