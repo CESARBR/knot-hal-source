@@ -209,7 +209,8 @@ static int tcp_init(const char *host, int port)
 	return 0;
 }
 
-int manager_start(const char *host, int port, const char *spi)
+int manager_start(const char *file, const char *host, int port,
+			const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
 	if (host == NULL)
 		return radio_init(spi);

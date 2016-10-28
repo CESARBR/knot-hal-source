@@ -167,7 +167,8 @@ int main(int argc, char *argv[])
 	else
 		printf("Native SPI mode\n");
 
-	err = manager_start(opt_host, opt_port, opt_spi);
+	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
+						opt_tx);
 	if (err < 0) {
 		g_main_loop_unref(main_loop);
 		return EXIT_FAILURE;
