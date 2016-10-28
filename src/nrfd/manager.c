@@ -7,6 +7,7 @@
  *
  */
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -209,9 +210,40 @@ static int tcp_init(const char *host, int port)
 	return 0;
 }
 
+static char *load_config(const char *file)
+{
+	char *buffer = NULL;
+	int length;
+	FILE *fl = fopen(file, "r");
+
+	if (fl == NULL) {
+		fprintf(stderr, "No such file available: %s\n", file);
+		return NULL;
+	}
+
+	fseek(fl, 0, SEEK_END);
+	length = ftell(fl);
+	fseek(fl, 0, SEEK_SET);
+
+	buffer = (char *) malloc((length+1)*sizeof(char));
+	if (buffer) {
+		fread(buffer, length, 1, fl);
+		buffer[length] = '\0';
+	}
+	fclose(fl);
+
+	return buffer;
+}
+
 int manager_start(const char *file, const char *host, int port,
 			const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
+	char *json_str;
+
+	json_str = load_config(file);
+	if (json_str == NULL)
+		printf("Invalid file\nCommand line settings will be set\n");
+
 	if (host == NULL)
 		return radio_init(spi);
 	else
