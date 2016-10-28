@@ -235,14 +235,42 @@ static char *load_config(const char *file)
 	return buffer;
 }
 
+static uint8_t set_tx_input(int tx_pwr)
+{
+	switch (tx_pwr) {
+
+	case 0:
+		return NRF24_PWR_0DBM;
+
+	case -6:
+		return NRF24_PWR_6DBM;
+
+	case -12:
+		return NRF24_PWR_12DBM;
+
+	case -18:
+		return NRF24_PWR_18DBM;
+	}
+
+	return NRF24_PWR_0DBM;
+}
+
 int manager_start(const char *file, const char *host, int port,
 			const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
 	char *json_str;
+	/*
+	 * This variable will recive the paramters from
+	 * the configuration file once its parameters get
+	 * extracted
+	 */
+	int tx_pwr_aux = 0;
 
 	json_str = load_config(file);
 	if (json_str == NULL)
 		printf("Invalid file\nCommand line settings will be set\n");
+
+	set_tx_input(tx_pwr_aux);
 
 	if (host == NULL)
 		return radio_init(spi);
