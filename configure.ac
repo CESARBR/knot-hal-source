@@ -32,7 +32,14 @@ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.28, dummy=no,
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
+PKG_CHECK_MODULES(JSON, json-c,
+  [AC_DEFINE([HAVE_JSON],[1],[Use JSON])],
+  [AC_MSG_ERROR("json-c missing")])
+AC_SUBST(JSON_CFLAGS)
+AC_SUBST(JSON_LIBS)
+
 AC_CONFIG_FILES([Makefile src/spi/Makefile src/nrf24l01/Makefile \
 		src/hal/storage/Makefile src/hal/time/Makefile \
 		src/hal/log/Makefile src/hal/comm/Makefile])
+
 AC_OUTPUT

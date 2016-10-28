@@ -255,31 +255,86 @@ static uint8_t set_tx_input(int tx_pwr)
 	return NRF24_PWR_0DBM;
 }
 
+/*
+ * TODO: Get "host", "spi" and "port"
+ * parameters when/if implemented
+ * in the json configuration file
+ */
+static int parse_config(const char *config, const char **host, int *port,
+			const char **spi, uint8_t *channel, uint8_t *tx_pwr)
+{
+	json_object *jobj, *obj_radio, *obj_tmp;
+
+	int tx_pwr_dBm, channel_json_input;
+
+	int err = -EINVAL;
+
+	jobj = json_tokener_parse(config);
+	if (jobj == NULL)
+		return -EINVAL;
+
+	if (!json_object_object_get_ex(jobj, "radio", &obj_radio))
+		goto done;
+
+	if (json_object_object_get_ex(obj_radio,  "channel", &obj_tmp)) {
+		channel_json_input = json_object_get_int(obj_tmp);
+
+		/*
+		 * Validate channel values
+		 * channel range 0 - 125 valid values
+		 */
+		if (channel_json_input > 125 || channel_json_input < 0) {
+			fprintf(stderr, "Invalid channel value: %d\n", channel_json_input);
+			channel_json_input = NRF24_CH_MIN;
+		}
+		*channel = channel_json_input;
+	}
+
+	if (json_object_object_get_ex(obj_radio,  "powerRate", &obj_tmp)) {
+		tx_pwr_dBm = json_object_get_int(obj_tmp);
+
+		/*
+		 * Sets tx_pwr
+		 * write Power Amplifier(PA) control in
+		 * TX mode: 0 <= v <= 3 valid values
+		 * and respectively to: -18dBm,
+		 * -12dBm, -6 dBm and 0dBm
+		 */
+		*tx_pwr = set_tx_input(tx_pwr_dBm);
+	}
+
+	/* Success */
+	err = 0;
+
+done:
+	/* Free mem used in json parse: */
+	json_object_put(jobj);
+	return err;
+}
+
 int manager_start(const char *file, const char *host, int port,
 			const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
 	char *json_str;
-	/*
-	 * This variable will recive the paramters from
-	 * the configuration file once its parameters get
-	 * extracted
-	 */
-	int tx_pwr_aux = 0;
 
 	json_str = load_config(file);
+
 	if (json_str == NULL)
 		printf("Invalid file\nCommand line settings will be set\n");
 
-	set_tx_input(tx_pwr_aux);
+	else {
+
+		if (parse_config(json_str, &host, &port, &spi, &channel, &tx_pwr) < 0)
+			printf("Invalid file parameters\n");
+	}
 
 	if (host == NULL)
 		return radio_init(spi);
-	else
-		/*
-		 * TCP development mode: Linux connected to RPi(phynrfd radio
-		 * proxy). Connect to phynrfd routing all traffic over TCP.
-		 */
-		return tcp_init(host, port);
+	/*
+	 * TCP development mode: Linux connected to RPi(phynrfd radio
+	 * proxy). Connect to phynrfd routing all traffic over TCP.
+	 */
+	return tcp_init(host, port);
 }
 
 void manager_stop(void)
