@@ -64,7 +64,7 @@ static gboolean watch_accept_cb(gpointer user_data)
 	return TRUE;
 }
 
-static int radio_init(const char *spi)
+static int radio_init(const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
 	int retval, fd;
 
@@ -331,7 +331,7 @@ int manager_start(const char *file, const char *host, int port,
 	}
 
 	if (host == NULL)
-		return radio_init(spi);
+		return radio_init(spi, channel, tx_pwr);
 	/*
 	 * TCP development mode: Linux connected to RPi(phynrfd radio
 	 * proxy). Connect to phynrfd routing all traffic over TCP.
