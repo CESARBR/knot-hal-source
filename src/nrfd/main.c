@@ -159,14 +159,10 @@ int main(int argc, char *argv[])
 
 	/* starting inotify */
 	inotifyFD = inotify_init();
-	/*
-	 * The path to file gatewayConfig.json with radio parameters will be
-	 * received through command line in the future, this is just a temporary
-	 * path as example.
-	 */
-	wd = inotify_add_watch(inotifyFD, "gatewayConfig.json", IN_MODIFY);
+
+	wd = inotify_add_watch(inotifyFD, opt_cfg, IN_MODIFY);
 	if (wd == -1) {
-		printf("Error adding watch on: gatewayConfig.json\n");
+		printf("Error adding watch on: %s\n", opt_cfg);
 		close(inotifyFD);
 		manager_stop();
 		return EXIT_FAILURE;
