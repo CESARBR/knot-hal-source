@@ -10,6 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <glib.h>
 #include <sys/inotify.h>
@@ -104,6 +108,7 @@ int main(int argc, char *argv[])
 	GOptionContext *context;
 	GError *gerr = NULL;
 	GIOChannel *inotify_io;
+	struct stat sb;
 	int err;
 	int inotifyFD, wd;
 	guint watch_id;
@@ -115,6 +120,19 @@ int main(int argc, char *argv[])
 		printf("Invalid arguments: %s\n", gerr->message);
 		g_error_free(gerr);
 		g_option_context_free(context);
+		return EXIT_FAILURE;
+	}
+
+	g_option_context_free(context);
+
+	if (stat(opt_cfg, &sb) == -1) {
+		err = errno;
+		printf("%s: %s(%d)\n", opt_cfg, strerror(err), err);
+		return EXIT_FAILURE;
+	}
+
+	if ((sb.st_mode & S_IFMT) != S_IFREG) {
+		printf("%s is not a regular file!\n", opt_cfg);
 		return EXIT_FAILURE;
 	}
 
@@ -137,8 +155,6 @@ int main(int argc, char *argv[])
 	}
 	opt_channel = opt_channel_aux;
 
-	g_option_context_free(context);
-
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
 	signal(SIGPIPE, SIG_IGN);
@@ -157,7 +173,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	/* starting inotify */
+	/* Starting inotify */
 	inotifyFD = inotify_init();
 
 	wd = inotify_add_watch(inotifyFD, opt_cfg, IN_MODIFY);
@@ -168,18 +184,17 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	/*Setting gio channel to watch inotify fd*/
+	/* Setting gio channel to watch inotify fd*/
 	inotify_io = g_io_channel_unix_new(inotifyFD);
 	watch_id = g_io_add_watch(inotify_io, G_IO_IN, inotify_cb, NULL);
 	g_io_channel_set_close_on_unref(inotify_io, TRUE);
-
 	g_main_loop_run(main_loop);
 
 	g_source_remove(watch_id);
 	g_io_channel_unref(inotify_io);
-	 /*removing from the watch list.*/
+	/* Removing from the watch list.*/
 	inotify_rm_watch(inotifyFD, wd);
-	/*closing the INOTIFY instance*/
+	/* Closing the INOTIFY instance */
 	close(inotifyFD);
 
 	manager_stop();
