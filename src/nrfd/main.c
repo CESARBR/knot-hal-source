@@ -27,6 +27,7 @@ static const char *opt_cfg = "gatewayConfig.json";
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
+static uint8_t opt_channel = CHANNEL_DEFAULT;
 static int opt_channel_aux = CHANNEL_DEFAULT;
 static uint8_t opt_tx = NRF24_PWR_0DBM;
 static int opt_tx_aux = 0;	/* 0 dBm */
@@ -125,6 +126,16 @@ int main(int argc, char *argv[])
 	 * -12dBm, -6 dBm and 0dBm
 	 */
 	opt_tx = set_tx_input(opt_tx_aux);
+
+	/*
+	 * Validate channel values
+	 * channel range 0 - 125 valid values
+	 */
+	if (opt_channel_aux > 125 || opt_channel_aux < 0) {
+		printf("Invalid channel value: %d\n", opt_channel_aux);
+		return EXIT_FAILURE;
+	}
+	opt_channel = opt_channel_aux;
 
 	g_option_context_free(context);
 
