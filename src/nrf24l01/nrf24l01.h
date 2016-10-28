@@ -49,6 +49,7 @@ extern "C"{
 #endif
 
 int8_t nrf24l01_init(const char *dev);
+int8_t nrf24l01_deinit(void);
 int8_t nrf24l01_set_channel(uint8_t ch);
 int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr);
 int8_t nrf24l01_set_ptx(uint8_t pipe_addr, bool ack);
