@@ -117,6 +117,13 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	/*
+	 * Validate tx_pwr
+	 * write Power Amplifier(PA) control in
+	 * TX mode: 0 <= v <= 3 valid values
+	 * and respectively to: -18dBm,
+	 * -12dBm, -6 dBm and 0dBm
+	 */
 	opt_tx = set_tx_input(opt_tx_aux);
 
 	g_option_context_free(context);
