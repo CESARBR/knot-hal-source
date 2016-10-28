@@ -316,16 +316,18 @@ int manager_start(const char *file, const char *host, int port,
 			const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
 	char *json_str;
+	int err;
 
 	json_str = load_config(file);
 
-	if (json_str == NULL)
-		printf("Invalid file\nCommand line settings will be set\n");
+	if (json_str != NULL) {
+		err = parse_config(json_str, &host, &port, &spi, &channel, &tx_pwr);
+		free(json_str);
+	}
 
-	else {
-
-		if (parse_config(json_str, &host, &port, &spi, &channel, &tx_pwr) < 0)
-			printf("Invalid file parameters\n");
+	if (err < 0) {
+		fprintf(stderr, "Invalid configuration file: %s\n", file);
+		return err;
 	}
 
 	if (host == NULL)
