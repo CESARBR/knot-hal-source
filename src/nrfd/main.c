@@ -17,27 +17,34 @@
 
 #include <glib.h>
 #include <sys/inotify.h>
+#include <json-c/json.h>
 
 #include "nrf24l01_io.h"
+#include "include/nrf24.h"
 #include "manager.h"
 
 #define BUF_LEN (sizeof(struct inotify_event))
 #define CHANNEL_DEFAULT NRF24_CH_MIN
+#define MAX_NODES 5
 
 static GMainLoop *main_loop;
 
-/* temporary default configuration file path */
+/* Temporary default configuration file path */
 static const char *opt_cfg = "gatewayConfig.json";
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
 static int opt_channel = CHANNEL_DEFAULT;
 static int opt_tx = NRF24_PWR_0DBM;
+static const char *opt_nodes = "/etc/knot/keys.json";
 
 static void sig_term(int sig)
 {
 	g_main_loop_quit(main_loop);
 }
+
+/* Struct with the mac address of the known peers */
+static struct nrf24_mac known_peers[MAX_NODES];
 
 /*
  * OPTIONAL: describe the valid values ranges
@@ -53,6 +60,8 @@ static GOptionEntry options[] = {
 					"port", "Remote port" },
 	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
 					"spi", "SPI device path" },
+	{ "nodes", 'n', 0, G_OPTION_ARG_STRING, &opt_nodes,
+					"nodes", "Known nodes file path" },
 	{ "channel", 'c', 0, G_OPTION_ARG_INT, &opt_channel,
 					"channel", "Broadcast channel" },
 	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_tx,
@@ -60,6 +69,95 @@ static GOptionEntry options[] = {
 		"TX power: transmition signal strength in dBm" },
 	{ NULL },
 };
+
+static int string_to_mac(const char *mac_str, uint8_t *address)
+{
+	/* Parse the input string into 8 bytes */
+	int rc = sscanf(mac_str,
+		"%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+			address, address + 1, address + 2, address + 3,
+			address + 4, address + 5, address + 6, address + 7);
+
+	if (rc != 8) {
+		printf("Invalid mac address format: %s\n", mac_str);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static char *load_nodes(const char *file)
+{
+	int length;
+	char *buffer;
+	FILE *fl;
+
+	fl = fopen(file, "r");
+	if (fl == NULL) {
+		printf("Failed to open file: %s", file);
+		return NULL;
+	}
+
+	fseek(fl, 0, SEEK_END);
+	length = ftell(fl);
+	fseek(fl, 0, SEEK_SET);
+
+	buffer = (char *) malloc((length + 1) * sizeof(char));
+	if (buffer == NULL) {
+		fclose(fl);
+		return NULL;
+	}
+
+	if (fread(buffer, length, 1, fl) != 1) {
+		free(buffer);
+		fclose(fl);
+		return NULL;
+	}
+
+	buffer[length] = '\0';
+
+	fclose(fl);
+
+	return buffer;
+}
+
+static int parse_nodes(const char *nodes_str)
+{
+	int array_len;
+	json_object *jobj, *obj_keys, *obj_nodes, *obj_tmp;
+
+	jobj = json_tokener_parse(nodes_str);
+	if (jobj == NULL)
+		return -EINVAL;
+
+	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
+		goto failure;
+
+	array_len = json_object_array_length(obj_keys);
+	if (array_len > MAX_NODES) {
+		printf("Invalid numbers of nodes in input archive");
+		goto failure;
+	}
+	for (int i = 0; i < array_len; i++) {
+		obj_nodes = json_object_array_get_idx(obj_keys, i);
+		if (!json_object_object_get_ex(obj_nodes, "mac", &obj_tmp))
+			goto failure;
+
+		/* Parse mac address string into struct nrf24_mac known_peers */
+		if (string_to_mac(json_object_get_string(obj_tmp),
+						known_peers[i].address.b) < 0)
+			goto failure;
+	}
+
+	/* Free mem used in json parse: */
+	json_object_put(jobj);
+	return 0;
+
+failure:
+	/* Free mem used in json parse: */
+	json_object_put(jobj);
+	return -EINVAL;
+}
 
 static gboolean inotify_cb(GIOChannel *gio, GIOCondition condition,
 								gpointer data)
@@ -83,6 +181,7 @@ static gboolean inotify_cb(GIOChannel *gio, GIOCondition condition,
 
 int main(int argc, char *argv[])
 {
+	char *nodes_str;
 	GOptionContext *context;
 	GError *gerr = NULL;
 	GIOChannel *inotify_io;
@@ -113,6 +212,21 @@ int main(int argc, char *argv[])
 		printf("%s is not a regular file!\n", opt_cfg);
 		return EXIT_FAILURE;
 	}
+
+	if (!opt_nodes) {
+		printf("Missing KNOT known nodes file!\n");
+		return EXIT_FAILURE;
+	}
+	/* Load nodes' info from json file */
+	nodes_str = load_nodes(opt_nodes);
+	if (!nodes_str)
+		return EXIT_FAILURE;
+
+	/* Parse info loaded and writes it to known_peers */
+	err = parse_nodes(nodes_str);
+	free(nodes_str);
+	if (err < 0)
+		return EXIT_FAILURE;
 
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
