@@ -10,7 +10,7 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd tools/sniffer
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd tools/sniffer tools/rpiecho
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -44,6 +44,17 @@ tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 		-I$(top_srcdir)/src/drivers -I$(top_srcdir)/src/hal/comm \
 		-I$(top_srcdir)/src/spi \
 		-I$(top_srcdir)/src/nrf24l01
+
+tools_rpiecho_SOURCES = tools/rpiecho.c src/hal/time/time_linux.c
+tools_rpiecho_LDADD = libs/libphy_driver.a \
+				 libs/libnrf24l01.a libs/libspi.a \
+				 @GLIB_LIBS@
+tools_rpiecho_LDFLAGS = $(AM_LDFLAGS)
+tools_rpiecho_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/spi \
+				-I$(top_srcdir)/src/nrf24l01 \
+				-I$(top_srcdir)/nrf
 
 DISTCLEANFILES =
 
