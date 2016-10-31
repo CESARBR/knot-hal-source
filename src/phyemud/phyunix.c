@@ -19,7 +19,7 @@
 
 #define THING_TO_NRFD_UNIX_SOCKET	":thing:nrfd"
 
-static int probe_unix(void)
+static int probe_unix(const char *spi, uint8_t tx_pwr)
 {
 	return 0;
 }
@@ -50,7 +50,7 @@ static int open_unix(const char *pathname)
 	return sock;
 }
 
-static int listen_unix(int sock)
+static int listen_unix(int sock, uint8_t channel)
 {
 	int err;
 

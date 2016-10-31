@@ -257,12 +257,12 @@ static int unix_start(void)
 	GIOChannel *io;
 	int sock;
 
-	phy_unix.probe();
+	phy_unix.probe(NULL, 0);
 	sock = phy_unix.open(NULL);
 	if (sock < 0)
 		return sock;
 
-	sock = phy_unix.listen(sock);
+	sock = phy_unix.listen(sock, 0);
 	if (sock < 0) {
 		phy_unix.close(sock);
 		return -1;
@@ -288,13 +288,13 @@ static int serial_start(const char *pathname)
 	GIOChannel *io;
 	int virtualfd, realfd, knotdfd;
 
-	if (phy_serial.probe() < 0)
+	if (phy_serial.probe(NULL, 0) < 0)
 		return -EIO;
 
 	virtualfd = phy_serial.open(pathname);
 	printf("virtualfd = (%d)\n\r", virtualfd);
 
-	realfd = phy_serial.listen(0);
+	realfd = phy_serial.listen(0, 0);
 	if (realfd < 0) {
 		phy_serial.close(realfd);
 		return -errno;

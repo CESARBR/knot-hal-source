@@ -152,7 +152,7 @@ int8_t nrf24l01_set_standby(int8_t spi_fd)
 * Init spi
 * Configure the radio to data rate of 1Mbps
 */
-int8_t nrf24l01_init(const char *dev)
+int8_t nrf24l01_init(const char *dev, uint8_t tx_pwr)
 {
 	uint8_t	value;
 	int8_t spi_fd;
@@ -174,7 +174,7 @@ int8_t nrf24l01_init(const char *dev)
 	/* Set RF speed and output power */
 	value = inr(spi_fd, NRF24_RF_SETUP) & ~NRF24_RF_SETUP_MASK;
 	outr(spi_fd, NRF24_RF_SETUP, value | NRF24_RF_DR(NRF24_DATA_RATE)|
-			NRF24_RF_PWR(NRF24_POWER));
+			NRF24_RF_PWR(tx_pwr));
 
 	/* Set address widths */
 	value = inr(spi_fd, NRF24_SETUP_AW) & ~NRF24_SETUP_AW_MASK;

@@ -45,10 +45,9 @@ static const uint8_t channel_data = 20;
 static const uint8_t major = 0;
 static const uint8_t minor = 0;
 
-static int nrf24l01_probe(void)
+static int nrf24l01_probe(const char *spi, uint8_t tx_pwr)
 {
-	spi_fd = nrf24l01_init("/dev/spidev0.0");
-	return spi_fd;
+	return nrf24l01_init(spi, tx_pwr);
 }
 
 static void nrf24l01_remove(void)
@@ -235,7 +234,7 @@ static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
 }
 
 
-static int nrf24l01_listen(int sockfd)
+static int nrf24l01_listen(int sockfd, uint8_t channel)
 {
 	if (sockfd < 0 || sockfd > NRF24_PIPE_ADDR_MAX)
 		return -EINVAL;
@@ -327,7 +326,7 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 	int err;
 
 	/*set radio in the default config */
-	nrf24l01_listen(cli_sockfd);
+	nrf24l01_listen(cli_sockfd, NRF24_CHANNEL_DEFAULT);
 	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
 
 	payload->src_addr = addr_gw;
@@ -366,7 +365,7 @@ static int nrf24L01_accept(int sockfd)
 	ssize_t len;
 
 	/*set radio in the default config */
-	nrf24l01_listen(sockfd);
+	nrf24l01_listen(sockfd, NRF24_CHANNEL_DEFAULT);
 	/* read connect_request from pipe broadcast */
 	len = read_data(PIPE_BROADCAST, datagram, NRF24_MTU);
 	if (len < 0)

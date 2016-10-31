@@ -27,12 +27,12 @@
 
 struct phy_driver {
 	const char *name;
-	int (*probe) (void);
+	int (*probe) (const char *spi, uint8_t tx_pwr);
 	void (*remove) (void);
 
 	int (*open) (const char *pathname);
 	void (*close) (int sockfd);
-	int (*listen) (int srv_sockfd);
+	int (*listen) (int srv_sockfd, uint8_t channel);
 	int (*accept) (int srv_sockfd);
 	int (*connect) (int cli_sockfd, uint8_t to_addr);
 	ssize_t (*recv) (int sockfd, void *buffer, size_t len);

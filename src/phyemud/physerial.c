@@ -51,7 +51,7 @@ struct serial_opts {
 static struct serial_opts serial_opts;
 
 /* Check if tty path is available*/
-static int serial_probe(void)
+static int serial_probe(const char *spi, uint8_t tx_power)
 {
 	return 0;
 }
@@ -79,7 +79,7 @@ static void serial_remove(void)
 {
 }
 
-static int serial_listen(int sock)
+static int serial_listen(int sock, uint8_t channel)
 {
 	struct termios term;
 	int ttyfd;
