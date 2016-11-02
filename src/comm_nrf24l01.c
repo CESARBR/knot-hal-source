@@ -303,7 +303,7 @@ int nrf24L01_connect_response(uint8_t sockfd)
 	struct nrf14_ll_crtl_pdu *opdu = (struct nrf14_ll_crtl_pdu *) datagram;
 	struct nrf24_ll_version_ind *payload =
 				(struct nrf24_ll_version_ind *) opdu->payload;
-	size_t len, offset;
+	size_t len;
 	int err;
 
 	opdu->opcode = NRF24_LL_CRTL_OP_VERSION_IND;
@@ -329,7 +329,7 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 	struct nrf24_ll_mgmt_pdu *opdu = (struct nrf24_ll_mgmt_pdu *)datagram;
 	struct nrf24_ll_mgmt_connect *payload =
 				(struct nrf24_ll_mgmt_connect *) opdu->payload;
-	size_t len, offset;
+	size_t len;
 	int err;
 
 	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
