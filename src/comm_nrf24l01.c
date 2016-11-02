@@ -279,8 +279,6 @@ static inline int nrf24l01_connect_wait(int8_t cli_sockfd)
 {
 	uint8_t datagram[NRF24_MTU];
 	struct nrf14_ll_crtl_pdu *ipdu = (struct nrf14_ll_crtl_pdu *) datagram;
-	struct nrf24_ll_version_ind *payload =
-				(struct nrf24_ll_version_ind *) ipdu->payload;
 	ssize_t len;
 
 	len = read_data(cli_sockfd, datagram, NRF24_MTU);
