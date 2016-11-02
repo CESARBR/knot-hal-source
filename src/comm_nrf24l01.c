@@ -290,8 +290,7 @@ static inline int nrf24l01_connect_wait(int8_t cli_sockfd)
 	if (ipdu->opcode != NRF24_LL_CRTL_OP_VERSION_IND)
 		return -1;
 
-	if (payload->major < 0 || payload->minor < 0)
-		return -1; /* invalid versions*/
+	/* TODO: check invalid versions*/
 
 	return 0;
 }
