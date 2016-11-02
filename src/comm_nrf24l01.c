@@ -281,8 +281,6 @@ int nrf24l01_connect_wait(int8_t cli_sockfd)
 	struct nrf24_ll_version_ind *payload =
 				(struct nrf24_ll_version_ind *) ipdu->payload;
 	size_t len;
-	int err;
-
 
 	len = read_data(cli_sockfd, datagram, NRF24_MTU);
 	if (len < 0)
@@ -367,7 +365,6 @@ static int nrf24L01_accept(int sockfd)
 	struct nrf24_ll_mgmt_connect *payload =
 				(struct nrf24_ll_mgmt_connect *) ipdu->payload;
 	ssize_t len;
-	int err;
 
 	/* read connect_request from pipe broadcast */
 	len = read_data(PIPE_BROADCAST, datagram, NRF24_MTU);
