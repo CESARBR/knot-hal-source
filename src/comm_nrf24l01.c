@@ -118,7 +118,7 @@ static int nrf24l01_open(const char *pathname)
 	 * Index '0' is reserved for pipe zero. Assigning '1'
 	 * means that the pipe 'i' is now allocated (busy).
 	 */
-	int i;
+	size_t i;
 
 	for (i = 1; i < sizeof(pipes_allocate); i++) {
 		if (pipes_allocate[i] == 0) {
