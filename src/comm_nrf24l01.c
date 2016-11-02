@@ -265,7 +265,8 @@ static int nrf24l01_listen(int sockfd)
 }
 
 
-void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa, int8_t pipe)
+static void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa,
+								int8_t pipe)
 {
 
 	nrf24l01_set_channel(channel);
@@ -274,7 +275,7 @@ void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa, int8_t pipe)
 }
 
 /*This function wait the connect request response*/
-int nrf24l01_connect_wait(int8_t cli_sockfd)
+static inline int nrf24l01_connect_wait(int8_t cli_sockfd)
 {
 	uint8_t datagram[NRF24_MTU];
 	struct nrf14_ll_crtl_pdu *ipdu = (struct nrf14_ll_crtl_pdu *) datagram;
@@ -295,7 +296,7 @@ int nrf24l01_connect_wait(int8_t cli_sockfd)
 	return 0;
 }
 
-int nrf24L01_connect_response(uint8_t sockfd)
+static inline int nrf24L01_connect_response(uint8_t sockfd)
 {
 	uint8_t datagram[NRF24_MTU];
 	struct nrf14_ll_crtl_pdu *opdu = (struct nrf14_ll_crtl_pdu *) datagram;
@@ -330,6 +331,8 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 	size_t len;
 	int err;
 
+	/*set radio in the default config */
+	nrf24l01_listen(cli_sockfd);
 	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
 
 	payload->src_addr = addr_gw;
@@ -354,6 +357,7 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr)
 	/* This function changes the radio to listen client in data channel */
 	nrf24l01_set_data_settings(channel_data, aa_pipes[cli_sockfd],
 		cli_sockfd);
+
 	return cli_sockfd;
 }
 
@@ -366,6 +370,8 @@ static int nrf24L01_accept(int sockfd)
 				(struct nrf24_ll_mgmt_connect *) ipdu->payload;
 	ssize_t len;
 
+	/*set radio in the default config */
+	nrf24l01_listen(sockfd);
 	/* read connect_request from pipe broadcast */
 	len = read_data(PIPE_BROADCAST, datagram, NRF24_MTU);
 	if (len < 0)
