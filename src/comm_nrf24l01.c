@@ -139,9 +139,6 @@ static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 	static int offset = 0;
 	static uint8_t seqnumber = 0;
 
-	if (len < 0)
-		return -EINVAL;
-
 	do {
 
 		/*
