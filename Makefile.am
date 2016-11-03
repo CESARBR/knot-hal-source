@@ -3,7 +3,7 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log src/hal/
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/phynrfd/phynrfd src/phyemud/phyemud \
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/phyemud/phyemud \
 							examples/uthingd
 
 proxy_spiproxyd_SOURCES = proxy/main.c
@@ -11,17 +11,17 @@ proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
 proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
 proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
-src_phynrfd_phynrfd_SOURCES = src/phynrfd/main.c \
-				src/phynrfd/manager.h src/phynrfd/manager.c
-src_phynrfd_phynrfd_LDADD = libs/libhallog.a \
+src_nrfd_nrfd_SOURCES = src/nrfd/main.c \
+				src/nrfd/manager.h src/nrfd/manager.c
+src_nrfd_nrfd_LDADD = libs/libhallog.a \
 				libs/libhalcomm.a \
 				libs/libhaltime.a \
 				libs/libhalstorage.a \
 				libs/libnrf24l01.a \
 				libs/libspi.a \
 				@GLIB_LIBS@
-src_phynrfd_phynrfd_LDFLAGS = $(AM_LDFLAGS)
-src_phynrfd_phynrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
+src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
 				-I$(top_srcdir)/src/hal/comm
 
