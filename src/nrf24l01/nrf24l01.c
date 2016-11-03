@@ -40,8 +40,6 @@ typedef enum {
 	STANDBY_II_MODE,
 } en_modes_t;
 
-static en_modes_t m_mode = UNKNOWN_MODE;
-
 static uint8_t m_pipe0_addr[5];
 
 #define DATA_SIZE	sizeof(uint8_t)
@@ -105,10 +103,10 @@ static inline int8_t command_data(uint8_t cmd, void *pd, uint16_t len)
 static void set_address_pipe(uint8_t reg, uint8_t *pipe_addr)
 {
 	uint8_t addr[5];
+	uint16_t len;
 
 	/* memcpy is necessary because outr_data cleans value after send */
 	memcpy(addr, pipe_addr, sizeof(addr));
-	uint16_t len;
 	switch (reg) {
 	case NRF24_TX_ADDR:
 	case NRF24_RX_ADDR_P0:
