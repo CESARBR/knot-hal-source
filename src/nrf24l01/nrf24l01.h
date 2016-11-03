@@ -6,7 +6,6 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
-#include "nrf24l01_io.h"
 
 /* Output power in max power */
 #define NRF24_POWER		NRF24_PWR_0DBM
@@ -15,7 +14,7 @@
 #define NRF24_DATA_RATE	NRF24_DR_1MBPS
 
 /* Channel = 2400GHz + CHANNEL_DEF [MHz], max 2.525GHz */
-#define NRF24_CHANNEL_DEFAULT	NRF24_CH_MIN
+#define NRF24_CHANNEL_DEFAULT	10
 
 /* Auto Retransmit Count => 15 attempt */
 #define NRF24_ARC			15
