@@ -1,0 +1,24 @@
+{
+  "keys": [
+    {
+      "name":"Sensor #1",
+      "mac":"AA:F1:32:B8:12:34:CD:AF"
+    },
+    {
+      "name":"Sensor #2",
+      "mac":"AA:F1:32:B8:12:34:CD:B0"
+    },
+    {
+      "name":"Sensor #3",
+      "mac":"AA:F1:32:B1:12:34:CD:B0"
+    },
+    {
+      "name":"Sensor #4",
+      "mac":"AA:F1:32:B1:12:34:CD:B3"
+    },
+    {
+      "name":"Sensor #5",
+      "mac":"BA:12:13:48:12:34:50:98"
+    }
+  ]
+}
