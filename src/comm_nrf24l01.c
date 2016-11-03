@@ -136,7 +136,7 @@ static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 	size_t plen;
 	uint8_t lid, datagram[NRF24_MTU];
 	const struct nrf24_ll_data_pdu *ipdu = (void *)datagram;
-	static int offset = 0;
+	static size_t offset = 0;
 	static uint8_t seqnumber = 0;
 
 	do {
