@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <glib.h>
-#include "spi.h"
 
 static GMainLoop *main_loop;
 

@@ -1,5 +1,5 @@
 AM_MAKEFLAGS = --no-print-directory
-SUBDIRS = src src/spi/ src/nrf24l01 src/hal/storage src/hal/time src/hal/log
+SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log src/hal/comm
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
@@ -9,38 +9,38 @@ bin_PROGRAMS = proxy/spiproxyd src/phynrfd/phynrfd src/phyemud/phyemud \
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
 proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
-proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				-I$(top_srcdir)/src \
-				-I$(top_srcdir)/src/spi \
-				-I$(top_srcdir)/src/nrf24l01
+proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 src_phynrfd_phynrfd_SOURCES = src/phynrfd/main.c \
 				src/phynrfd/manager.h src/phynrfd/manager.c
-src_phynrfd_phynrfd_LDADD = libs/libcomm_nrf24l01.a \
-			    libs/libnrf24l01.a libs/libspi.a \
-			    libs/libhallog.a @GLIB_LIBS@
+src_phynrfd_phynrfd_LDADD = libs/libhallog.a \
+				libs/libhalcomm.a \
+				libs/libhaltime.a \
+				libs/libhalstorage.a \
+				libs/libnrf24l01.a \
+				libs/libspi.a \
+				@GLIB_LIBS@
 src_phynrfd_phynrfd_LDFLAGS = $(AM_LDFLAGS)
 src_phynrfd_phynrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
-				-I$(top_srcdir)/src/spi \
-				-I$(top_srcdir)/src/nrf24l01 \
-				-I$(top_srcdir)/nrf
+				-I$(top_srcdir)/src/hal/comm
 
 src_phyemud_phyemud_SOURCES = src/phyemud/main.c \
-			src/comm_private.h \
+			src/hal/comm/comm_private.h \
 			src/phyemud/manager.h src/phyemud/manager.c \
 			src/phyemud/phyunix.c src/phyemud/physerial.c
 src_phyemud_phyemud_LDADD = @GLIB_LIBS@
 src_phyemud_phyemud_LDFLAGS = $(AM_LDFLAGS)
 src_phyemud_phyemud_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				-I$(top_srcdir)/src
+				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/hal/comm
 
 examples_uthingd_SOURCES = examples/uthing.c \
-			src/comm_private.h \
 			src/phyemud/phyunix.c
 examples_uthingd_LDFLAGS = $(AM_LDFLAGS)
 examples_uthingd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				-I$(top_srcdir)/src
+				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/hal/comm
 
 DISTCLEANFILES =
 
