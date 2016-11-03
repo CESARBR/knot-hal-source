@@ -33,7 +33,6 @@ static int	spi_fd = -1;
 
 int spi_init(const char *dev)
 {
-	int err;
 
 	if (spi_fd > 0)
 		return -1;
