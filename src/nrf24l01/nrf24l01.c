@@ -225,7 +225,6 @@ int8_t nrf24l01_init(const char *dev)
 
 int8_t nrf24l01_deinit(void)
 {
-	int16_t		value;
 
 	disable();
 	/* Power down the radio */
