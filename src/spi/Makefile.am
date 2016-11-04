@@ -1,4 +1,5 @@
 lib_LIBRARIES = libspi.a
+AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 lib_ARDUINO = spi_arduino.c spi.h
 
 libspi_a_SOURCES = spi_linux.c
@@ -10,5 +11,4 @@ all-local:
 
 clean-local:
 	$(RM) -r libspi.a
-
 

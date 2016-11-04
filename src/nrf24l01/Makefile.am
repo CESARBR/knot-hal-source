@@ -1,4 +1,5 @@
 lib_LIBRARIES = libnrf24l01.a
+AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 lib_ARDUINO = nrf24l01.c nrf24l01.h nrf24l01_io.h nrf24l01_io_arduino.c
 
 libnrf24l01_a_SOURCES = nrf24l01.c nrf24l01_io_linux.c
@@ -10,5 +11,4 @@ all-local:
 
 clean-local:
 	$(RM) -r libnrf24l01.a
-
 
