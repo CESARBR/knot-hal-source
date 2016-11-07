@@ -81,7 +81,7 @@ inline int phy_close(int sockfd)
 
 inline ssize_t phy_read(int sockfd, void *buffer, size_t len)
 {
-	return -ENOSYS;
+	return driver_ops[sockfd]->recv(driver_ops[sockfd]->fd, buffer, len);
 }
 
 inline ssize_t phy_write(int sockfd, const void *buffer, size_t len)
