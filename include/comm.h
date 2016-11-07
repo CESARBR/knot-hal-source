@@ -9,14 +9,12 @@
 
 /* Domain: selects radio technology */
 #define HAL_COMM_PF_NRF24		1
+#define HAL_COMM_PF_SERIAL		2
 
 /*
  * UDATA: Sequenced and reliable protocol
  */
 #define HAL_COMM_NRF24PROTO_UDATA	64
-
-/* Serial port */
-int hal_comm_open(const char *pathname);
 
 /*
  * nRF24 and other radios. Returns -ENFILE (limit of resources/pipes has
