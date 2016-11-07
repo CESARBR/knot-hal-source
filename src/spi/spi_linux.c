@@ -33,9 +33,7 @@ int8_t spi_init(const char *dev)
 {
 	int spi_fd;
 
-#if defined(RPI_BOARD) || defined(RPI2_BOARD)
 	spi_fd = open(dev, O_RDWR);
-#endif
 
 	if (spi_fd < 1)
 		return -errno;
