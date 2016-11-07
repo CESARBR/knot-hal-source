@@ -89,8 +89,7 @@ inline ssize_t phy_write(int sockfd, const void *buffer, size_t len)
 	return driver_ops[sockfd]->send(driver_ops[sockfd]->fd, buffer, len);
 }
 
-inline int phy_ioctl(int sockfd, int cmd, void *args)
+inline int phy_ioctl(int sockfd, int cmd, void *arg)
 {
-
-	return -ENOSYS;
+	return driver_ops[sockfd]->ioctl(driver_ops[sockfd]->fd, cmd, arg);
 }
