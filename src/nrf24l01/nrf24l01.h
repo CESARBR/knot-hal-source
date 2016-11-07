@@ -56,7 +56,7 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t *pipe_addr);
 int8_t nrf24l01_set_ptx(uint8_t pipe, bool ack);
 int8_t nrf24l01_ptx_data(void *pdata, uint16_t len);
 int8_t nrf24l01_ptx_wait_datasent(void);
-int8_t nrf24l01_set_prx(void);
+int8_t nrf24l01_set_prx(uint8_t *pipe0_addr);
 int8_t nrf24l01_prx_pipe_available(void);
 int8_t nrf24l01_prx_data(void *pdata, uint16_t len);
 int8_t nrf24l01_set_standby(void);

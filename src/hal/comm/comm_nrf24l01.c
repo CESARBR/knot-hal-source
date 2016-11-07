@@ -75,7 +75,7 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 	 * and only switch to TX mode when transmitting data.
 	 */
 
-	nrf24l01_set_prx();
+	nrf24l01_set_prx(aa_pipes[0]);
 
 	/*
 	 * On success, the number of bytes written is returned
@@ -256,7 +256,7 @@ static int nrf24l01_listen(int sockfd)
 	nrf24l01_set_standby();
 
 	/* Put the radio in RX mode to start receiving packets.*/
-	nrf24l01_set_prx();
+	nrf24l01_set_prx(aa_pipes[0]);
 
 	return 0;
 }
@@ -268,7 +268,7 @@ static void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa,
 
 	nrf24l01_set_channel(channel);
 	nrf24l01_open_pipe(pipe, aa);
-	nrf24l01_set_prx();
+	nrf24l01_set_prx(aa_pipes[0]);
 }
 
 /*This function wait the connect request response*/

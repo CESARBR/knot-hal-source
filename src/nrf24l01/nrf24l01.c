@@ -41,7 +41,6 @@ typedef enum {
 	STANDBY_II_MODE,
 } en_modes_t;
 
-static uint8_t m_pipe0_addr[5];
 #define DATA_SIZE	sizeof(uint8_t)
 
 /* Time delay in microseconds (us) */
@@ -303,9 +302,6 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t *pipe_addr)
 
 	/* Enable pipe */
 	if (!(inr(NRF24_EN_RXADDR) & rpipe.en_rxaddr)) {
-		if (rpipe.rx_addr == NRF24_RX_ADDR_P0)
-			memcpy(m_pipe0_addr, pipe_addr, sizeof(m_pipe0_addr));
-
 		set_address_pipe(rpipe.rx_addr, pipe_addr);
 		outr(NRF24_EN_RXADDR, inr(NRF24_EN_RXADDR)
 			| rpipe.en_rxaddr);
@@ -405,11 +401,17 @@ int8_t nrf24l01_ptx_wait_datasent(void)
 * set pipe to send data;
 * the radio will be the Primary Receiver (PRX).
 * See page 33 of nRF24L01_Product_Specification_v2_0.pdf
+* Receive the value of pipe 0 addr
 */
-int8_t nrf24l01_set_prx(void)
+int8_t nrf24l01_set_prx(uint8_t *pipe0_addr)
 {
+	/* The addr of pipe 0 is necessary to avoid
+	 * save this value internally. If there are more than
+	 * one radio using this lib, the value of pipe 0 addr
+	 * can be different.
+	 */
 	set_standby1();
-	set_address_pipe(NRF24_RX_ADDR_P0, m_pipe0_addr);
+	set_address_pipe(NRF24_RX_ADDR_P0, pipe0_addr);
 	/* RX Settings */
 	outr(NRF24_STATUS, NRF24_ST_RX_DR);
 	outr(NRF24_CONFIG, inr(NRF24_CONFIG) | NRF24_CFG_PRIM_RX);
