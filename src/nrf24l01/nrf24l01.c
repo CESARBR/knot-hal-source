@@ -32,15 +32,6 @@ static const pipe_reg_t pipe_reg[] = {
 	{ NRF24_AA_P5, NRF24_EN_RXADDR_P5, NRF24_RX_ADDR_P5, NRF24_RX_PW_P5 }
 };
 
-typedef enum {
-	UNKNOWN_MODE,
-	POWER_DOWN_MODE,
-	STANDBY_I_MODE,
-	RX_MODE,
-	TX_MODE,
-	STANDBY_II_MODE,
-} en_modes_t;
-
 #define DATA_SIZE	sizeof(uint8_t)
 
 /* Time delay in microseconds (us) */
