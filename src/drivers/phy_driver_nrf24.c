@@ -97,7 +97,7 @@ static int nrf24l01_open(const char *pathname)
 
 static void nrf24l01_close(int spi_fd)
 {
-
+	nrf24l01_deinit(spi_fd);
 }
 
 static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
