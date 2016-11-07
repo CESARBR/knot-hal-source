@@ -59,8 +59,18 @@ static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 
 static ssize_t nrf24l01_read(int spi_fd, void *buffer, size_t len)
 {
-	return -ENOSYS;
+	ssize_t length = -1;
+	struct nrf24_io_pack *p = (struct nrf24_io_pack *) buffer;
+	/* If the pipe available */
+	if (nrf24l01_prx_pipe_available(spi_fd) == p->pipe)
+		/* Copy data to buffer */
+		length = nrf24l01_prx_data(spi_fd, p->payload, len);
 
+	/*
+	 * On success, the number of bytes read is returned
+	 * Otherwise, -1 is returned.
+	 */
+	return length;
 }
 
 static int nrf24l01_open(const char *pathname)
