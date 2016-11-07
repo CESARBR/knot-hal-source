@@ -35,7 +35,7 @@ static uint8_t aa_pipes[6][5] = {
 };
 
 int8_t pipes_allocate[] = {0, 0, 0, 0, 0, 0};
-
+int spi_fd;
 #define NRF24_PIPE0		0
 
 /* TODO: Get this values from config file */
@@ -47,7 +47,8 @@ static const uint8_t minor = 0;
 
 static int nrf24l01_probe(void)
 {
-	return nrf24l01_init("/dev/spidev0.0");
+	spi_fd = nrf24l01_init("/dev/spidev0.0");
+	return spi_fd;
 }
 
 static void nrf24l01_remove(void)
@@ -59,13 +60,13 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 {
 	int err;
 	/* Puts the radio in TX mode  enabling Acknowledgment */
-	nrf24l01_set_ptx(sockfd, true);
+	nrf24l01_set_ptx(spi_fd, sockfd, true);
 
 	/* Transmits the data */
-	nrf24l01_ptx_data((void *)buffer, len);
+	nrf24l01_ptx_data(spi_fd, (void *)buffer, len);
 
 	/* Waits for ACK */
-	err = nrf24l01_ptx_wait_datasent();
+	err = nrf24l01_ptx_wait_datasent(spi_fd);
 
 	if (err < 0)
 		return err;
@@ -75,7 +76,7 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 	 * and only switch to TX mode when transmitting data.
 	 */
 
-	nrf24l01_set_prx(aa_pipes[0]);
+	nrf24l01_set_prx(spi_fd, aa_pipes[0]);
 
 	/*
 	 * On success, the number of bytes written is returned
@@ -90,9 +91,9 @@ static ssize_t read_data(int sockfd, void *buffer, size_t len)
 	ssize_t length = -1;
 
 	/* If the pipe available */
-	if (nrf24l01_prx_pipe_available() == sockfd)
+	if (nrf24l01_prx_pipe_available(spi_fd) == sockfd)
 		/* Copy data to buffer */
-		length = nrf24l01_prx_data(buffer, len);
+		length = nrf24l01_prx_data(spi_fd, buffer, len);
 
 	/*
 	 * On success, the number of bytes read is returned
@@ -240,11 +241,11 @@ static int nrf24l01_listen(int sockfd)
 		return -EINVAL;
 
 	/* Set channel */
-	if (nrf24l01_set_channel(NRF24_CHANNEL_DEFAULT) == -1)
+	if (nrf24l01_set_channel(spi_fd, NRF24_CHANNEL_DEFAULT) == -1)
 		return -EINVAL;
 
 	/* Open pipe zero in the sockfd address */
-	nrf24l01_open_pipe(NRF24_PIPE0, aa_pipes[NRF24_PIPE0]);
+	nrf24l01_open_pipe(spi_fd, NRF24_PIPE0, aa_pipes[NRF24_PIPE0]);
 
 	/*
 	 * Standby mode is used to minimize average
@@ -253,10 +254,10 @@ static int nrf24l01_listen(int sockfd)
 	 * part of the crystal oscillator is active.
 	 * FIFO state: No ongoing packet transmission.
 	 */
-	nrf24l01_set_standby();
+	nrf24l01_set_standby(spi_fd);
 
 	/* Put the radio in RX mode to start receiving packets.*/
-	nrf24l01_set_prx(aa_pipes[0]);
+	nrf24l01_set_prx(spi_fd, aa_pipes[0]);
 
 	return 0;
 }
@@ -266,9 +267,9 @@ static void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa,
 								int8_t pipe)
 {
 
-	nrf24l01_set_channel(channel);
-	nrf24l01_open_pipe(pipe, aa);
-	nrf24l01_set_prx(aa_pipes[0]);
+	nrf24l01_set_channel(spi_fd, channel);
+	nrf24l01_open_pipe(spi_fd, pipe, aa);
+	nrf24l01_set_prx(spi_fd, aa_pipes[0]);
 }
 
 /*This function wait the connect request response*/

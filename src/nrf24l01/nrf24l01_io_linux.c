@@ -95,9 +95,9 @@ int io_setup(const char *dev)
 	return spi_init(dev);
 }
 
-void io_reset(void)
+void io_reset(int spi_fd)
 {
 	disable();
 	munmap((void*)gpio, BLOCK_SIZE);
-	spi_deinit();
+	spi_deinit(spi_fd);
 }

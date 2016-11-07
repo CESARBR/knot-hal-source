@@ -29,13 +29,9 @@
 #define SPI_SPEED		1000000
 #define BITS_PER_WORD		8
 
-static int	spi_fd = -1;
-
-int spi_init(const char *dev)
+int8_t spi_init(const char *dev)
 {
-
-	if (spi_fd > 0)
-		return -1;
+	int spi_fd;
 
 #if defined(RPI_BOARD) || defined(RPI2_BOARD)
 	spi_fd = open(dev, O_RDWR);
@@ -44,10 +40,10 @@ int spi_init(const char *dev)
 	if (spi_fd < 1)
 		return -errno;
 
-	return 0;
+	return spi_fd;
 }
 
-void spi_deinit(void)
+void spi_deinit(int8_t spi_fd)
 {
 	if (spi_fd > 0) {
 		close(spi_fd);
@@ -55,7 +51,8 @@ void spi_deinit(void)
 	}
 }
 
-int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
+int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
+		int lrx)
 {
 	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
 	uint8_t  mode;

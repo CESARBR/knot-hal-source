@@ -43,12 +43,11 @@ int io_setup(const char *dev)
 	/* PB1 as output */
 	DDRB |= (1 << CE);
 	disable();
-	spi_init("");
-	return 0;
+	return spi_init("");
 }
 
-void io_reset(void)
+void io_reset(int spi_fd)
 {
 	disable();
-	spi_deinit();
+	spi_deinit(spi_fd);
 }

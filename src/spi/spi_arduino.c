@@ -27,7 +27,7 @@
 
 static int m_init = 0;
 
-int spi_init(const char *dev)
+int8_t spi_init(const char *dev)
 {
 	if (m_init)
 		return 0;
@@ -60,7 +60,7 @@ int spi_init(const char *dev)
 	return 0;
 }
 
-void spi_deinit(void)
+void spi_deinit(int8_t spi_fd)
 {
 	if (m_init) {
 
@@ -72,7 +72,8 @@ void spi_deinit(void)
 	}
 }
 
-int spi_transfer(const uint8_t *tx, int ltx, uint8_t *rx, int lrx)
+int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
+			int lrx)
 {
 	const uint8_t *tpd;
 	uint8_t *rpd;
