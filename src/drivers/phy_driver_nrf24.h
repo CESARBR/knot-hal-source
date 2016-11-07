@@ -18,4 +18,20 @@ struct nrf24_io_pack {
 	uint8_t payload[NRF24_PAYLOAD_SIZE];
 } __attribute__ ((packed));
 
+enum nrf24_cmds {
+					CMD_SET_PIPE,
+					CMD_SET_CHANNEL,
+					CMD_GET_CHANNEL,
+					CMD_SET_ADDRESS_PIPE,
+					CMD_SET_POWER,
+};
+
+/* Used to set pipe address*/
+struct addr_pipe {
+	int pipe;
+	bool ack;
+	uint8_t aa[5];
+};
+
+
 #endif

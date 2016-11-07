@@ -102,7 +102,35 @@ static void nrf24l01_close(int spi_fd)
 
 static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 {
-	return -ENOSYS;
+	int err = 0;
+
+	/* Set standby to set registers */
+	nrf24l01_set_standby(spi_fd);
+
+	switch (cmd) {
+
+	/* Command to set address pipe */
+	case CMD_SET_PIPE:
+		{
+			struct addr_pipe *addrpipe = (struct addr_pipe *) arg;
+
+			err = nrf24l01_open_pipe(spi_fd, addrpipe->pipe,
+					addrpipe->aa, addrpipe->ack);
+		}
+		break;
+
+	/* Command to set channel pipe */
+	case CMD_SET_CHANNEL:
+		err = nrf24l01_set_channel(spi_fd, *((int *) arg));
+		break;
+
+	default:
+		err = -1;
+	}
+
+	nrf24l01_set_prx(spi_fd, broadcast_addr);
+
+	return err;
 }
 
 struct phy_driver nrf24l01 = {
