@@ -20,6 +20,7 @@
 #endif
 
 #include "nrf24l01.h"
+#include "nrf24l01_io.h"
 #include "phy_driver_private.h"
 #include "phy_driver_nrf24.h"
 
@@ -75,8 +76,23 @@ static ssize_t nrf24l01_read(int spi_fd, void *buffer, size_t len)
 
 static int nrf24l01_open(const char *pathname)
 {
-	return -ENOSYS;
+	int err;
+	/*
+	 * Considering 16-bits to address adapter and logical
+	 * channels. The most significant 4-bits will be used to
+	 * address the local adapter, the remaining (12-bits) will
+	 * used to address logical channels(clients/pipes).
+	 * eg: For nRF24 '0' will be mapped to pipe0.
+	 * TODO: Implement addressing
+	 */
 
+	/* Init the radio with tx power 0dbm */
+	err = nrf24l01_init(pathname, NRF24_PWR_0DBM);
+	if (err < 0)
+		return err;
+
+	/* Returns spi fd */
+	return err;
 }
 
 static void nrf24l01_close(int spi_fd)
