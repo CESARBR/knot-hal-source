@@ -31,10 +31,8 @@ static const char *opt_cfg = "gatewayConfig.json";
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
-static uint8_t opt_channel = CHANNEL_DEFAULT;
-static int opt_channel_aux = CHANNEL_DEFAULT;
-static uint8_t opt_tx = NRF24_PWR_0DBM;
-static int opt_tx_aux = 0;	/* 0 dBm */
+static int opt_channel = CHANNEL_DEFAULT;
+static int opt_tx = NRF24_PWR_0DBM;
 
 static void sig_term(int sig)
 {
@@ -55,9 +53,9 @@ static GOptionEntry options[] = {
 					"port", "Remote port" },
 	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
 					"spi", "SPI device path" },
-	{ "channel", 'c', 0, G_OPTION_ARG_INT, &opt_channel_aux,
+	{ "channel", 'c', 0, G_OPTION_ARG_INT, &opt_channel,
 					"channel", "Broadcast channel" },
-	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_tx_aux,
+	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_tx,
 					"tx_power",
 		"TX power: transmition signal strength in dBm" },
 	{ NULL },
@@ -81,26 +79,6 @@ static gboolean inotify_cb(GIOChannel *gio, GIOCondition condition,
 		g_main_loop_quit(main_loop);
 
 	return TRUE;
-}
-
-static uint8_t set_tx_input(int tx_pwr)
-{
-	switch (tx_pwr) {
-
-	case 0:
-		return NRF24_PWR_0DBM;
-
-	case -6:
-		return NRF24_PWR_6DBM;
-
-	case -12:
-		return NRF24_PWR_12DBM;
-
-	case -18:
-		return NRF24_PWR_18DBM;
-	}
-
-	return NRF24_PWR_0DBM;
 }
 
 int main(int argc, char *argv[])
@@ -135,25 +113,6 @@ int main(int argc, char *argv[])
 		printf("%s is not a regular file!\n", opt_cfg);
 		return EXIT_FAILURE;
 	}
-
-	/*
-	 * Validate tx_pwr
-	 * write Power Amplifier(PA) control in
-	 * TX mode: 0 <= v <= 3 valid values
-	 * and respectively to: -18dBm,
-	 * -12dBm, -6 dBm and 0dBm
-	 */
-	opt_tx = set_tx_input(opt_tx_aux);
-
-	/*
-	 * Validate channel values
-	 * channel range 0 - 125 valid values
-	 */
-	if (opt_channel_aux > 125 || opt_channel_aux < 0) {
-		printf("Invalid channel value: %d\n", opt_channel_aux);
-		return EXIT_FAILURE;
-	}
-	opt_channel = opt_channel_aux;
 
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);

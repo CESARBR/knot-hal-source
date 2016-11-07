@@ -260,11 +260,9 @@ static uint8_t set_tx_input(int tx_pwr)
  * in the json configuration file
  */
 static int parse_config(const char *config, const char **host, int *port,
-			const char **spi, uint8_t *channel, uint8_t *tx_pwr)
+			const char **spi, int *channel, int *tx_pwr)
 {
 	json_object *jobj, *obj_radio, *obj_tmp;
-
-	int tx_pwr_dBm, channel_json_input;
 
 	int err = -EINVAL;
 
@@ -275,32 +273,11 @@ static int parse_config(const char *config, const char **host, int *port,
 	if (!json_object_object_get_ex(jobj, "radio", &obj_radio))
 		goto done;
 
-	if (json_object_object_get_ex(obj_radio,  "channel", &obj_tmp)) {
-		channel_json_input = json_object_get_int(obj_tmp);
+	if (json_object_object_get_ex(obj_radio, "channel", &obj_tmp))
+		*channel = json_object_get_int(obj_tmp);
 
-		/*
-		 * Validate channel values
-		 * channel range 0 - 125 valid values
-		 */
-		if (channel_json_input > 125 || channel_json_input < 0) {
-			fprintf(stderr, "Invalid channel value: %d\n", channel_json_input);
-			channel_json_input = NRF24_CH_MIN;
-		}
-		*channel = channel_json_input;
-	}
-
-	if (json_object_object_get_ex(obj_radio,  "powerRate", &obj_tmp)) {
-		tx_pwr_dBm = json_object_get_int(obj_tmp);
-
-		/*
-		 * Sets tx_pwr
-		 * write Power Amplifier(PA) control in
-		 * TX mode: 0 <= v <= 3 valid values
-		 * and respectively to: -18dBm,
-		 * -12dBm, -6 dBm and 0dBm
-		 */
-		*tx_pwr = set_tx_input(tx_pwr_dBm);
-	}
+	if (json_object_object_get_ex(obj_radio,  "TxPower", &obj_tmp))
+		*tx_pwr = json_object_get_int(obj_tmp);
 
 	/* Success */
 	err = 0;
@@ -312,8 +289,11 @@ done:
 }
 
 int manager_start(const char *file, const char *host, int port,
-			const char *spi, uint8_t channel, uint8_t tx_pwr)
+			const char *spi, int channel, int tx_pwr)
 {
+	uint8_t tx_pwr_radio;
+	uint8_t channel_radio = NRF24_CH_MIN;
+
 	char *json_str;
 	int err;
 
@@ -329,8 +309,22 @@ int manager_start(const char *file, const char *host, int port,
 		return err;
 	}
 
+	/*
+	 * Set tx_power from dBm to the values
+	 * defined on the nrf24l01 datasheet
+	 */
+	tx_pwr_radio = set_tx_input(tx_pwr);
+
+	/*
+	 * Validate and set the channel input
+	 * value for the radio_init function
+	 */
+	if (channel <= 125 && channel >= 0)
+		channel_radio = channel;
+
+
 	if (host == NULL)
-		return radio_init(spi, channel, tx_pwr);
+		return radio_init(spi, channel_radio, tx_pwr_radio);
 	/*
 	 * TCP development mode: Linux connected to RPi(phynrfd radio
 	 * proxy). Connect to phynrfd routing all traffic over TCP.
