@@ -63,7 +63,20 @@ inline int phy_open(const char *pathname)
 
 inline int phy_close(int sockfd)
 {
-	return -ENOSYS;
+	if (sockfd < 0 || sockfd > PHY_DRIVERS_COUNTER)
+		return -EINVAL;
+
+	/* If has open driver */
+	if (driver_ops[sockfd]->ref_open != 0) {
+		--driver_ops[sockfd]->ref_open;
+		/* If zero then close the driver */
+		if (driver_ops[sockfd]->ref_open == 0) {
+			driver_ops[sockfd]->close(driver_ops[sockfd]->fd);
+			driver_ops[sockfd]->fd = -1;
+		}
+	}
+
+	return 0;
 }
 
 inline ssize_t phy_read(int sockfd, void *buffer, size_t len)
