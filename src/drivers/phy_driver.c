@@ -27,9 +27,38 @@ struct phy_driver *driver_ops[] = {
 	&nrf24l01
 };
 
+/* ARRAY SIZE */
+#define PHY_DRIVERS_COUNTER	((int) (sizeof(driver_ops) \
+				 / sizeof(driver_ops[0])))
+
 inline int phy_open(const char *pathname)
 {
-	return -ENOSYS;
+	uint8_t i;
+	int err, sockfd = -1;
+
+	/* Find driver index */
+	for (i = 0; i < PHY_DRIVERS_COUNTER; ++i) {
+		if (strcmp(pathname, driver_ops[i]->name) == 0)
+			sockfd = i;
+	}
+
+	/* Return error if driver not found */
+	if (sockfd < 0)
+		return sockfd;
+
+	/* If not open */
+	if (driver_ops[sockfd]->ref_open == 0) {
+		/* Open the driver - returns fd */
+		err = driver_ops[sockfd]->open(driver_ops[sockfd]->pathname);
+		if (err < 0)
+			return err;
+
+		driver_ops[sockfd]->fd = err;
+	}
+
+	++driver_ops[sockfd]->ref_open;
+
+	return sockfd;
 }
 
 inline int phy_close(int sockfd)
