@@ -15,6 +15,7 @@
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
 
+
 typedef struct {
 	uint8_t enaa,
 	en_rxaddr,
@@ -41,7 +42,6 @@ typedef enum {
 } en_modes_t;
 
 static uint8_t m_pipe0_addr[5];
-
 #define DATA_SIZE	sizeof(uint8_t)
 
 /* Time delay in microseconds (us) */
@@ -107,6 +107,7 @@ static void set_address_pipe(uint8_t reg, uint8_t *pipe_addr)
 
 	/* memcpy is necessary because outr_data cleans value after send */
 	memcpy(addr, pipe_addr, sizeof(addr));
+
 	switch (reg) {
 	case NRF24_TX_ADDR:
 	case NRF24_RX_ADDR_P0:
@@ -120,6 +121,29 @@ static void set_address_pipe(uint8_t reg, uint8_t *pipe_addr)
 	outr_data(reg, &addr, len);
 }
 
+/*Get address of pipe */
+static uint8_t *get_address_pipe(uint8_t pipe)
+{
+	uint16_t len;
+	static uint8_t pipe_addr[8];
+
+	memset(pipe_addr, 0, sizeof(pipe_addr));
+	len = NRF24_AW_RD(inr(NRF24_SETUP_AW));
+
+	switch (pipe_reg[pipe].rx_addr) {
+	case NRF24_TX_ADDR:
+	case NRF24_RX_ADDR_P0:
+	case NRF24_RX_ADDR_P1:
+		break;
+
+	default:
+		inr_data(NRF24_RX_ADDR_P1, pipe_addr, len);
+		len = DATA_SIZE;
+	}
+	inr_data(pipe_reg[pipe].rx_addr, pipe_addr, len);
+
+	return pipe_addr;
+}
 static int8_t set_standby1(void)
 {
 	disable();
@@ -296,8 +320,9 @@ int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t *pipe_addr)
 * the radio will be the Primary Transmitter (PTX).
 * See page 31 of nRF24L01_Product_Specification_v2_0.pdf
 */
-int8_t nrf24l01_set_ptx(uint8_t *pipe_addr, bool ack)
+int8_t nrf24l01_set_ptx(uint8_t pipe, bool ack)
 {
+
 	/* put the radio in mode standby-1 */
 	set_standby1();
 	/* TX Settling */
@@ -313,8 +338,8 @@ int8_t nrf24l01_set_ptx(uint8_t *pipe_addr, bool ack)
 	else
 		outr(NRF24_EN_AA, inr(NRF24_EN_AA) | pipe_reg[0].enaa);
 
-	set_address_pipe(NRF24_RX_ADDR_P0, pipe_addr);
-	set_address_pipe(NRF24_TX_ADDR, pipe_addr);
+	set_address_pipe(NRF24_RX_ADDR_P0, get_address_pipe(pipe));
+	set_address_pipe(NRF24_TX_ADDR, get_address_pipe(pipe));
 	#if (NRF24_ARC != NRF24_ARC_DISABLE)
 		/*
 		* Set ARC and ARD retry periods

@@ -59,7 +59,7 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 {
 	int err;
 	/* Puts the radio in TX mode  enabling Acknowledgment */
-	nrf24l01_set_ptx(aa_pipes[sockfd], true);
+	nrf24l01_set_ptx(sockfd, true);
 
 	/* Transmits the data */
 	nrf24l01_ptx_data((void *)buffer, len);
