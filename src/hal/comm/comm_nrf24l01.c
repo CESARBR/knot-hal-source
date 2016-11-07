@@ -60,7 +60,7 @@ static ssize_t send_data(int sockfd, const void *buffer, size_t len)
 {
 	int err;
 	/* Puts the radio in TX mode  enabling Acknowledgment */
-	nrf24l01_set_ptx(spi_fd, sockfd, true);
+	nrf24l01_set_ptx(spi_fd, sockfd);
 
 	/* Transmits the data */
 	nrf24l01_ptx_data(spi_fd, (void *)buffer, len);
@@ -245,7 +245,7 @@ static int nrf24l01_listen(int sockfd)
 		return -EINVAL;
 
 	/* Open pipe zero in the sockfd address */
-	nrf24l01_open_pipe(spi_fd, NRF24_PIPE0, aa_pipes[NRF24_PIPE0]);
+	nrf24l01_open_pipe(spi_fd, NRF24_PIPE0, aa_pipes[NRF24_PIPE0], false);
 
 	/*
 	 * Standby mode is used to minimize average
@@ -268,7 +268,7 @@ static void nrf24l01_set_data_settings(uint8_t channel, uint8_t *aa,
 {
 
 	nrf24l01_set_channel(spi_fd, channel);
-	nrf24l01_open_pipe(spi_fd, pipe, aa);
+	nrf24l01_open_pipe(spi_fd, pipe, aa, true);
 	nrf24l01_set_prx(spi_fd, aa_pipes[0]);
 }
 

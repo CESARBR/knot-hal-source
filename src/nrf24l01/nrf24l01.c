@@ -287,7 +287,8 @@ int8_t nrf24l01_set_channel(int8_t spi_fd, uint8_t ch)
 * 0 <= pipe <= 5
 * Pipes are enabled with the bits in the EN_RXADDR
 */
-int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr)
+int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr,
+				bool ack)
 {
 	pipe_reg_t rpipe;
 
@@ -299,8 +300,12 @@ int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr)
 		outr(spi_fd, NRF24_EN_RXADDR, inr(spi_fd, NRF24_EN_RXADDR)
 			| rpipe.en_rxaddr);
 
-		outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
-			| rpipe.enaa);
+		if (!ack)
+			outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
+					& ~pipe_reg[pipe].enaa);
+		else
+			outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
+					| pipe_reg[pipe].enaa);
 	}
 	return 0;
 }
@@ -310,7 +315,7 @@ int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr)
 * the radio will be the Primary Transmitter (PTX).
 * See page 31 of nRF24L01_Product_Specification_v2_0.pdf
 */
-int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe, bool ack)
+int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 {
 
 	/* put the radio in mode standby-1 */
@@ -318,17 +323,16 @@ int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe, bool ack)
 	/* TX Settling */
 
 	/*
-	 * If the ack option is disable is necessary disable auto-ack in pipe 0
-	 * because ack always arrive in pipe 0
-	 * and the ack is enable for all pipe by default
-	 * as configured in init
+	 * If the ack is enable in this pipe is necessary enable
+	 * the ack in pipe0 too. Because ack always arrive in pipe 0.
 	 */
-	if (!ack)
+	if (inr(spi_fd, NRF24_EN_AA) & pipe_reg[pipe].enaa
+				&& pipe != NRF24_PIPE0_ADDR)
 		outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
-				& ~pipe_reg[0].enaa);
+					| NRF24_AA_P0);
 	else
 		outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
-				| pipe_reg[0].enaa);
+				& ~NRF24_AA_P0);
 
 	set_address_pipe(spi_fd, NRF24_RX_ADDR_P0,
 						get_address_pipe(spi_fd, pipe));
