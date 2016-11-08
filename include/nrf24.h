@@ -22,7 +22,7 @@ struct nrf24_mac {
 };
 
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
-struct nrf24_evt_connected {
+struct mgmt_evt_nrf24_connected {
 	struct nrf24_mac src;	/* Source address */
 	struct nrf24_mac dst;	/* Destination address */
 
@@ -31,14 +31,33 @@ struct nrf24_evt_connected {
 } __attribute__ ((packed));
 
 /* Sent after timeout or user initiated disconnection */
-struct nrf24_evt_disconnected {
+struct mgmt_evt_nrf24_disconnected {
 	struct nrf24_mac src;	/* Source address */
 	struct nrf24_mac dst;	/* Destination address */
 } __attribute__ ((packed));
 
-/* Event indicating connectability or simply broadcast(beacon) */
-struct nrf24_evt_broadcast {
-	uint8_t type;		/* Beacon/Setup/Presence */
-	uint8_t len;		/* Payload length */
+#define MGMT_EVT_NRF24_BCAST_BEACON		0 /* Non-connectable */
+struct mgmt_evt_nrf24_bcast_beacon {
+	uint8_t len;		 /* Payload length */
 	uint8_t payload[0];
-};
+} __attribute__ ((packed));
+
+#define MGMT_EVT_NRF24_BCAST_SETUP		1 /* Connectable & on setup mode */
+struct mgmt_evt_nrf24_bcast_setup {
+	struct nrf24_mac src;
+	uint8_t len;		 /* Payload length */
+	uint8_t payload[0];
+} __attribute__ ((packed));
+
+#define MGMT_EVT_NRF24_BCAST_PRESENCE		2 /* Connectable */
+struct mgmt_evt_nrf24_bcast_presence {
+	struct nrf24_mac src;
+	uint8_t len;		 /* Payload length */
+	uint8_t payload[0];
+} __attribute__ ((packed));
+
+struct mgmt_nrf24_header {
+	uint16_t opcode;	/* Command/Response/Event opcode */
+	uint8_t index;		/* Multi adapter: index */
+	uint8_t payload[0];	/* Command/Response/Event specific data */
+} __attribute__ ((packed));
