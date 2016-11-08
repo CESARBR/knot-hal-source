@@ -11,10 +11,7 @@
 #define HAL_COMM_PF_NRF24		1
 #define HAL_COMM_PF_SERIAL		2
 
-/*
- * UDATA: Sequenced and reliable protocol
- */
-#define HAL_COMM_NRF24PROTO_UDATA	64
+#define HAL_COMM_PROTO_RAW		0 /* Raw data(User): serial/NRF24 */
 
 /*
  * nRF24 and other radios. Returns -ENFILE (limit of resources/pipes has
