@@ -33,16 +33,18 @@ src_nrfd_nrfd_LDADD = libs/libhallog.a \
 src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
 src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm
 
 src_phyemud_phyemud_SOURCES = src/phyemud/main.c \
-			src/hal/comm/comm_private.h \
+			src/drivers/phy_driver_private.h \
 			src/phyemud/manager.h src/phyemud/manager.c \
 			src/phyemud/phyunix.c src/phyemud/physerial.c
 src_phyemud_phyemud_LDADD = @GLIB_LIBS@
 src_phyemud_phyemud_LDFLAGS = $(AM_LDFLAGS)
 src_phyemud_phyemud_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm
 
 examples_uthingd_SOURCES = examples/uthing.c \
@@ -50,6 +52,7 @@ examples_uthingd_SOURCES = examples/uthing.c \
 examples_uthingd_LDFLAGS = $(AM_LDFLAGS)
 examples_uthingd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm
 
 DISTCLEANFILES =

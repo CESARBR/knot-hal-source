@@ -18,7 +18,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "comm_private.h"
+#include "phy_driver_private.h"
 
 /* Application packet size maximum */
 #define PACKET_SIZE_MAX			512

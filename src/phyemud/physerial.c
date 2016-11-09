@@ -38,7 +38,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "comm_private.h"
+#include "phy_driver_private.h"
 
 struct serial_opts {
 	char	tty[24];

@@ -15,7 +15,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "comm_private.h"
+#include "phy_driver_private.h"
 
 #define THING_TO_NRFD_UNIX_SOCKET	":thing:nrfd"
 

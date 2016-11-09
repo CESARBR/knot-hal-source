@@ -3,7 +3,8 @@ lib_LIBRARIES = libhalcomm.a
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 
 libhalcomm_a_SOURCES = comm_nrf24l01.c
-libhalcomm_a_CPPFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/src/nrf24l01
+libhalcomm_a_CPPFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/src/nrf24l01 \
+			-I$(top_srcdir)/src/drivers
 libhalcomm_a_DEPENDENCIES = $(top_srcdir)/include/comm.h
 
 all-local:

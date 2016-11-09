@@ -20,7 +20,7 @@
 #endif
 
 #include "include/time.h"
-#include "comm_private.h"
+#include "phy_driver_private.h"
 #include "nrf24l01.h"
 #include "nrf24l01_ll.h"
 

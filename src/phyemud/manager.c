@@ -22,7 +22,7 @@
 
 #include <glib.h>
 
-#include "comm_private.h"
+#include "phy_driver_private.h"
 #include "manager.h"
 
 /* Application packet size maximum, same as knotd */
