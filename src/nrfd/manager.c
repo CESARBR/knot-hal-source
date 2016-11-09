@@ -24,74 +24,10 @@
 #include "nrf24l01_io.h"
 #include "manager.h"
 
-static struct phy_driver *driver = &nrf24l01;
-
-static int nrf24_fd = -1;
-static guint listen_idle = 0;
-
-static void watch_rxtx_destroy(gpointer user_data)
-{
-	/* Close pipe & free resources */
-}
-
-static gboolean watch_rxtx_cb(gpointer user_data)
-{
-	int cli_fd = GPOINTER_TO_INT(user_data);
-
-	/* FIXME: recv & send & detect disconnection */
-	fprintf(stdout, "client id: %d\n", cli_fd);
-
-	return TRUE;
-}
-
-static void watch_accept_destroy(gpointer user_data)
-{
-}
-
-static gboolean watch_accept_cb(gpointer user_data)
-{
-	int cli_fd;
-
-	cli_fd = driver->accept(nrf24_fd);
-	if (cli_fd < 0)
-		return TRUE;
-
-	/* FIXME: remove client sources before exiting */
-	g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,
-			watch_rxtx_cb, GINT_TO_POINTER(cli_fd),
-			watch_rxtx_destroy);
-
-	return TRUE;
-}
 
 static int radio_init(const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
-	int retval, fd;
 
-	retval = driver->probe(spi, tx_pwr);
-	if (retval < 0)
-		return retval;
-
-	/* nRF24 radio initialization */
-	fd = driver->open(NULL);
-	if (fd < 0) {
-		driver->remove();
-		return fd;
-	}
-
-	/* Blocking operation: waiting for available nRF24L01 channel */
-	retval = driver->listen(fd, channel);
-	if (retval < 0) {
-		driver->close(fd);
-		driver->remove();
-		return retval;
-	}
-
-	nrf24_fd = fd;
-
-	listen_idle = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,
-				      watch_accept_cb, NULL,
-				      watch_accept_destroy);
 
 	return 0;
 }
@@ -99,18 +35,6 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t tx_pwr)
 static void radio_stop(void)
 {
 
-	if (listen_idle) {
-		g_source_remove(listen_idle);
-		listen_idle = 0;
-	}
-
-	/* nRF24: Stop listening pipe0 */
-	if (nrf24_fd >= 0)
-		driver->close(nrf24_fd);
-
-	/* Stop nRF24 radio */
-	driver->remove();
-	nrf24_fd = -1;
 }
 
 static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
