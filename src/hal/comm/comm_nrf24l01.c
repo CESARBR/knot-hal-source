@@ -36,6 +36,7 @@ static uint8_t aa_pipes[6][5] = {
 	{0xF0, 0x96, 0xB6, 0xC1, 0x6B}
 };
 
+/* Global to save driver index */
 static int driverIndex = -1;
 
 /* Local functions */
@@ -119,7 +120,17 @@ int hal_comm_socket(int domain, int protocol)
 
 int hal_comm_close(int sockfd)
 {
-	return -ENOSYS;
+	if (driverIndex == -1)
+		return -EPERM;
+
+	/* Pipe 0 is not closed because ACK arrives in this pipe */
+	if (sockfd >= 1 && sockfd <= 5) {
+		/* Free pipe */
+		pipes_allocate[sockfd-1] = -1;
+		phy_ioctl(driverIndex, CMD_RESET_PIPE, &sockfd);
+	}
+
+	return 0;
 }
 
 ssize_t hal_comm_read(int sockfd, void *buffer, size_t count)
