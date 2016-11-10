@@ -1,4 +1,4 @@
-lib_LIBRARIES = libhalcommnrf24.a
+lib_LIBRARIES = libhalcommnrf24.a libhalcommserial.a
 
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 
@@ -7,8 +7,13 @@ libhalcommnrf24_a_CPPFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/src/nrf24l01 \
 					-I$(top_srcdir)/src/drivers
 libhalcommnrf24_a_DEPENDENCIES = $(top_srcdir)/include/comm.h
 
+libhalcommserial_a_SOURCES = comm_serial.c
+libhalcommserial_a_CPPFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/src/drivers
+libhalcommserial_a_DEPENDENCIES = $(top_srcdir)/include/comm.h
+
 all-local:
 	$(MKDIR_P) $(top_srcdir)/libs && cp $(lib_LIBRARIES) $(top_srcdir)/libs
 
 clean-local:
 	$(RM) -r libhalcommnrf24.a
+	$(RM) -r libhalcommserial.a
