@@ -26,7 +26,7 @@ proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 src_nrfd_nrfd_SOURCES = src/nrfd/main.c \
 				src/nrfd/manager.h src/nrfd/manager.c
 src_nrfd_nrfd_LDADD = libs/libhallog.a \
-				libs/libhalcomm.a \
+				libs/libhalcommnrf24.a \
 				libs/libhaltime.a \
 				libs/libhalstorage.a \
 				libs/libnrf24l01.a \
