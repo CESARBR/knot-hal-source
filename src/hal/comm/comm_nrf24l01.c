@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifdef ARDUINO
 #include <avr_errno.h>
@@ -20,9 +21,39 @@
 
 #include "include/comm.h"
 #include "phy_driver.h"
-#include "nrf24l01.h"
+#include "phy_driver_nrf24.h"
+
+/* Array to indicate if pipe is in used */
+static int8_t pipes_allocate[] = {0, 0, 0, 0, 0};
+
+/* Access Address for each pipe */
+static uint8_t aa_pipes[6][5] = {
+	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
+	{0x35, 0x96, 0xB6, 0xC1, 0x6B},
+	{0x77, 0x96, 0xB6, 0xC1, 0x6B},
+	{0xD3, 0x96, 0xB6, 0xC1, 0x6B},
+	{0xE7, 0x96, 0xB6, 0xC1, 0x6B},
+	{0xF0, 0x96, 0xB6, 0xC1, 0x6B}
+};
 
 static int driverIndex = -1;
+
+/* Local functions */
+static inline int get_free_pipe(void)
+{
+	uint8_t i;
+
+	for (i = 0; i < sizeof(pipes_allocate); i++) {
+		if (pipes_allocate[i] == 0) {
+			/* one peer for pipe*/
+			pipes_allocate[i] = 1;
+			return i+1;
+		}
+	}
+
+	/* No free pipe */
+	return -1;
+}
 
 int hal_comm_init(const char *pathname)
 {
@@ -40,8 +71,50 @@ int hal_comm_init(const char *pathname)
 
 int hal_comm_socket(int domain, int protocol)
 {
+	int retval;
+	struct addr_pipe ap;
 
-	return -ENOSYS;
+	/* If domain is not NRF24 */
+	if (domain != HAL_COMM_PF_NRF24)
+		return -EPERM;
+
+	/* If not initialized */
+	if (driverIndex == -1)
+		return -EPERM;	/* Operation not permitted */
+
+	switch (protocol) {
+
+	case HAL_COMM_PROTO_MGMT:
+		/* If Management, disable ACK and returns 0 */
+		ap.ack = false;
+		retval = 0;
+		break;
+
+	case HAL_COMM_PROTO_RAW:
+		/*
+		 * If raw data, enable ACK
+		 * and returns an available pipe
+		 * from 1 to 5
+		 */
+		retval = get_free_pipe();
+		/* If not pipe available */
+		if (retval < 0)
+			return -EUSERS; /* Returns too many users */
+
+		ap.ack = true;
+		break;
+
+	default:
+		return -EINVAL; /* Invalid argument */
+	}
+
+	ap.pipe = retval;
+	memcpy(ap.aa, aa_pipes[retval], sizeof(aa_pipes[retval]));
+
+	/* Open pipe */
+	phy_ioctl(driverIndex, CMD_SET_PIPE, &ap);
+
+	return retval;
 }
 
 void hal_comm_close(int sockfd)

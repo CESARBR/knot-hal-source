@@ -12,3 +12,5 @@
 #define EBADMSG			74	/* Not a data message */
 #define EILSEQ			84	/* Illegal byte sequence */
 #define ENOSYS			38	/*  Function not implemented */
+#define EPERM			01	/* Operation not permitted */
+#define EUSERS			87	/* Too many users */
