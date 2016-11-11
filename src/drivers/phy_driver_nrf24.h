@@ -20,6 +20,7 @@ struct nrf24_io_pack {
 
 enum nrf24_cmds {
 					CMD_SET_PIPE,
+					CMD_RESET_PIPE,
 					CMD_SET_CHANNEL,
 					CMD_GET_CHANNEL,
 					CMD_SET_ADDRESS_PIPE,
