@@ -259,7 +259,29 @@ int hal_comm_listen(int sockfd)
 int hal_comm_accept(int sockfd, uint64_t *addr)
 {
 
-	return -ENOSYS;
+	uint8_t datagram[NRF24_MTU];
+	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *) datagram;
+	struct nrf24_ll_mgmt_connect *payload =
+			(struct nrf24_ll_mgmt_connect *) ipdu->payload;
+	size_t len;
+
+	/* Read connect_request from pipe broadcast */
+	len = mgmt.len_rx;
+	if (len == 0)
+		return -EAGAIN;
+
+	/* Get the response */
+	memcpy(datagram, mgmt.buffer_rx, len);
+	/* Reset rx len */
+	mgmt.len_rx = 0;
+	/* If this packet is not connect request */
+	if (ipdu->type != NRF24_PDU_TYPE_CONNECT_REQ)
+		return -EINVAL;
+	/* If this packet is not for me*/
+	if (payload->dst_addr.address.uint64 != *addr)
+		return -EINVAL;
+
+	return 0;
 }
 
 
