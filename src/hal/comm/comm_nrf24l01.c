@@ -117,9 +117,9 @@ int hal_comm_socket(int domain, int protocol)
 	return retval;
 }
 
-void hal_comm_close(int sockfd)
+int hal_comm_close(int sockfd)
 {
-
+	return -ENOSYS;
 }
 
 ssize_t hal_comm_read(int sockfd, void *buffer, size_t count)
