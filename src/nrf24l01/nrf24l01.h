@@ -54,6 +54,7 @@ int8_t nrf24l01_deinit(int8_t spi_fd);
 int8_t nrf24l01_set_channel(int8_t spi_fd, uint8_t ch);
 int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr,
 					bool ack);
+int8_t nrf24l01_close_pipe(int8_t spi_fd, int8_t pipe);
 int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe);
 int8_t nrf24l01_ptx_data(int8_t spi_fd, void *pdata, uint16_t len);
 int8_t nrf24l01_ptx_wait_datasent(int8_t spi_fd);

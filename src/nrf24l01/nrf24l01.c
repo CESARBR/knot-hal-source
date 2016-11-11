@@ -310,6 +310,34 @@ int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr,
 	return 0;
 }
 
+/*
+* nrf24l01_close_pipe:
+* 0 <= pipe <= 5
+*/
+
+int8_t nrf24l01_close_pipe(int8_t spi_fd, int8_t pipe)
+{
+	pipe_reg_t rpipe;
+
+	if (pipe < NRF24_PIPE_MIN || pipe > NRF24_PIPE_MAX)
+		return -1;
+
+	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
+
+	if (inr(spi_fd, NRF24_EN_RXADDR) & rpipe.en_rxaddr) {
+		/*
+		* The data pipes are enabled with the bits in the EN_RXADDR
+		* Disable the EN_RXADDR for this pipe
+		*/
+		outr(spi_fd, NRF24_EN_RXADDR, inr(spi_fd, NRF24_EN_RXADDR)
+				& ~rpipe.en_rxaddr);
+		/* Disable auto ack in this pipe */
+		outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
+				& ~rpipe.enaa);
+	}
+	return 0;
+}
+
 /* nrf24l01_set_ptx:
 * set pipe to send data;
 * the radio will be the Primary Transmitter (PTX).
