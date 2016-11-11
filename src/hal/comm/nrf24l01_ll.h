@@ -7,6 +7,8 @@
  *
  */
 
+#include "include/nrf24.h"
+
 #define NRF24_MTU					32
 
 /* Common to all devices */
@@ -44,8 +46,8 @@ struct nrf24_ll_mgmt_pdu {
  * TODO: event should be added to notify disconnection to upper layer
  */
 struct nrf24_ll_mgmt_connect {
-	uint64_t src_addr;	/* Source address */
-	uint64_t dst_addr;	/* Destination address */
+	struct nrf24_mac src_addr;	/* Source address */
+	struct nrf24_mac dst_addr;	/* Destination address */
 	uint8_t channel;	/* nRF24 channel: nRF24 spec page 25 */
 	uint8_t aa[5];		/* Access Address: nRF24 spec page 28 */
 	uint64_t rfu;		/* Reserved for future use */
