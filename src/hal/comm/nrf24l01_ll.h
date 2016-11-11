@@ -102,3 +102,10 @@ struct nrf24_ll_version_ind {
 	uint8_t major;
 	uint8_t minor;
 } __attribute__ ((packed));
+
+/*Slave to master */
+#define NRF24_LL_CRTL_OP_DISCONNECT	0x04
+struct nrf14_ll_disconnect {
+	struct nrf24_mac src_addr;	/* Source address */
+	struct nrf24_mac dst_addr;	/* Destination address */
+} __attribute__ ((packed));
