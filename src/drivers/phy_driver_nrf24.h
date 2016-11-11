@@ -29,7 +29,7 @@ enum nrf24_cmds {
 
 /* Used to set pipe address*/
 struct addr_pipe {
-	int pipe;
+	uint8_t pipe;
 	bool ack;
 	uint8_t aa[5];
 };
