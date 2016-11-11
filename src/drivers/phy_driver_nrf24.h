@@ -19,12 +19,12 @@ struct nrf24_io_pack {
 } __attribute__ ((packed));
 
 enum nrf24_cmds {
-					CMD_SET_PIPE,
-					CMD_RESET_PIPE,
-					CMD_SET_CHANNEL,
-					CMD_GET_CHANNEL,
-					CMD_SET_ADDRESS_PIPE,
-					CMD_SET_POWER,
+				NRF24_CMD_SET_PIPE,
+				NRF24_CMD_RESET_PIPE,
+				NRF24_CMD_SET_CHANNEL,
+				NRF24_CMD_GET_CHANNEL,
+				NRF24_CMD_SET_ADDRESS_PIPE,
+				NRF24_CMD_SET_POWER,
 };
 
 /* Used to set pipe address*/

@@ -175,7 +175,7 @@ int hal_comm_socket(int domain, int protocol)
 	memcpy(ap.aa, aa_pipes[retval], sizeof(aa_pipes[retval]));
 
 	/* Open pipe */
-	phy_ioctl(driverIndex, CMD_SET_PIPE, &ap);
+	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &ap);
 
 	return retval;
 }
@@ -189,7 +189,7 @@ int hal_comm_close(int sockfd)
 	if (sockfd >= 1 && sockfd <= 5) {
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
-		phy_ioctl(driverIndex, CMD_RESET_PIPE, &sockfd);
+		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
 	}
 
 	return 0;
