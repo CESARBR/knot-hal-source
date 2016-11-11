@@ -7,9 +7,6 @@
  *
  */
 
-#ifndef __PHY_DRIVER_NRF24__
-#define __PHY_DRIVER_NRF24__
-
 #define NRF24_PAYLOAD_SIZE		32
 
 /* Used to read/write operations */
@@ -33,6 +30,3 @@ struct addr_pipe {
 	bool ack;
 	uint8_t aa[5];
 };
-
-
-#endif
