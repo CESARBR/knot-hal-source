@@ -20,15 +20,24 @@
 #endif
 
 #include "include/comm.h"
+#include "include/nrf24.h"
 #include "phy_driver.h"
 #include "phy_driver_nrf24.h"
+#include "nrf24l01_ll.h"
+
+/* TODO: Get this values from config file */
+static const struct nrf24_mac addr_gw = {
+					.address.uint64 = 0xDEADBEEF12345678};
+static const uint8_t channel_data = 20;
 
 #define DATA_SIZE 128
 
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
-	uint8_t buffer_rx[30];
+	uint8_t buffer_rx[DATA_SIZE];
 	size_t len_rx;
+	uint8_t buffer_tx[DATA_SIZE];
+	size_t len_tx;
 };
 
 static struct nrf24_mgmt mgmt = {.len_rx = 0};
@@ -257,5 +266,35 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 int hal_comm_connect(int sockfd, uint64_t *addr)
 {
 
-	return -ENOSYS;
+	uint8_t datagram[NRF24_MTU];
+	struct nrf24_ll_mgmt_pdu *opdu = (struct nrf24_ll_mgmt_pdu *)datagram;
+	struct nrf24_ll_mgmt_connect *payload =
+				(struct nrf24_ll_mgmt_connect *) opdu->payload;
+	size_t len;
+
+	/* If already has something to write then returns busy */
+	if (mgmt.len_tx != 0)
+		return -EBUSY;
+
+	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
+
+	payload->src_addr = addr_gw;
+	payload->dst_addr.address.uint64 = *addr;
+	payload->channel = channel_data;
+	/*
+	 * Set in payload the addr to be set in client.
+	 * sockfd contains the pipe allocated for the client
+	 * aa_pipes contains the Access Address for each pipe
+	 */
+	memcpy(payload->aa, aa_pipes[sockfd],
+		sizeof(aa_pipes[sockfd]));
+
+	len = sizeof(struct nrf24_ll_mgmt_connect);
+	len += sizeof(struct nrf24_ll_mgmt_pdu);
+
+	/* Copy data to be write in tx buffer for BROADCAST*/
+	memcpy(mgmt.buffer_tx, datagram, len);
+	mgmt.len_tx = len;
+
+	return 0;
 }
