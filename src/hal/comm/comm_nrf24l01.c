@@ -104,6 +104,15 @@ int hal_comm_init(const char *pathname)
 	return 0;
 }
 
+int hal_comm_deinit(void)
+{
+	if (driverIndex == -1)
+		return -EPERM;
+
+	return phy_close(driverIndex);
+}
+
+
 int hal_comm_socket(int domain, int protocol)
 {
 	int retval;
