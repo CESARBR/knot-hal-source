@@ -38,6 +38,8 @@ struct nrf24_data {
 	int8_t pipe;
 	uint8_t buffer_rx[DATA_SIZE];
 	size_t len_rx;
+	uint8_t buffer_tx[DATA_SIZE];
+	size_t len_tx;
 };
 
 #ifndef ARDUINO	/* If gateway then 5 peers */
@@ -211,12 +213,25 @@ ssize_t hal_comm_read(int sockfd, void *buffer, size_t count)
 	return length;
 }
 
+
 ssize_t hal_comm_write(int sockfd, const void *buffer, size_t count)
 {
 
-	return -ENOSYS;
-}
+	/* TODO: Run background procedures */
 
+	if (sockfd < 1 || sockfd > 5 || count == 0 || count > DATA_SIZE)
+		return -EINVAL;
+
+	/* If already has something to write then returns busy */
+	if (peers[sockfd-1].len_tx != 0)
+		return -EBUSY;
+
+	/* Copy data to be write in tx buffer */
+	memcpy(peers[sockfd-1].buffer_tx, buffer, count);
+	peers[sockfd-1].len_tx = count;
+
+	return count;
+}
 int hal_comm_listen(int sockfd)
 {
 
