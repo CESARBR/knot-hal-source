@@ -26,6 +26,9 @@ extern "C" {
  * been reached) or an id representing the logical communication channel
  * for a new client.
  */
+
+int hal_comm_init(const char *pathname);
+
 int hal_comm_socket(int domain, int protocol);
 
 void hal_comm_close(int sockfd);

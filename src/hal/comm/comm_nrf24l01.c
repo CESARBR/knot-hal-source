@@ -19,9 +19,24 @@
 #endif
 
 #include "include/comm.h"
+#include "phy_driver.h"
 #include "nrf24l01.h"
-#include "nrf24l01_ll.h"
 
+static int driverIndex = -1;
+
+int hal_comm_init(const char *pathname)
+{
+	/* If driver not opened */
+	if (driverIndex != -1)
+		return -EPERM;
+
+	/* Open driver and returns the driver index */
+	driverIndex = phy_open(pathname);
+	if (driverIndex < 0)
+		return driverIndex;
+
+	return 0;
+}
 
 int hal_comm_socket(int domain, int protocol)
 {
