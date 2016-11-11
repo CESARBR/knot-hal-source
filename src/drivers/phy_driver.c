@@ -31,7 +31,7 @@ struct phy_driver *driver_ops[] = {
 #define PHY_DRIVERS_COUNTER	((int) (sizeof(driver_ops) \
 				 / sizeof(driver_ops[0])))
 
-inline int phy_open(const char *pathname)
+int phy_open(const char *pathname)
 {
 	uint8_t i;
 	int err, sockfd = -1;
@@ -61,7 +61,7 @@ inline int phy_open(const char *pathname)
 	return sockfd;
 }
 
-inline int phy_close(int sockfd)
+int phy_close(int sockfd)
 {
 	if (sockfd < 0 || sockfd > PHY_DRIVERS_COUNTER)
 		return -EINVAL;
@@ -79,17 +79,17 @@ inline int phy_close(int sockfd)
 	return 0;
 }
 
-inline ssize_t phy_read(int sockfd, void *buffer, size_t len)
+ssize_t phy_read(int sockfd, void *buffer, size_t len)
 {
 	return driver_ops[sockfd]->recv(driver_ops[sockfd]->fd, buffer, len);
 }
 
-inline ssize_t phy_write(int sockfd, const void *buffer, size_t len)
+ssize_t phy_write(int sockfd, const void *buffer, size_t len)
 {
 	return driver_ops[sockfd]->send(driver_ops[sockfd]->fd, buffer, len);
 }
 
-inline int phy_ioctl(int sockfd, int cmd, void *arg)
+int phy_ioctl(int sockfd, int cmd, void *arg)
 {
 	return driver_ops[sockfd]->ioctl(driver_ops[sockfd]->fd, cmd, arg);
 }
