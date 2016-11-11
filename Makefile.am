@@ -15,7 +15,7 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/phyemud/phyemud \
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd \
 							examples/uthingd
 
 proxy_spiproxyd_SOURCES = proxy/main.c
@@ -39,17 +39,6 @@ src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm \
 				-I$(top_srcdir)/src/nrf24l01 @JSON_CFLAGS@
-
-src_phyemud_phyemud_SOURCES = src/phyemud/main.c \
-			src/drivers/phy_driver_private.h \
-			src/phyemud/manager.h src/phyemud/manager.c \
-			src/phyemud/phyunix.c src/phyemud/physerial.c
-src_phyemud_phyemud_LDADD = @GLIB_LIBS@
-src_phyemud_phyemud_LDFLAGS = $(AM_LDFLAGS)
-src_phyemud_phyemud_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				-I$(top_srcdir)/src \
-				-I$(top_srcdir)/src/drivers \
-				-I$(top_srcdir)/src/hal/comm
 
 examples_uthingd_SOURCES = examples/uthing.c \
 			src/phyemud/phyunix.c
