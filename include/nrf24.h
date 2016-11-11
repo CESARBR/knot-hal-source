@@ -7,6 +7,9 @@
  *
  */
 
+#ifndef __HAL_NRF24_H__
+#define __HAL_NRF24_H__
+
 /*
  * nRF24 64-bits address example (string)
  * 88:77:66:55:44:33:22:11 (On left MSB of the address)
@@ -61,3 +64,5 @@ struct mgmt_nrf24_header {
 	uint8_t index;		/* Multi adapter: index */
 	uint8_t payload[0];	/* Command/Response/Event specific data */
 } __attribute__ ((packed));
+
+#endif /* __HAL_NRF24_H__ */
