@@ -10,6 +10,10 @@
 #ifndef __HAL_COMM_H__
 #define __HAL_COMM_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Domain: selects radio technology */
 #define HAL_COMM_PF_NRF24		1
 #define HAL_COMM_PF_SERIAL		2
@@ -39,5 +43,9 @@ int hal_comm_accept(int sockfd, uint64_t *addr);
 
 /* Blocking operation. Returns -ETIMEOUT */
 int hal_comm_connect(int sockfd, uint64_t *addr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HAL_COMM_H__ */
