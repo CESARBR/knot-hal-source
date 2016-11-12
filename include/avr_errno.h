@@ -9,6 +9,10 @@
 #ifndef __HAL_AVR_ERRNO_H__
 #define __HAL_AVR_ERRNO_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define	EINVAL			22	/* Invalid argument */
 #define EAGAIN			11	/* Resource temporarily unavailable */
 #define EBADMSG			74	/* Not a data message */
@@ -16,5 +20,9 @@
 #define ENOSYS			38	/*  Function not implemented */
 #define EPERM			01	/* Operation not permitted */
 #define EUSERS			87	/* Too many users */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HAL_AVR_ERRNO_H__ */
