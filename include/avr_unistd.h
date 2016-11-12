@@ -7,4 +7,9 @@
  *
  */
 
+#ifndef __HAL_AVR_UNISTD_H__
+#define __HAL_AVR_UNISTD_H__
+
 typedef long int ssize_t;
+
+#endif /* __HAL_AVR_UNISTD_H__ */

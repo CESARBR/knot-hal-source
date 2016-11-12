@@ -6,6 +6,8 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
+#ifndef __HAL_AVR_ERRNO_H__
+#define __HAL_AVR_ERRNO_H__
 
 #define	EINVAL			22	/* Invalid argument */
 #define EAGAIN			11	/* Resource temporarily unavailable */
@@ -14,3 +16,5 @@
 #define ENOSYS			38	/*  Function not implemented */
 #define EPERM			01	/* Operation not permitted */
 #define EUSERS			87	/* Too many users */
+
+#endif /* __HAL_AVR_ERRNO_H__ */
