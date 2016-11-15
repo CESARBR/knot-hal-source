@@ -15,8 +15,7 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd \
-							examples/uthingd
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -39,14 +38,6 @@ src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm \
 				-I$(top_srcdir)/src/nrf24l01 @JSON_CFLAGS@
-
-examples_uthingd_SOURCES = examples/uthing.c \
-			src/phyemud/phyunix.c
-examples_uthingd_LDFLAGS = $(AM_LDFLAGS)
-examples_uthingd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				-I$(top_srcdir)/src \
-				-I$(top_srcdir)/src/drivers \
-				-I$(top_srcdir)/src/hal/comm
 
 DISTCLEANFILES =
 
