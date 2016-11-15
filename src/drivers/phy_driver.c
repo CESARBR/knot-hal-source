@@ -81,12 +81,12 @@ int phy_close(int sockfd)
 
 ssize_t phy_read(int sockfd, void *buffer, size_t len)
 {
-	return driver_ops[sockfd]->recv(driver_ops[sockfd]->fd, buffer, len);
+	return driver_ops[sockfd]->read(driver_ops[sockfd]->fd, buffer, len);
 }
 
 ssize_t phy_write(int sockfd, const void *buffer, size_t len)
 {
-	return driver_ops[sockfd]->send(driver_ops[sockfd]->fd, buffer, len);
+	return driver_ops[sockfd]->write(driver_ops[sockfd]->fd, buffer, len);
 }
 
 int phy_ioctl(int sockfd, int cmd, void *arg)

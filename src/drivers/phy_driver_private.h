@@ -31,8 +31,8 @@ struct phy_driver {
 
 	int (*open) (const char *pathname);
 	void (*close) (int sockfd);
-	ssize_t (*recv) (int sockfd, void *buffer, size_t len);
-	ssize_t (*send) (int sockfd, const void *buffer, size_t len);
+	ssize_t (*read) (int sockfd, void *buffer, size_t len);
+	ssize_t (*write) (int sockfd, const void *buffer, size_t len);
 	int (*ioctl) (int sockfd, int cmd, void *arg);
 	int ref_open;
 	int fd;
