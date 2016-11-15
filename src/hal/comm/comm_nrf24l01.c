@@ -115,12 +115,22 @@ int hal_comm_init(const char *pathname)
 
 int hal_comm_deinit(void)
 {
+	int err;
+
+	/* If try to close driver with no driver open */
 	if (driverIndex == -1)
 		return -EPERM;
 
-	return phy_close(driverIndex);
-}
+	/* Close driver */
+	err = phy_close(driverIndex);
+	if (err < 0)
+		return err;
 
+	/* Dereferencing driverIndex */
+	driverIndex = -1;
+
+	return err;
+}
 
 int hal_comm_socket(int domain, int protocol)
 {
