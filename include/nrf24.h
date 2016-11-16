@@ -54,15 +54,13 @@ struct mgmt_evt_nrf24_bcast_beacon {
 #define MGMT_EVT_NRF24_BCAST_SETUP		0x0204 /* Connectable & on setup mode */
 struct mgmt_evt_nrf24_bcast_setup {
 	struct nrf24_mac src;
-	uint8_t len;		 /* Payload length */
-	uint8_t payload[0];
+	/* TODO: Add device/service infos? */
 } __attribute__ ((packed));
 
 #define MGMT_EVT_NRF24_BCAST_PRESENCE		0x0205 /* Connectable */
 struct mgmt_evt_nrf24_bcast_presence {
 	struct nrf24_mac src;
-	uint8_t len;		 /* Payload length */
-	uint8_t payload[0];
+	/* TODO: Add device/service infos? */
 } __attribute__ ((packed));
 
 struct mgmt_nrf24_header {
