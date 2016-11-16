@@ -70,22 +70,6 @@ static GOptionEntry options[] = {
 	{ NULL },
 };
 
-static int string_to_mac(const char *mac_str, uint8_t *address)
-{
-	/* Parse the input string into 8 bytes */
-	int rc = sscanf(mac_str,
-		"%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-			address, address + 1, address + 2, address + 3,
-			address + 4, address + 5, address + 6, address + 7);
-
-	if (rc != 8) {
-		printf("Invalid mac address format: %s\n", mac_str);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 static char *load_nodes(const char *file)
 {
 	int length;
@@ -144,8 +128,8 @@ static int parse_nodes(const char *nodes_str)
 			goto failure;
 
 		/* Parse mac address string into struct nrf24_mac known_peers */
-		if (string_to_mac(json_object_get_string(obj_tmp),
-						known_peers[i].address.b) < 0)
+		if (nrf24_str2mac(json_object_get_string(obj_tmp),
+						known_peers + i) < 0)
 			goto failure;
 	}
 
