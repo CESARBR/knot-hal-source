@@ -28,6 +28,12 @@ struct nrf24_mac {
 	} address;
 };
 
+/* Converts nrf24_mac address to string */
+int nrf24_mac2str(const struct nrf24_mac *, char *);
+
+/* Converts string to nrf24_mac address */
+int nrf24_str2mac(const char *, struct nrf24_mac *);
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {

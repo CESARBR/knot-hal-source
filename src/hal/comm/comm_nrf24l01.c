@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef ARDUINO
 #include <avr_errno.h>
@@ -329,4 +330,28 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	mgmt.len_tx = len;
 
 	return 0;
+}
+
+int nrf24_str2mac(const char *str, struct nrf24_mac *mac)
+{
+	/* Parse the input string into 8 bytes */
+	int rc = sscanf(str,
+		"%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+		&mac->address.b[0], &mac->address.b[1], &mac->address.b[2],
+		&mac->address.b[3], &mac->address.b[4], &mac->address.b[5],
+		&mac->address.b[6], &mac->address.b[7]);
+
+	return (rc != 8 ? -1 : 0);
+}
+
+int nrf24_mac2str(const struct nrf24_mac *mac, char *str)
+{
+	/* Write nrf24_mac.address into string buffer in hexadecimal format */
+	int rc = sprintf(str,
+		"%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+			mac->address.b[0], mac->address.b[1], mac->address.b[2],
+			mac->address.b[3], mac->address.b[4], mac->address.b[5],
+			mac->address.b[6], mac->address.b[7]);
+
+	return (rc != 8 ? -1 : 0);
 }
