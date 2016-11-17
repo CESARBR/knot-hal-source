@@ -63,11 +63,23 @@ struct mgmt_cmd_nrf24_broadcast {
 } __attribute__ ((packed));
 
 /*
+ * Synchronous command to manage broadcast: beaconing/presence/setup
+ * Interval is defined as the elapsed time between the begining of
+ * windows. Consequently: window <= interval
+ */
+#define MGMT_CMD_NRF24_BCAST_PARAMS		0x0105
+struct mgmt_cmd_nrf24_broadcast_params {
+	uint8_t type;			/* 0: beacon, 1: presence, 2: setup */
+	uint16_t window;		/* ms */
+	uint16_t interval;		/* ms */
+} __attribute__ ((packed));
+
+/*
  * Synchronous command to set beaconing/presence/setup data included
  * in the payload field. Must follow BTLE advertising data format in
  * order to allow future radio & protocol interoperability.
  */
-#define MGMT_CMD_NRF24_BCAST_DATA		0x0105
+#define MGMT_CMD_NRF24_BCAST_DATA		0x0106
 struct mgmt_cmd_nrf24_broadcast_data {
 	uint8_t len;
 	uint8_t payload[0];
