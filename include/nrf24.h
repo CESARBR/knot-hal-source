@@ -49,15 +49,22 @@ struct mgmt_cmd_nrf24_power {
 	uint8_t on;		/* 1: Power ON, 0: Power OFF */
 } __attribute__ ((packed));
 
+/* Local nRF24 adapter: MAC address */
+#define MGMT_CMD_NRF24_CONFIG		0x0103
+struct mgmt_cmd_nrf24_config {
+	struct nrf24_mac mac;	/* Local adapter nRF24 MAC address */
+	uint8_t key[0];		/* FIXME: private key */
+} __attribute__ ((packed));
+
 /* Synchronous command to load/overwrite known devices/keys. */
-#define MGMT_CMD_NRF24_LOAD_KEY			0x0103
+#define MGMT_CMD_NRF24_LOAD_KEY			0x0104
 struct mgmt_cmd_nrf24_load_key {
 	struct nrf24_mac mac;		/* Peer */
 	char key[0];			/* FIXME: */
 } __attribute__ ((packed));
 
 /* Synchronous command to enable broadcast: beaconing/presence/setup */
-#define MGMT_CMD_NRF24_BCAST_ENABLE		0x0104
+#define MGMT_CMD_NRF24_BCAST_ENABLE		0x0105
 struct mgmt_cmd_nrf24_broadcast {
 	uint8_t enable;		/* 1: enable, 0: disable */
 } __attribute__ ((packed));
@@ -67,7 +74,7 @@ struct mgmt_cmd_nrf24_broadcast {
  * Interval is defined as the elapsed time between the begining of
  * windows. Consequently: window <= interval
  */
-#define MGMT_CMD_NRF24_BCAST_PARAMS		0x0105
+#define MGMT_CMD_NRF24_BCAST_PARAMS		0x0106
 struct mgmt_cmd_nrf24_broadcast_params {
 	uint8_t type;			/* 0: beacon, 1: presence, 2: setup */
 	uint16_t window;		/* ms */
@@ -79,14 +86,14 @@ struct mgmt_cmd_nrf24_broadcast_params {
  * in the payload field. Must follow BTLE advertising data format in
  * order to allow future radio & protocol interoperability.
  */
-#define MGMT_CMD_NRF24_BCAST_DATA		0x0106
+#define MGMT_CMD_NRF24_BCAST_DATA		0x0107
 struct mgmt_cmd_nrf24_broadcast_data {
 	uint8_t len;
 	uint8_t payload[0];
 };
 
 /* Synchronous command to enable scanning: beaconing/presence/setup */
-#define MGMT_CMD_NRF24_SCAN_ENABLE		0x0106
+#define MGMT_CMD_NRF24_SCAN_ENABLE		0x0108
 struct mgmt_cmd_nrf24_scan {
 	uint8_t enable;		/* 1: enable, 0: disable */
 } __attribute__ ((packed));
@@ -96,7 +103,7 @@ struct mgmt_cmd_nrf24_scan {
  * Interval is defined as the elapsed time between the begining of
  * windows. Consequently: window <= interval
  */
-#define MGMT_CMD_NRF24_SCAN_PARAMS		0x0107
+#define MGMT_CMD_NRF24_SCAN_PARAMS		0x0109
 struct mgmt_cmd_nrf24_scan_params {
 	uint16_t window;		/* ms */
 	uint16_t interval;		/* ms */
@@ -104,7 +111,6 @@ struct mgmt_cmd_nrf24_scan_params {
 					   only, 2: setup only */
 	uint8_t filter;			/* 0: report all, 1: skip dupplicated */
 } __attribute__ ((packed));
-
 
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
