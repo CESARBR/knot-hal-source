@@ -49,6 +49,13 @@ struct mgmt_cmd_nrf24_power {
 	uint8_t on;		/* 1: Power ON, 0: Power OFF */
 } __attribute__ ((packed));
 
+/* Synchronous command to load/overwrite known devices/keys. */
+#define MGMT_CMD_NRF24_LOAD_KEY			0x0103
+struct mgmt_cmd_nrf24_load_key {
+	struct nrf24_mac mac;		/* Peer */
+	char key[0];			/* FIXME: */
+} __attribute__ ((packed));
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {
