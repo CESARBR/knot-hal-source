@@ -85,6 +85,12 @@ struct mgmt_cmd_nrf24_broadcast_data {
 	uint8_t payload[0];
 };
 
+/* Synchronous command to enable scanning: beaconing/presence/setup */
+#define MGMT_CMD_NRF24_SCAN_ENABLE		0x0106
+struct mgmt_cmd_nrf24_scan {
+	uint8_t enable;		/* 1: enable, 0: disable */
+} __attribute__ ((packed));
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {
