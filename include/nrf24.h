@@ -34,6 +34,21 @@ int nrf24_mac2str(const struct nrf24_mac *, char *);
 /* Converts string to nrf24_mac address */
 int nrf24_str2mac(const char *, struct nrf24_mac *);
 
+/* Generic response for all commands */
+#define MGMT_CMD_NRF24_RSP			0x0101
+struct mgmt_cmd_nrf24_rsp {
+	uint16_t cmd;		/* CMD opcode related to this response */
+	uint8_t status;		/* 0: success, 1: failure */
+	uint16_t len;		/* Payload length */
+	uint8_t payload[0];	/* Command specific returned response */
+} __attribute__ ((packed));
+
+/* Synchronous command to power UP nRF24 adapter */
+#define MGMT_CMD_NRF24_POWER			0x0102
+struct mgmt_cmd_nrf24_power {
+	uint8_t on;		/* 1: Power ON, 0: Power OFF */
+} __attribute__ ((packed));
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {
