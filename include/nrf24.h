@@ -56,6 +56,12 @@ struct mgmt_cmd_nrf24_load_key {
 	char key[0];			/* FIXME: */
 } __attribute__ ((packed));
 
+/* Synchronous command to enable broadcast: beaconing/presence/setup */
+#define MGMT_CMD_NRF24_BCAST_ENABLE		0x0104
+struct mgmt_cmd_nrf24_broadcast {
+	uint8_t enable;		/* 1: enable, 0: disable */
+} __attribute__ ((packed));
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {
