@@ -108,6 +108,17 @@ struct mgmt_evt_nrf24_bcast_presence {
 	/* TODO: Add device/service infos? */
 } __attribute__ ((packed));
 
+/*
+ * New device has been added: keys are generated in the lower layer.
+ * Userspace should store it and use management command to load the
+ * keys after radio starts.
+ */
+#define MGMT_EVT_NRF24_KEY			0x0206 /* New key */
+struct mgmt_evt_nrf24_key {
+	struct nrf24_mac src;
+	uint8_t key[0];			/* FIXME: size? */
+} __attribute__ ((packed));
+
 struct mgmt_nrf24_header {
 	uint16_t opcode;	/* Command/Response/Event opcode */
 	uint8_t index;		/* Multi adapter: index */
