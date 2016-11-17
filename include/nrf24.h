@@ -91,6 +91,21 @@ struct mgmt_cmd_nrf24_scan {
 	uint8_t enable;		/* 1: enable, 0: disable */
 } __attribute__ ((packed));
 
+/*
+ * Synchronous command to manage scanning: beaconing/presence/setup
+ * Interval is defined as the elapsed time between the begining of
+ * windows. Consequently: window <= interval
+ */
+#define MGMT_CMD_NRF24_SCAN_PARAMS		0x0107
+struct mgmt_cmd_nrf24_scan_params {
+	uint16_t window;		/* ms */
+	uint16_t interval;		/* ms */
+	uint8_t type;			/* 0xFF: All, 0: beacon only, 1: presence
+					   only, 2: setup only */
+	uint8_t filter;			/* 0: report all, 1: skip dupplicated */
+} __attribute__ ((packed));
+
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {
