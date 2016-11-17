@@ -62,6 +62,17 @@ struct mgmt_cmd_nrf24_broadcast {
 	uint8_t enable;		/* 1: enable, 0: disable */
 } __attribute__ ((packed));
 
+/*
+ * Synchronous command to set beaconing/presence/setup data included
+ * in the payload field. Must follow BTLE advertising data format in
+ * order to allow future radio & protocol interoperability.
+ */
+#define MGMT_CMD_NRF24_BCAST_DATA		0x0105
+struct mgmt_cmd_nrf24_broadcast_data {
+	uint8_t len;
+	uint8_t payload[0];
+};
+
 /* Sent after detecting activity on data channel: pipe1 to pipe5*/
 #define MGMT_EVT_NRF24_CONNECTED		0x0201 /* PHY connected */
 struct mgmt_evt_nrf24_connected {
