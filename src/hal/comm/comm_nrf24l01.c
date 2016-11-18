@@ -30,6 +30,9 @@
 #define _MIN(a, b)		((a) < (b) ? (a) : (b))
 #define DATA_SIZE 128
 
+/* Global to know if listen function was called */
+static uint8_t listen = 0;
+
 /* TODO: Get this values from config file */
 static const struct nrf24_mac addr_gw = {
 					.address.uint64 = 0xDEADBEEF12345678};
@@ -579,10 +582,13 @@ ssize_t hal_comm_write(int sockfd, const void *buffer, size_t count)
 
 	return count;
 }
+
 int hal_comm_listen(int sockfd)
 {
+	/* Init listen */
+	listen = 1;
 
-	return -ENOSYS;
+	return 0;
 }
 
 int hal_comm_accept(int sockfd, uint64_t *addr)
@@ -613,6 +619,9 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	/* If this packet is not for me*/
 	if (payload->dst_addr.address.uint64 != *addr)
 		return -EINVAL;
+
+	/* If accept then stop listen */
+	listen = 0;
 
 	return 0;
 }
