@@ -134,6 +134,85 @@ static int write_mgmt(int spi_fd)
 	return err;
 }
 
+static int read_mgmt(int spi_fd)
+{
+	ssize_t ilen;
+	struct nrf24_io_pack p;
+	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *)p.payload;
+
+	/* Read from management pipe */
+	p.pipe = 0;
+
+	/* Read data */
+	ilen = phy_read(spi_fd, &p, NRF24_MTU);
+	if (ilen < 0)
+		return -EAGAIN;
+
+	/* If already has something in rx buffer then return BUSY*/
+	if (mgmt.len_rx != 0)
+		return -EBUSY;
+
+	switch (ipdu->type) {
+	/* If is a presente type */
+	case NRF24_PDU_TYPE_PRESENCE:
+	{
+		/* Event header structure */
+		struct mgmt_nrf24_header *evt =
+			(struct mgmt_nrf24_header *) mgmt.buffer_rx;
+		/* Event presence structure */
+		struct mgmt_evt_nrf24_bcast_presence *evt_presence =
+			(struct mgmt_evt_nrf24_bcast_presence *)evt->payload;
+		/* Mac address structure */
+		struct nrf24_mac *mac = (struct nrf24_mac *)ipdu->payload;
+
+		/* Header type is a broadcast presence */
+		evt->opcode = MGMT_EVT_NRF24_BCAST_PRESENCE;
+		evt->index = 0;
+		/* Copy source address */
+		evt_presence->src.address.uint64 = mac->address.uint64;
+
+		mgmt.len_rx = sizeof(struct nrf24_mac) +
+				sizeof(struct mgmt_nrf24_header);
+	}
+		break;
+	/* If is a connect request type */
+	case NRF24_PDU_TYPE_CONNECT_REQ:
+	{
+		/* Event header structure */
+		struct mgmt_nrf24_header *evt =
+			(struct mgmt_nrf24_header *) mgmt.buffer_rx;
+		/* Event connect structure */
+		struct mgmt_evt_nrf24_connected *evt_connect =
+			(struct mgmt_evt_nrf24_connected *)evt->payload;
+		/* Link layer connect structure */
+		struct nrf24_ll_mgmt_connect *connect =
+				(struct nrf24_ll_mgmt_connect *) ipdu->payload;
+
+		/* Header type is a connect request type */
+		evt->opcode = MGMT_EVT_NRF24_CONNECTED;
+		evt->index = 0;
+		/* Copy src and dst address*/
+		evt_connect->src.address.uint64 =
+			connect->src_addr.address.uint64;
+		evt_connect->dst.address.uint64 =
+			connect->dst_addr.address.uint64;
+		/* Copy channel */
+		evt_connect->channel = connect->channel;
+		/* Copy access address */
+		memcpy(evt_connect->aa, connect->aa, sizeof(aa_pipes[0]));
+
+		mgmt.len_rx = sizeof(struct mgmt_nrf24_header) +
+				sizeof(struct mgmt_evt_nrf24_connected);
+	}
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/* Returns the amount of bytes read */
+	return ilen;
+}
+
 static void running(void)
 {
 
@@ -158,7 +237,7 @@ static void running(void)
 			state = START_RAW;
 
 		/* TODO: Send presence packets */
-		/* TODO: Read management packets until timeout occurs */
+		read_mgmt(driverIndex);
 		write_mgmt(driverIndex);
 		break;
 
@@ -190,7 +269,6 @@ static void running(void)
 		break;
 
 	}
-
 }
 
 /* Global functions */
