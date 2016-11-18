@@ -52,19 +52,27 @@ struct nrf24_data {
 	uint8_t buffer_tx[DATA_SIZE];
 	size_t len_tx;
 	uint8_t seqnumber_tx;
+	uint8_t seqnumber_rx;
+	size_t offset_rx;
 };
 
 #ifndef ARDUINO	/* If gateway then 5 peers */
 static struct nrf24_data peers[5] = {
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0}
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0}
 };
 #else	/* If thing then 1 peer */
 static struct nrf24_data peers[1] = {
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0},
 };
 #endif
 
@@ -103,6 +111,9 @@ static inline int alloc_pipe(void)
 		if (peers[i].pipe == -1) {
 
 			peers[i].len_rx = 0;
+			peers[i].seqnumber_rx = 0;
+			peers[i].seqnumber_tx = 0;
+			peers[i].offset_rx = 0;
 			/* one peer for pipe*/
 			peers[i].pipe = i+1;
 			return peers[i].pipe;
@@ -280,6 +291,70 @@ static int write_raw(int spi_fd, int sockfd)
 	return err;
 }
 
+static int read_raw(int spi_fd, int sockfd)
+{
+	ssize_t ilen;
+	size_t plen;
+	uint8_t lid;
+	struct nrf24_io_pack p;
+	const struct nrf24_ll_data_pdu *ipdu = (void *)p.payload;
+
+	p.pipe = sockfd;
+
+	do {
+
+		/*
+		 * Reads the data,
+		 * on success, the number of bytes read is returned
+		 */
+		ilen = phy_read(spi_fd, &p, NRF24_MTU);
+
+		/* If no data available */
+		if (ilen < 0)
+			return -EAGAIN;	/* Try again */
+
+		/* Reset offset if sequence number is zero */
+		if (ipdu->nseq == 0) {
+			peers[sockfd-1].offset_rx = 0;
+			peers[sockfd-1].seqnumber_rx = 0;
+		}
+
+		/* If sequence number error */
+		if (peers[sockfd-1].seqnumber_rx < ipdu->nseq)
+			return -EILSEQ; /* Illegal byte sequence */
+		if (peers[sockfd-1].seqnumber_rx > ipdu->nseq)
+			return -EAGAIN; /* Discard packet duplicated */
+
+		/* Payloag length = input length - header size */
+		plen = ilen - DATA_HDR_SIZE;
+		lid = ipdu->lid;
+
+		if (lid == NRF24_PDU_LID_DATA_FRAG && plen < NRF24_PW_MSG_SIZE)
+			return -EBADMSG; /* Not a data message */
+
+		/* Reads no more than DATA_SIZE bytes */
+		if (peers[sockfd-1].offset_rx + plen > DATA_SIZE)
+			plen = DATA_SIZE - peers[sockfd-1].offset_rx;
+
+		memcpy(peers[sockfd-1].buffer_rx + peers[sockfd-1].offset_rx,
+			ipdu->payload, plen);
+		peers[sockfd-1].offset_rx += plen;
+		peers[sockfd-1].seqnumber_rx++;
+
+	} while (lid != NRF24_PDU_LID_DATA_END &&
+			peers[sockfd-1].offset_rx < DATA_SIZE);
+
+	/* Sets packet length read */
+	peers[sockfd-1].len_rx = peers[sockfd-1].offset_rx;
+
+	/* If the complete msg is received, resets the controls */
+	peers[sockfd-1].seqnumber_rx = 0;
+	peers[sockfd-1].offset_rx = 0;
+
+	/* Returns de number of bytes received */
+	return peers[sockfd-1].len_rx;
+}
+
 static void running(void)
 {
 
@@ -328,8 +403,8 @@ static void running(void)
 
 		/* Check if pipe is allocated */
 		if (peers[sockIndex].pipe != -1) {
-			/* TODO: call read raw data */
 			write_raw(driverIndex, sockIndex);
+			read_raw(driverIndex, sockIndex);
 		}
 
 
