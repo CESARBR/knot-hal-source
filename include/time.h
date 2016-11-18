@@ -18,6 +18,7 @@ uint32_t hal_time_ms(void);
 uint32_t hal_time_us(void);
 void hal_delay_ms(uint32_t ms);
 void hal_delay_us(uint32_t us);
+int hal_timeout(uint32_t current,  uint32_t start,  uint32_t timeout);
 
 #ifdef __cplusplus
 }

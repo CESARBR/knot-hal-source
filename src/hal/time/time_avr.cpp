@@ -8,6 +8,8 @@
  */
 
 #include <Arduino.h>
+#include <limits.h>
+
 #include "time.h"
 
 uint32_t hal_time_ms(void)
@@ -28,4 +30,18 @@ void hal_delay_ms(uint32_t ms)
 void hal_delay_us(uint32_t us)
 {
 	delayMicroseconds(us);
+}
+
+int hal_timeout(uint32_t current,  uint32_t start,  uint32_t timeout)
+{
+	/* Time overflow */
+	if (current < start)
+		/* Fit time overflow and compute time elapsed */
+		current += (ULONG_MAX - start);
+	else
+		/* Compute time elapsed */
+		current -= start;
+
+	/* Timeout is flagged */
+	return (current >= timeout);
 }
