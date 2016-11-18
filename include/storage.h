@@ -14,8 +14,16 @@
 extern "C" {
 #endif
 
-int hal_storage_read(uint16_t addr, uint8_t *value, uint16_t len);
-int hal_storage_write(uint16_t addr, const uint8_t *value, uint16_t len);
+// Identifier of data type to be stored
+#define HAL_STORAGE_ID_UUID	0
+#define HAL_STORAGE_ID_TOKEN	1
+#define HAL_STORAGE_ID_MAC	2
+#define HAL_STORAGE_ID_CONFIG	3
+
+size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len);
+size_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len);
+size_t hal_storage_write_end(uint8_t id, void *value, size_t len);
+size_t hal_storage_read_end(uint8_t id, void *value, size_t len);
 
 #ifdef __cplusplus
 }
