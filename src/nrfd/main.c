@@ -108,6 +108,7 @@ static char *load_nodes(const char *file)
 static int parse_nodes(const char *nodes_str)
 {
 	int array_len;
+	int i;
 	json_object *jobj, *obj_keys, *obj_nodes, *obj_tmp;
 
 	jobj = json_tokener_parse(nodes_str);
@@ -122,7 +123,7 @@ static int parse_nodes(const char *nodes_str)
 		printf("Invalid numbers of nodes in input archive");
 		goto failure;
 	}
-	for (int i = 0; i < array_len; i++) {
+	for (i = 0; i < array_len; i++) {
 		obj_nodes = json_object_array_get_idx(obj_keys, i);
 		if (!json_object_object_get_ex(obj_nodes, "mac", &obj_tmp))
 			goto failure;
