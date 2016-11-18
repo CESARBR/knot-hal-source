@@ -8,5 +8,5 @@
  */
 
 int manager_start(const char *file, const char *host, int port,
-			const char *spi, int channel, int tx_pwr);
+			const char *spi, int channel, int dbm);
 void manager_stop(void);

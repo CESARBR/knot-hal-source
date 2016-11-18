@@ -35,7 +35,7 @@ static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
 static int opt_channel = CHANNEL_DEFAULT;
-static int opt_tx = NRF24_PWR_0DBM;
+static int opt_dbm = NRF24_PWR_0DBM;
 static const char *opt_nodes = "/etc/knot/keys.json";
 
 static void sig_term(int sig)
@@ -64,7 +64,7 @@ static GOptionEntry options[] = {
 					"nodes", "Known nodes file path" },
 	{ "channel", 'c', 0, G_OPTION_ARG_INT, &opt_channel,
 					"channel", "Broadcast channel" },
-	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_tx,
+	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_dbm,
 					"tx_power",
 		"TX power: transmition signal strength in dBm" },
 	{ NULL },
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 		printf("Native SPI mode\n");
 
 	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
-						opt_tx);
+								opt_dbm);
 	if (err < 0) {
 		g_main_loop_unref(main_loop);
 		return EXIT_FAILURE;

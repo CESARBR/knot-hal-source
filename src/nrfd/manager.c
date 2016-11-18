@@ -27,8 +27,6 @@
 
 static int radio_init(const char *spi, uint8_t channel, uint8_t tx_pwr)
 {
-
-
 	return 0;
 }
 
@@ -158,9 +156,10 @@ static char *load_config(const char *file)
 	return buffer;
 }
 
-static uint8_t set_tx_input(int tx_pwr)
+/* Set TX Power from dBm to values defined at nRF24 datasheet */
+static uint8_t dbm_int2rfpwr(int dbm)
 {
-	switch (tx_pwr) {
+	switch (dbm) {
 
 	case 0:
 		return NRF24_PWR_0DBM;
@@ -175,6 +174,7 @@ static uint8_t set_tx_input(int tx_pwr)
 		return NRF24_PWR_18DBM;
 	}
 
+	/* Return default value when dBm value is invalid */
 	return NRF24_PWR_0DBM;
 }
 
@@ -184,7 +184,7 @@ static uint8_t set_tx_input(int tx_pwr)
  * in the json configuration file
  */
 static int parse_config(const char *config, const char **host, int *port,
-			const char **spi, int *channel, int *tx_pwr)
+							int *channel, int *dbm)
 {
 	json_object *jobj, *obj_radio, *obj_tmp;
 
@@ -201,7 +201,7 @@ static int parse_config(const char *config, const char **host, int *port,
 		*channel = json_object_get_int(obj_tmp);
 
 	if (json_object_object_get_ex(obj_radio,  "TxPower", &obj_tmp))
-		*tx_pwr = json_object_get_int(obj_tmp);
+		*dbm = json_object_get_int(obj_tmp);
 
 	/* Success */
 	err = 0;
@@ -213,18 +213,15 @@ done:
 }
 
 int manager_start(const char *file, const char *host, int port,
-			const char *spi, int channel, int tx_pwr)
+				const char *spi, int channel, int dbm)
 {
-	uint8_t tx_pwr_radio;
-	uint8_t channel_radio = NRF24_CH_MIN;
-
 	char *json_str;
 	int err;
 
 	json_str = load_config(file);
-
 	if (json_str != NULL) {
-		err = parse_config(json_str, &host, &port, &spi, &channel, &tx_pwr);
+		/* */
+		err = parse_config(json_str, &host, &port, &channel, &dbm);
 		free(json_str);
 	}
 
@@ -233,22 +230,12 @@ int manager_start(const char *file, const char *host, int port,
 		return err;
 	}
 
-	/*
-	 * Set tx_power from dBm to the values
-	 * defined on the nrf24l01 datasheet
-	 */
-	tx_pwr_radio = set_tx_input(tx_pwr);
-
-	/*
-	 * Validate and set the channel input
-	 * value for the radio_init function
-	 */
+	 /* Validate and set the channel */
 	if (channel <= 125 && channel >= 0)
-		channel_radio = channel;
-
+		channel = NRF24_CH_MIN;
 
 	if (host == NULL)
-		return radio_init(spi, channel_radio, tx_pwr_radio);
+		return radio_init(spi, channel, dbm_int2rfpwr(dbm));
 	/*
 	 * TCP development mode: Linux connected to RPi(phynrfd radio
 	 * proxy). Connect to phynrfd routing all traffic over TCP.
