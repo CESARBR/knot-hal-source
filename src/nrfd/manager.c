@@ -20,19 +20,27 @@
 #include <glib.h>
 #include <json-c/json.h>
 
+#include "include/comm.h"
+
 #include "phy_driver_private.h"
 #include "nrf24l01_io.h"
 #include "manager.h"
 
 
-static int radio_init(const char *spi, uint8_t channel, uint8_t tx_pwr)
+static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr)
 {
+	int err;
+
+	err = hal_comm_init(spi);
+	if (err < 0)
+		return err;
+
 	return 0;
 }
 
 static void radio_stop(void)
 {
-
+	hal_comm_deinit();
 }
 
 static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
