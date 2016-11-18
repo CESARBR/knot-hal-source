@@ -84,12 +84,14 @@ static uint8_t aa_pipes[6][5] = {
 static int driverIndex = -1;
 
 /* Local functions */
-static inline int get_free_pipe(void)
+static inline int alloc_pipe(void)
 {
 	uint8_t i;
 
 	for (i = 0; i < CONNECTION_COUNTER; i++) {
 		if (peers[i].pipe == -1) {
+
+			peers[i].len_rx = 0;
 			/* one peer for pipe*/
 			peers[i].pipe = i+1;
 			return peers[i].pipe;
@@ -160,7 +162,7 @@ int hal_comm_socket(int domain, int protocol)
 		 * and returns an available pipe
 		 * from 1 to 5
 		 */
-		retval = get_free_pipe();
+		retval = alloc_pipe();
 		/* If not pipe available */
 		if (retval < 0)
 			return -EUSERS; /* Returns too many users */
