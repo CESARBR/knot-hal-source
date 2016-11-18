@@ -92,9 +92,10 @@ static uint8_t aa_pipes[6][5] = {
 
 /* Global to save driver index */
 static int driverIndex = -1;
-
+/* Channel to management and raw data */
 static int channel_mgmt = 20;
 static int channel_raw = 10;
+
 enum {
 	START_MGMT,
 	MGMT,
@@ -360,22 +361,22 @@ static void running(void)
 
 	static int state = 0;
 	static int sockIndex = 0; /* Index peers */
+	static unsigned long start;
 
 	switch (state) {
 
 	case START_MGMT:
 		/* Set channel to management channel */
 		phy_ioctl(driverIndex, NRF24_CMD_SET_CHANNEL, &channel_mgmt);
-
-		/* TODO: Start timeout */
-
+		/* Start timeout */
+		start = hal_time_ms();
 		/* Go to next state */
 		state = MGMT;
 		break;
 
 	case MGMT:
-		/* TODO: Check if 10ms timeout occurred */
-		/* If timeout occurred then go to next state */
+		/* Check if 10ms timeout occurred */
+		if (hal_timeout(hal_time_ms(), start, 10) > 0)
 			state = START_RAW;
 
 		/* TODO: Send presence packets */
@@ -386,17 +387,17 @@ static void running(void)
 	case START_RAW:
 		/* Set channel to data channel */
 		phy_ioctl(driverIndex, NRF24_CMD_SET_CHANNEL, &channel_raw);
-
-		/* TODO: Start timeout */
+		/* Start timeout */
+		start = hal_time_ms();
 
 		/* Go to next state */
 		state = RAW;
 		break;
 
 	case RAW:
-		/* TODO: Check if 60ms timeout occurred */
-		/* If timeout occurred then go to next state */
-			state = START_MGMT;
+		/* Check if 60ms timeout occurred */
+		if (hal_timeout(hal_time_ms(), start, 60) > 0)
+			state = 0;
 
 		if (sockIndex == CONNECTION_COUNTER)
 			sockIndex = 0;
