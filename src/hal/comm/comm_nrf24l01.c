@@ -26,11 +26,11 @@
 #include "phy_driver_nrf24.h"
 #include "nrf24l01_ll.h"
 
+#define DATA_SIZE 128
+
 /* TODO: Get this values from config file */
 static const struct nrf24_mac addr_gw = {
 					.address.uint64 = 0xDEADBEEF12345678};
-
-#define DATA_SIZE 128
 
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
@@ -65,6 +65,10 @@ static struct nrf24_data peers[1] = {
 };
 #endif
 
+/* ARRAY SIZE */
+#define CONNECTION_COUNTER	((int) (sizeof(peers) \
+				 / sizeof(peers[0])))
+
 /* Access Address for each pipe */
 static uint8_t aa_pipes[6][5] = {
 	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
@@ -74,10 +78,6 @@ static uint8_t aa_pipes[6][5] = {
 	{0xE7, 0x96, 0xB6, 0xC1, 0x6B},
 	{0xF0, 0x96, 0xB6, 0xC1, 0x6B}
 };
-
-/* ARRAY SIZE */
-#define CONNECTION_COUNTER	((int) (sizeof(peers) \
-				 / sizeof(peers[0])))
 
 /* Global to save driver index */
 static int driverIndex = -1;
@@ -110,6 +110,30 @@ static inline int alloc_pipe(void)
 	return -1;
 }
 
+static int write_mgmt(int spi_fd)
+{
+	int err;
+	struct nrf24_io_pack p;
+
+	/* If nothing to do */
+	if (mgmt.len_tx == 0)
+		return -EAGAIN;
+
+	/* Set pipe to be sent */
+	p.pipe = 0;
+	/* Copy buffer_tx to payload */
+	memcpy(p.payload, mgmt.buffer_tx, mgmt.len_tx);
+
+	err = phy_write(spi_fd, &p, mgmt.len_tx);
+	if (err < 0)
+		return err;
+
+	/* Reset len_tx */
+	mgmt.len_tx = 0;
+
+	return err;
+}
+
 static void running(void)
 {
 
@@ -134,7 +158,8 @@ static void running(void)
 			state = START_RAW;
 
 		/* TODO: Send presence packets */
-		/* TODO: Read/write management packets until timeout occurs */
+		/* TODO: Read management packets until timeout occurs */
+		write_mgmt(driverIndex);
 		break;
 
 	case START_RAW:
@@ -168,6 +193,7 @@ static void running(void)
 
 }
 
+/* Global functions */
 int hal_comm_init(const char *pathname)
 {
 	/* If driver not opened */
