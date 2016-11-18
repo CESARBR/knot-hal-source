@@ -32,10 +32,14 @@
 
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
+/* Global to know to number of live connections */
+static uint8_t connection_live = 0;
 
 /* TODO: Get this values from config file */
 static const struct nrf24_mac addr_gw = {
 					.address.uint64 = 0xDEADBEEF12345678};
+
+static struct nrf24_mac addr_thing = {.address.uint64 = 0 };
 
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
@@ -510,6 +514,7 @@ int hal_comm_close(int sockfd)
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
+		connection_live--;
 	}
 
 	return 0;
@@ -594,36 +599,40 @@ int hal_comm_listen(int sockfd)
 int hal_comm_accept(int sockfd, uint64_t *addr)
 {
 
-
-	uint8_t datagram[NRF24_MTU];
-	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *) datagram;
-	struct nrf24_ll_mgmt_connect *payload =
-			(struct nrf24_ll_mgmt_connect *) ipdu->payload;
-	size_t len;
+	/* TODO: Run background procedures */
+	struct mgmt_nrf24_header *evt =
+				(struct mgmt_nrf24_header *) mgmt.buffer_rx;
+	struct mgmt_evt_nrf24_connected *evt_connect =
+			(struct mgmt_evt_nrf24_connected *)evt->payload;
 
 	/* Run background procedures */
 	running();
 
-	/* Read connect_request from pipe broadcast */
-	len = mgmt.len_rx;
-	if (len == 0)
+	/* Save thing address */
+	addr_thing.address.uint64 = *addr;
+
+	if (mgmt.len_rx == 0)
 		return -EAGAIN;
 
-	/* Get the response */
-	memcpy(datagram, mgmt.buffer_rx, len);
-	/* Reset rx len */
+	/* Free management read to receive new packet */
 	mgmt.len_rx = 0;
-	/* If this packet is not connect request */
-	if (ipdu->type != NRF24_PDU_TYPE_CONNECT_REQ)
-		return -EINVAL;
-	/* If this packet is not for me*/
-	if (payload->dst_addr.address.uint64 != *addr)
-		return -EINVAL;
 
+	if (evt->opcode != MGMT_EVT_NRF24_CONNECTED ||
+		evt_connect->dst.address.uint64 != *addr)
+		return -EAGAIN;
+
+	/* If is already connected */
+	if (peers[0].pipe != -1)
+		return -EUSERS;
+
+	peers[0].pipe = 1;
 	/* If accept then stop listen */
 	listen = 0;
+	/* If accept then increment connection_live */
+	connection_live++;
 
-	return 0;
+	/* Return pipe */
+	return peers[0].pipe;
 }
 
 
@@ -662,7 +671,8 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	/* Copy data to be write in tx buffer for BROADCAST*/
 	memcpy(mgmt.buffer_tx, datagram, len);
 	mgmt.len_tx = len;
-
+	/* If connect then increment connection_live */
+	connection_live++;
 	return 0;
 }
 
