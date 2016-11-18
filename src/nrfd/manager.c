@@ -7,9 +7,7 @@
  *
  */
 
-#include <stdlib.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -21,11 +19,43 @@
 #include <json-c/json.h>
 
 #include "include/comm.h"
+#include "include/nrf24.h"
 
-#include "phy_driver_private.h"
 #include "nrf24l01_io.h"
 #include "manager.h"
 
+static int mgmtfd;
+static guint mgmtwatch;
+
+static gboolean mgmt_read_idle(gpointer user_data)
+{
+	uint8_t buffer[256];
+	const struct mgmt_nrf24_header *mhdr =
+				(const struct mgmt_nrf24_header *) buffer;
+	ssize_t rbytes;
+
+	rbytes = hal_comm_read(mgmtfd, buffer, sizeof(buffer));
+
+	/* mgmt on bad state? */
+	if (rbytes < 0 && rbytes != -EAGAIN)
+		return FALSE;
+
+	/* Nothing to read? */
+	if (rbytes == -EAGAIN)
+		return TRUE;
+
+	/* Return/ignore if it is not an event? */
+	if (!(mhdr->opcode & 0x0200))
+		return TRUE;
+
+	printf("MGMT opcode: 0x%04X\n", mhdr->opcode);
+	if (mhdr->opcode != MGMT_EVT_NRF24_BCAST_PRESENCE)
+		return TRUE;
+
+	/* If it is not connected: connect to the indicated peer */
+
+	return TRUE;
+}
 
 static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr)
 {
@@ -35,11 +65,26 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr)
 	if (err < 0)
 		return err;
 
+	mgmtfd = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_MGMT);
+	if (mgmtfd < 0)
+		goto done;
+
+	mgmtwatch = g_idle_add(mgmt_read_idle, NULL);
+
 	return 0;
+done:
+	hal_comm_deinit();
+
+	return mgmtfd;
 }
 
 static void radio_stop(void)
 {
+	if (mgmtwatch)
+		g_source_remove(mgmtwatch);
+
+	hal_comm_close(mgmtfd);
+
 	hal_comm_deinit();
 }
 
