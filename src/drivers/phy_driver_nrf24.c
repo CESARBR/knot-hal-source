@@ -128,11 +128,15 @@ static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 		err = nrf24l01_set_channel(spi_fd, *((int *) arg));
 		break;
 
+	case NRF24_CMD_SET_STANDBY:
+		break;
+
 	default:
 		err = -1;
 	}
 
-	nrf24l01_set_prx(spi_fd, broadcast_addr);
+	if (cmd != NRF24_CMD_SET_STANDBY)
+		nrf24l01_set_prx(spi_fd, broadcast_addr);
 
 	return err;
 }

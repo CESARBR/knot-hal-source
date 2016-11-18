@@ -22,6 +22,7 @@ enum nrf24_cmds {
 				NRF24_CMD_GET_CHANNEL,
 				NRF24_CMD_SET_ADDRESS_PIPE,
 				NRF24_CMD_SET_POWER,
+				NRF24_CMD_SET_STANDBY,
 };
 
 /* Used to set pipe address*/
