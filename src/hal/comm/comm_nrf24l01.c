@@ -102,12 +102,21 @@ static int driverIndex = -1;
 /* Channel to management and raw data */
 static int channel_mgmt = 20;
 static int channel_raw = 10;
+static uint16_t window_bcast = 1;	/* ms */
+static uint16_t interval_bcast = 2;	/* ms */
 
 enum {
 	START_MGMT,
 	MGMT,
 	START_RAW,
 	RAW
+};
+
+enum {
+	PRESENCE,
+	TIMEOUT_WINDOW,
+	STANDBY,
+	TIMEOUT_INTERVAL
 };
 
 /* Local functions */
@@ -363,6 +372,55 @@ static int read_raw(int spi_fd, int sockfd)
 	return peers[sockfd-1].len_rx;
 }
 
+/*
+ * This functions send presence packets during
+ * windows_bcast time and go to standy by mode during
+ * (interval_bcast - windows_bcast) time
+ */
+static void presence_connect(int spi_fd)
+{
+	struct nrf24_io_pack p;
+	struct nrf24_ll_mgmt_pdu *opdu = (void *)p.payload;
+	struct nrf24_mac *payload =
+				(struct nrf24_mac *) opdu->payload;
+	size_t len;
+	static unsigned long start;
+	/* Start timeout */
+	static uint8_t state = 0;
+
+	switch (state) {
+	case PRESENCE:
+		/* Send Presence */
+		if (addr_thing.address.uint64 == 0)
+			break;
+
+		p.pipe = 0;
+		opdu->type = NRF24_PDU_TYPE_PRESENCE;
+		payload->address.uint64 = addr_thing.address.uint64;
+		len = sizeof(struct nrf24_ll_mgmt_pdu)+sizeof(struct nrf24_mac);
+		phy_write(spi_fd, &p, len);
+		/* Init time */
+		start = hal_time_ms();
+		state = TIMEOUT_WINDOW;
+		break;
+	case TIMEOUT_WINDOW:
+		if (hal_timeout(hal_time_ms(), start, window_bcast) > 0)
+			state = STANDBY;
+
+		break;
+	case STANDBY:
+		phy_ioctl(spi_fd, NRF24_CMD_SET_STANDBY, NULL);
+		state = TIMEOUT_INTERVAL;
+		break;
+	case TIMEOUT_INTERVAL:
+		if (hal_timeout(hal_time_ms(), start, interval_bcast) > 0)
+			state = PRESENCE;
+
+		break;
+	}
+}
+
+
 static void running(void)
 {
 
@@ -387,7 +445,9 @@ static void running(void)
 			if (connection_live > 0)
 				state = START_RAW;
 
-		/* TODO: Send presence packets */
+		if (listen)
+			presence_connect(driverIndex);
+
 		read_mgmt(driverIndex);
 		write_mgmt(driverIndex);
 		break;
