@@ -384,7 +384,8 @@ static void running(void)
 	case MGMT:
 		/* Check if 10ms timeout occurred */
 		if (hal_timeout(hal_time_ms(), start, 10) > 0)
-			state = START_RAW;
+			if (connection_live > 0)
+				state = START_RAW;
 
 		/* TODO: Send presence packets */
 		read_mgmt(driverIndex);
