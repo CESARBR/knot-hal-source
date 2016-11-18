@@ -700,8 +700,8 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 int hal_comm_connect(int sockfd, uint64_t *addr)
 {
 
-	uint8_t datagram[NRF24_MTU];
-	struct nrf24_ll_mgmt_pdu *opdu = (struct nrf24_ll_mgmt_pdu *)datagram;
+	struct nrf24_ll_mgmt_pdu *opdu =
+		(struct nrf24_ll_mgmt_pdu *)mgmt.buffer_tx;
 	struct nrf24_ll_mgmt_connect *payload =
 				(struct nrf24_ll_mgmt_connect *) opdu->payload;
 	size_t len;
@@ -729,11 +729,10 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	len = sizeof(struct nrf24_ll_mgmt_connect);
 	len += sizeof(struct nrf24_ll_mgmt_pdu);
 
-	/* Copy data to be write in tx buffer for BROADCAST*/
-	memcpy(mgmt.buffer_tx, datagram, len);
-	mgmt.len_tx = len;
 	/* If connect then increment connection_live */
 	connection_live++;
+	mgmt.len_tx = len;
+
 	return 0;
 }
 
