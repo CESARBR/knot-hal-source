@@ -22,10 +22,12 @@
 
 #include "include/comm.h"
 #include "include/nrf24.h"
+#include "include/time.h"
 #include "phy_driver.h"
 #include "phy_driver_nrf24.h"
 #include "nrf24l01_ll.h"
 
+#define _MIN(a, b)		((a) < (b) ? (a) : (b))
 #define DATA_SIZE 128
 
 /* TODO: Get this values from config file */
@@ -49,19 +51,20 @@ struct nrf24_data {
 	size_t len_rx;
 	uint8_t buffer_tx[DATA_SIZE];
 	size_t len_tx;
+	uint8_t seqnumber_tx;
 };
 
 #ifndef ARDUINO	/* If gateway then 5 peers */
 static struct nrf24_data peers[5] = {
-	{.pipe = -1, .len_rx = 0},
-	{.pipe = -1, .len_rx = 0},
-	{.pipe = -1, .len_rx = 0},
-	{.pipe = -1, .len_rx = 0},
-	{.pipe = -1, .len_rx = 0}
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0}
 };
 #else	/* If thing then 1 peer */
 static struct nrf24_data peers[1] = {
-	{.pipe = -1, .len_rx = 0},
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0},
 };
 #endif
 
@@ -213,6 +216,70 @@ static int read_mgmt(int spi_fd)
 	return ilen;
 }
 
+static int write_raw(int spi_fd, int sockfd)
+{
+	int err;
+	struct nrf24_io_pack p;
+	struct nrf24_ll_data_pdu *opdu = (void *)p.payload;
+	size_t plen, left;
+
+	/* If has nothing to send, returns EBUSY */
+	if (peers[sockfd-1].len_tx == 0)
+		return -EAGAIN;
+
+	/* If len is larger than the maximum message size */
+	if (peers[sockfd-1].len_tx > NRF24_MAX_MSG_SIZE)
+		return -EINVAL;
+
+	/* Set pipe to be sent */
+	p.pipe = sockfd;
+	/* Amount of bytes to be sent */
+	left = peers[sockfd-1].len_tx;
+
+	while (left) {
+
+		/* Delay to avoid sending all packets too fast */
+		hal_delay_us(512);
+		/*
+		 * If left is larger than the NRF24_PW_MSG_SIZE,
+		 * payload length = NRF24_PW_MSG_SIZE,
+		 * if not, payload length = left
+		 */
+		plen = _MIN(left, NRF24_PW_MSG_SIZE);
+
+		/*
+		 * If left is larger than the NRF24_PW_MSG_SIZE,
+		 * it means that the packet is fragmented,
+		 * if not, it means that it is the last packet.
+		 */
+		opdu->lid = (left > NRF24_PW_MSG_SIZE) ?
+			NRF24_PDU_LID_DATA_FRAG : NRF24_PDU_LID_DATA_END;
+
+		/* Packet sequence number */
+		opdu->nseq = peers[sockfd-1].seqnumber_tx;
+
+		/* Offset = len - left */
+		memcpy(opdu->payload, peers[sockfd-1].buffer_tx +
+			(peers[sockfd-1].len_tx - left), plen);
+
+		/* Send packet */
+		err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
+		if (err < 0)
+			return err;
+
+		left -= plen;
+		peers[sockfd-1].seqnumber_tx++;
+	}
+
+	err = peers[sockfd-1].len_tx;
+
+	/* Resets controls */
+	peers[sockfd-1].len_tx = 0;
+	peers[sockfd-1].seqnumber_tx = 0;
+
+	return err;
+}
+
 static void running(void)
 {
 
@@ -261,7 +328,8 @@ static void running(void)
 
 		/* Check if pipe is allocated */
 		if (peers[sockIndex].pipe != -1) {
-			/* TODO: call read/write raw data */
+			/* TODO: call read raw data */
+			write_raw(driverIndex, sockIndex);
 		}
 
 
