@@ -183,8 +183,7 @@ static uint8_t dbm_int2rfpwr(int dbm)
  * parameters when/if implemented
  * in the json configuration file
  */
-static int parse_config(const char *config, const char **host, int *port,
-							int *channel, int *dbm)
+static int parse_config(const char *config, int *channel, int *dbm)
 {
 	json_object *jobj, *obj_radio, *obj_tmp;
 
@@ -215,13 +214,14 @@ done:
 int manager_start(const char *file, const char *host, int port,
 				const char *spi, int channel, int dbm)
 {
+	int cfg_channel = NRF24_CH_MIN, cfg_dbm = 0;
 	char *json_str;
 	int err;
 
+	/* Command line arguments have higher priority */
 	json_str = load_config(file);
 	if (json_str != NULL) {
-		/* */
-		err = parse_config(json_str, &host, &port, &channel, &dbm);
+		err = parse_config(json_str, &cfg_channel, &cfg_dbm);
 		free(json_str);
 	}
 
@@ -231,8 +231,15 @@ int manager_start(const char *file, const char *host, int port,
 	}
 
 	 /* Validate and set the channel */
-	if (channel <= 125 && channel >= 0)
-		channel = NRF24_CH_MIN;
+	if (channel < 0 || channel > 125)
+		channel = cfg_channel;
+
+	/*
+	 * Use TX Power from configuration file if it has not been passed
+	 * through cmd line. -255 means invalid: not informed by user.
+	 */
+	if (dbm == -255)
+		dbm = cfg_dbm;
 
 	if (host == NULL)
 		return radio_init(spi, channel, dbm_int2rfpwr(dbm));

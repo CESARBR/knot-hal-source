@@ -34,8 +34,8 @@ static const char *opt_cfg = "gatewayConfig.json";
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
-static int opt_channel = CHANNEL_DEFAULT;
-static int opt_dbm = NRF24_PWR_0DBM;
+static int opt_channel = -1;
+static int opt_dbm = -255;
 static const char *opt_nodes = "/etc/knot/keys.json";
 
 static void sig_term(int sig)
