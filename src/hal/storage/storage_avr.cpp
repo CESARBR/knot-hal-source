@@ -64,15 +64,15 @@ int hal_storage_write_end(void *value, uint16_t len, uint8_t data)
 	 */
 	switch (data) {
 	case DATA_UUID:
-		dst = EE2END - len - ADDR_UUID;
+		dst = E2END - len - ADDR_UUID;
 		break;
 	case DATA_TOKEN:
-		dst = EE2END - len - ADDR_TOKEN;
+		dst = E2END - len - ADDR_TOKEN;
 		break;
 	case DATA_CONFIG:
-		dst = EE2END - len - ADDR_CONFIG;
+		dst = E2END - len - ADDR_CONFIG;
 		/* Store the size of the config to know where it end in the EEPROM */
-		hal_storage_write(EE2END - ADDR_SIZE_CONFIG, len, 2);
+		hal_storage_write(E2END - ADDR_SIZE_CONFIG, len, 2);
 		break;
 	default:
 		return -1;
