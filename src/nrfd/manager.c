@@ -27,7 +27,7 @@
 static int mgmtfd;
 static guint mgmtwatch;
 
-static gboolean mgmt_read_idle(gpointer user_data)
+static gboolean read_idle(gpointer user_data)
 {
 	uint8_t buffer[256];
 	const struct mgmt_nrf24_header *mhdr =
@@ -69,7 +69,7 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr)
 	if (mgmtfd < 0)
 		goto done;
 
-	mgmtwatch = g_idle_add(mgmt_read_idle, NULL);
+	mgmtwatch = g_idle_add(read_idle, NULL);
 
 	return 0;
 done:
