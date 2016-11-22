@@ -78,18 +78,10 @@ static struct nrf24_data peers[5] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
 		.seqnumber_rx = 0, .offset_rx = 0}
 };
-#else	/* If thing then 1 peer */
-static struct nrf24_data peers[1] = {
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
-};
-#endif
 
-/* ARRAY SIZE */
-#define CONNECTION_COUNTER	((int) (sizeof(peers) \
-				 / sizeof(peers[0])))
-
-/* Access Address for each pipe */
+/* TODO: TODO: Get this values from config file
+ * Access Address for each pipe
+ */
 static uint8_t aa_pipes[6][5] = {
 	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
 	{0x35, 0x96, 0xB6, 0xC1, 0x6B},
@@ -98,6 +90,26 @@ static uint8_t aa_pipes[6][5] = {
 	{0xE7, 0x96, 0xB6, 0xC1, 0x6B},
 	{0xF0, 0x96, 0xB6, 0xC1, 0x6B}
 };
+
+#else	/* If thing then 1 peer */
+static struct nrf24_data peers[1] = {
+	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
+		.seqnumber_rx = 0, .offset_rx = 0},
+};
+
+/* TODO: TODO: Get this value from config file
+ * Access Address for pipe 0
+ * AA for pipe 1 are in connect req pkt
+ */
+static uint8_t aa_pipes[1][5] = {
+	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
+};
+
+#endif
+
+/* ARRAY SIZE */
+#define CONNECTION_COUNTER	((int) (sizeof(peers) \
+				 / sizeof(peers[0])))
 
 /* Global to save driver index */
 static int driverIndex = -1;
