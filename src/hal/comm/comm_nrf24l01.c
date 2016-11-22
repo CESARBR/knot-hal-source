@@ -61,6 +61,8 @@ struct nrf24_data {
 	uint8_t seqnumber_tx;
 	uint8_t seqnumber_rx;
 	size_t offset_rx;
+	unsigned long keepalive_wait;
+	uint8_t keepalive;
 };
 
 #ifndef ARDUINO	/* If gateway then 5 peers */
@@ -139,6 +141,31 @@ static inline int alloc_pipe(void)
 
 	/* No free pipe */
 	return -1;
+}
+
+static int write_keepalive(int spi_fd, int sockfd, int keepalive_op)
+{
+	int err;
+	/* Assemble keep alive package */
+	struct nrf24_io_pack p;
+	struct nrf24_ll_data_pdu *opdu =
+		(struct nrf24_ll_data_pdu *)p.payload;
+	struct nrf14_ll_crtl_pdu *ctrl =
+		(struct nrf14_ll_crtl_pdu *)opdu->payload;
+
+	opdu->lid = NRF24_PDU_LID_CONTROL;
+	p.pipe = sockfd;
+	/* Keep alive opcode - Request or Response */
+	ctrl->opcode = keepalive_op;
+
+	/* Sends keep alive packet */
+	err = phy_write(spi_fd, &p, sizeof(struct nrf24_ll_data_pdu) +
+		sizeof(struct nrf14_ll_crtl_pdu));
+
+	if (err < 0)
+		return err;
+
+	return 0;
 }
 
 static int write_mgmt(int spi_fd)
@@ -312,64 +339,108 @@ static int read_raw(int spi_fd, int sockfd)
 {
 	ssize_t ilen;
 	size_t plen;
-	uint8_t lid;
 	struct nrf24_io_pack p;
 	const struct nrf24_ll_data_pdu *ipdu = (void *)p.payload;
 
 	p.pipe = sockfd;
+	/*
+	 * Reads the data while to exist,
+	 * on success, the number of bytes read is returned
+	 */
+	while ((ilen = phy_read(spi_fd, &p, NRF24_MTU)) > 0) {
+		/* Check if is data or Control */
+		switch (ipdu->lid) {
 
-	do {
+		/* If is Control */
+		case NRF24_PDU_LID_CONTROL:
+		{
+			struct nrf14_ll_crtl_pdu *ctrl =
+				(struct nrf14_ll_crtl_pdu *)ipdu->payload;
 
-		/*
-		 * Reads the data,
-		 * on success, the number of bytes read is returned
-		 */
-		ilen = phy_read(spi_fd, &p, NRF24_MTU);
+			/*
+			 * If is keep alive then resets keepalive_wait
+			 * Thing side
+			 */
+			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
+				peers[sockfd-1].keepalive_wait = hal_time_ms();
+				peers[sockfd-1].keepalive = 1;
+			}
 
-		/* If no data available */
-		if (ilen < 0)
-			return -EAGAIN;	/* Try again */
+			/*
+			 * If is keep alive then resets keepalive_wait
+			 * NRFD side
+			 */
+			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ) {
+				peers[sockfd-1].keepalive_wait = hal_time_ms();
+				peers[sockfd-1].keepalive = 1;
+				write_keepalive(spi_fd, sockfd,
+					NRF24_LL_CRTL_OP_KEEPALIVE_RSP);
+			}
 
-		/* Reset offset if sequence number is zero */
-		if (ipdu->nseq == 0) {
-			peers[sockfd-1].offset_rx = 0;
-			peers[sockfd-1].seqnumber_rx = 0;
 		}
+			break;
 
-		/* If sequence number error */
-		if (peers[sockfd-1].seqnumber_rx < ipdu->nseq)
-			return -EILSEQ; /* Illegal byte sequence */
-		if (peers[sockfd-1].seqnumber_rx > ipdu->nseq)
-			return -EAGAIN; /* Discard packet duplicated */
+		/* If is Data */
+		case NRF24_PDU_LID_DATA_FRAG:
+		case NRF24_PDU_LID_DATA_END:
+			if (peers[sockfd-1].len_rx != 0)
+				break; /* Discard packet */
 
-		/* Payloag length = input length - header size */
-		plen = ilen - DATA_HDR_SIZE;
-		lid = ipdu->lid;
+			/* Reset offset if sequence number is zero */
+			if (ipdu->nseq == 0) {
+				peers[sockfd-1].offset_rx = 0;
+				peers[sockfd-1].seqnumber_rx = 0;
+			}
 
-		if (lid == NRF24_PDU_LID_DATA_FRAG && plen < NRF24_PW_MSG_SIZE)
-			return -EBADMSG; /* Not a data message */
+			/* If sequence number error */
+			if (peers[sockfd-1].seqnumber_rx < ipdu->nseq)
+				break;
+				/*
+				 * TODO: disconnect, data error!?!?!?
+				 * Illegal byte sequence
+				 */
 
-		/* Reads no more than DATA_SIZE bytes */
-		if (peers[sockfd-1].offset_rx + plen > DATA_SIZE)
-			plen = DATA_SIZE - peers[sockfd-1].offset_rx;
+			if (peers[sockfd-1].seqnumber_rx > ipdu->nseq)
+				break; /* Discard packet duplicated */
 
-		memcpy(peers[sockfd-1].buffer_rx + peers[sockfd-1].offset_rx,
-			ipdu->payload, plen);
-		peers[sockfd-1].offset_rx += plen;
-		peers[sockfd-1].seqnumber_rx++;
+			/* Payloag length = input length - header size */
+			plen = ilen - DATA_HDR_SIZE;
 
-	} while (lid != NRF24_PDU_LID_DATA_END &&
-			peers[sockfd-1].offset_rx < DATA_SIZE);
+			if (ipdu->lid == NRF24_PDU_LID_DATA_FRAG &&
+				plen < NRF24_PW_MSG_SIZE)
+				break;
+				/*
+				 * TODO: disconnect, data error!?!?!?
+				 * Not a data message
+				 */
 
-	/* Sets packet length read */
-	peers[sockfd-1].len_rx = peers[sockfd-1].offset_rx;
+			/* Reads no more than DATA_SIZE bytes */
+			if (peers[sockfd-1].offset_rx + plen > DATA_SIZE)
+				plen = DATA_SIZE - peers[sockfd-1].offset_rx;
 
-	/* If the complete msg is received, resets the controls */
-	peers[sockfd-1].seqnumber_rx = 0;
-	peers[sockfd-1].offset_rx = 0;
+			memcpy(peers[sockfd-1].buffer_rx +
+				peers[sockfd-1].offset_rx, ipdu->payload, plen);
+			peers[sockfd-1].offset_rx += plen;
+			peers[sockfd-1].seqnumber_rx++;
 
-	/* Returns de number of bytes received */
-	return peers[sockfd-1].len_rx;
+			/* If is DATA_END then put in rx buffer */
+			if (ipdu->lid == NRF24_PDU_LID_DATA_END) {
+				/* Sets packet length read */
+				peers[sockfd-1].len_rx =
+					peers[sockfd-1].offset_rx;
+
+				/*
+				 * If the complete msg is received,
+				 * resets the controls
+				 */
+				peers[sockfd-1].seqnumber_rx = 0;
+				peers[sockfd-1].offset_rx = 0;
+			}
+			break;
+		}
+	}
+
+	return 0;
 }
 
 /*

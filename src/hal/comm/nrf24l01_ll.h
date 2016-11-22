@@ -89,12 +89,18 @@ struct nrf14_ll_crtl_pdu {
 	uint8_t payload[0];
 } __attribute__ ((packed));
 
+
+#define NRF24_KEEPALIVE_SEND_MS		2560
+#define NRF24_KEEPALIVE_TIMEOUT_MS	(10 * NRF24_KEEPALIVE_SEND_MS)
+
 /*
  * Keep alive should be sent every 2560ms. Timeout happens
  * after 25600ms (10 keep alive without response).
  */
 #define NRF24_LL_CRTL_OP_KEEPALIVE_REQ	0x01
 #define NRF24_LL_CRTL_OP_KEEPALIVE_RSP	0x02
+
+
 
 /* Sent automatically from both sides after establishing connection */
 #define NRF24_LL_CRTL_OP_VERSION_IND	0x03
