@@ -27,33 +27,47 @@
 static int mgmtfd;
 static guint mgmtwatch;
 
-static gboolean read_idle(gpointer user_data)
+static int8_t mgmt_read(void)
 {
+
 	uint8_t buffer[256];
-	const struct mgmt_nrf24_header *mhdr =
-				(const struct mgmt_nrf24_header *) buffer;
+	struct mgmt_nrf24_header *mhdr = (struct mgmt_nrf24_header *) buffer;
 	ssize_t rbytes;
 
 	rbytes = hal_comm_read(mgmtfd, buffer, sizeof(buffer));
 
 	/* mgmt on bad state? */
 	if (rbytes < 0 && rbytes != -EAGAIN)
-		return FALSE;
+		return -1;
 
 	/* Nothing to read? */
 	if (rbytes == -EAGAIN)
-		return TRUE;
+		return -1;
 
 	/* Return/ignore if it is not an event? */
 	if (!(mhdr->opcode & 0x0200))
-		return TRUE;
+		return -1;
 
-	printf("MGMT opcode: 0x%04X\n", mhdr->opcode);
-	if (mhdr->opcode != MGMT_EVT_NRF24_BCAST_PRESENCE)
-		return TRUE;
+	switch (mhdr->opcode) {
 
-	/* If it is not connected: connect to the indicated peer */
+	case MGMT_EVT_NRF24_BCAST_PRESENCE:
+		break;
 
+	case MGMT_EVT_NRF24_BCAST_SETUP:
+		break;
+
+	case MGMT_EVT_NRF24_BCAST_BEACON:
+		break;
+
+	case MGMT_EVT_NRF24_DISCONNECTED:
+		break;
+	}
+	return 0;
+}
+
+static gboolean read_idle(gpointer user_data)
+{
+	mgmt_read();
 	return TRUE;
 }
 
