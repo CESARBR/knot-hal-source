@@ -24,8 +24,90 @@
 #include "nrf24l01_io.h"
 #include "manager.h"
 
+#define MAX_PEERS 5
 static int mgmtfd;
 static guint mgmtwatch;
+
+struct peer {
+	struct nrf24_mac mac;
+	int8_t socket_fd;
+};
+
+static struct peer peers[MAX_PEERS] = {
+	{.mac.address.uint64 = 0, .socket_fd = -1},
+	{.mac.address.uint64 = 0, .socket_fd = -1},
+	{.mac.address.uint64 = 0, .socket_fd = -1},
+	{.mac.address.uint64 = 0, .socket_fd = -1},
+	{.mac.address.uint64 = 0, .socket_fd = -1}
+};
+
+static uint8_t count_clients;
+
+/* Get peer position in vector of peers*/
+static int8_t get_peer(struct nrf24_mac mac)
+{
+	int8_t i;
+
+	for (i = 0; i < MAX_PEERS; i++)
+		if (peers[i].mac.address.uint64 == mac.address.uint64)
+			return i;
+
+	return -EINVAL;
+}
+
+/* Get free position in vector for peers*/
+static int8_t get_peer_index(void)
+{
+	int8_t i;
+
+	for (i = 0; i < MAX_PEERS; i++)
+		if (peers[i].socket_fd == -1)
+			return i;
+
+	return -EINVAL;
+}
+
+static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
+{
+	int8_t position;
+	int err;
+	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
+			(struct mgmt_evt_nrf24_bcast_presence *) mhdr->payload;
+
+
+	if (count_clients >= MAX_PEERS)
+		return -EUSERS; /*MAX PEERS*/
+
+	/*Check if this peer is already allocated */
+	position = get_peer(evt_pre->src);
+	/* If this is a new peer */
+	if (position < 0) {
+		/* Get free peers position */
+		position = get_peer_index();
+		/* Set mac value for this position */
+		peers[position].mac.address.uint64 =
+				evt_pre->src.address.uint64;
+		/*Create Socket */
+		err =
+			hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
+
+		if (err < 0)
+			return err;
+
+		peers[position].socket_fd = err;
+
+		/*Send Connect */
+		hal_comm_connect(peers[position].socket_fd,
+					&evt_pre->src.address.uint64);
+
+		count_clients++;
+	} else {
+		/* Resend connect */
+		hal_comm_connect(peers[position].socket_fd,
+			&evt_pre->src.address.uint64);
+	}
+	return 0;
+}
 
 static int8_t mgmt_read(void)
 {
@@ -51,6 +133,7 @@ static int8_t mgmt_read(void)
 	switch (mhdr->opcode) {
 
 	case MGMT_EVT_NRF24_BCAST_PRESENCE:
+		evt_presence(mhdr);
 		break;
 
 	case MGMT_EVT_NRF24_BCAST_SETUP:
