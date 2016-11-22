@@ -109,6 +109,28 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	return 0;
 }
 
+/* Read RAW from Clients */
+static int8_t clients_read(void)
+{
+
+	int8_t i;
+	uint8_t buffer[256];
+
+	/* If no client */
+	if (count_clients == 0)
+		return 0;
+
+	for (i = 0; i < MAX_PEERS; i++) {
+		if (peers[i].socket_fd == -1)
+			continue;
+
+		memset(buffer, 0, sizeof(buffer));
+		hal_comm_read(peers[i].socket_fd, buffer, sizeof(buffer));
+		/*TODO : SEND DATA TO KNOTD */
+	}
+	return 0;
+}
+
 static int8_t mgmt_read(void)
 {
 
@@ -151,6 +173,7 @@ static int8_t mgmt_read(void)
 static gboolean read_idle(gpointer user_data)
 {
 	mgmt_read();
+	clients_read();
 	return TRUE;
 }
 
