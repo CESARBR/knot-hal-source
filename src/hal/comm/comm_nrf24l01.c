@@ -797,7 +797,8 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 				(struct mgmt_nrf24_header *) mgmt.buffer_rx;
 	struct mgmt_evt_nrf24_connected *evt_connect =
 			(struct mgmt_evt_nrf24_connected *)evt->payload;
-
+	struct addr_pipe p_addr;
+	int pipe;
 	/* Run background procedures */
 	running();
 
@@ -814,13 +815,21 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 		evt_connect->dst.address.uint64 != *addr)
 		return -EAGAIN;
 
-	/* If is already connected */
-	if (peers[0].pipe != -1)
-		return -EUSERS;
+	pipe = alloc_pipe();
+	/* If not pipe available */
+	if (pipe < 0)
+		return -EUSERS; /* Returns too many users */
 
-	peers[0].pipe = 1;
 	/* If accept then stop listen */
 	listen = 0;
+
+	/* Set aa in pipe */
+	p_addr.pipe = pipe;
+	memcpy(p_addr.aa, evt_connect->aa, sizeof(evt_connect->aa));
+	p_addr.ack = 1;
+	/*open pipe*/
+	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &p_addr);
+
 	/* If accept then increment connection_live */
 	connection_live++;
 
@@ -828,7 +837,7 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	peers[sockfd-1].keepalive = 1;
 
 	/* Return pipe */
-	return peers[0].pipe;
+	return pipe;
 }
 
 
