@@ -43,13 +43,14 @@ static struct nrf24_mac addr_thing = {.address.uint64 = 0 };
 
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
+	int8_t pipe;
 	uint8_t buffer_rx[DATA_SIZE];
 	size_t len_rx;
 	uint8_t buffer_tx[DATA_SIZE];
 	size_t len_tx;
 };
 
-static struct nrf24_mgmt mgmt = {.len_rx = 0};
+static struct nrf24_mgmt mgmt = {.pipe = -1, .len_rx = 0};
 
 /* Structure to save peers context */
 struct nrf24_data {
@@ -676,11 +677,21 @@ int hal_comm_socket(int domain, int protocol)
 
 	case HAL_COMM_PROTO_MGMT:
 		/* If Management, disable ACK and returns 0 */
+		if (mgmt.pipe == 0)
+			return -EUSERS; /* Returns too many users */
 		ap.ack = false;
 		retval = 0;
+		mgmt.pipe = 0;
 		break;
 
 	case HAL_COMM_PROTO_RAW:
+		if (mgmt.pipe == -1) {
+			/* If Management is not open*/
+			ap.ack = false;
+			mgmt.pipe = 0;
+			retval = 0;
+			break;
+		}
 		/*
 		 * If raw data, enable ACK
 		 * and returns an available pipe
