@@ -181,7 +181,7 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr)
 {
 	int err;
 
-	err = hal_comm_init(spi);
+	err = hal_comm_init("NRF0");
 	if (err < 0)
 		return err;
 
