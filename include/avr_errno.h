@@ -20,6 +20,7 @@ extern "C" {
 #define ENOSYS			38	/*  Function not implemented */
 #define EPERM			01	/* Operation not permitted */
 #define EUSERS			87	/* Too many users */
+#define EBUSY			16	/* Device or resource busy */
 
 #ifdef __cplusplus
 }
