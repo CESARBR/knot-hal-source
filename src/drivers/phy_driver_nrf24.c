@@ -146,7 +146,7 @@ struct phy_driver nrf24l01 = {
 #ifndef ARDUINO
 	.pathname = "/dev/spidev0.0",
 #else
-	.pathname = NULL;
+	.pathname = NULL,
 #endif
 	.open = nrf24l01_open,
 	.read = nrf24l01_read,
