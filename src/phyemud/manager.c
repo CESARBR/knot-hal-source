@@ -22,7 +22,8 @@
 
 #include <glib.h>
 
-#include "phy_driver_private.h"
+#include "include/nrf24.h"
+#include "include/comm.h"
 #include "manager.h"
 
 /* Application packet size maximum, same as knotd */
@@ -31,6 +32,7 @@
 
 static guint unix_watch_id = 0;
 static GSList *session_list = NULL;
+static int commfd;
 
 struct session {
 	unsigned int thing_id;	/* Thing event source */
@@ -41,7 +43,6 @@ struct session {
 };
 
 extern struct phy_driver phy_unix;
-extern struct phy_driver phy_serial;
 
 static int connect_unix(void)
 {
@@ -286,30 +287,23 @@ static int serial_start(const char *pathname)
 	struct session *session;
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	GIOChannel *io;
-	int virtualfd, realfd, knotdfd;
+	int knotdfd;
 
-	if (phy_serial.probe(NULL, 0) < 0)
-		return -EIO;
-
-	virtualfd = phy_serial.open(pathname);
-	printf("virtualfd = (%d)\n\r", virtualfd);
-
-	realfd = phy_serial.listen(0, 0);
-	if (realfd < 0) {
-		phy_serial.close(realfd);
+	commfd = hal_comm_init(pathname, NULL);
+	printf("commfd = (%d)\n\r", commfd);
+	if (commfd < 0)
 		return -errno;
-	}
 
 	knotdfd = connect_unix();
 	if (knotdfd < 0) {
-		phy_unix.close(realfd);
+		phy_unix.close(commfd);
 		return FALSE;
 	}
 
 	printf("Serial server started\n\r");
 
 	/* Tracking thing connection & data */
-	io = g_io_channel_unix_new(realfd);
+	io = g_io_channel_unix_new(commfd);
 	g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_set_close_on_unref(io, TRUE);
 
@@ -328,7 +322,6 @@ static int serial_start(const char *pathname)
 	g_io_channel_unref(session->knotd_io);
 
 	session->thing_io = io;
-	session->ops = &phy_serial;
 
 	session->thing_id = g_io_add_watch_full(io, G_PRIORITY_DEFAULT,
 						cond, generic_io_watch, session,
@@ -350,7 +343,7 @@ static void unix_stop(void)
 
 static void serial_stop(void)
 {
-	phy_serial.remove();
+	hal_comm_close(commfd);
 }
 
 int manager_start(const char *serial, gboolean unix_sock)
@@ -359,6 +352,9 @@ int manager_start(const char *serial, gboolean unix_sock)
 
 	if (unix_sock)
 		err = unix_start();
+
+	if (err < 0)
+		return err;
 
 	if (serial)
 		err = serial_start(serial);
