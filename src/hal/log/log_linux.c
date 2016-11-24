@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -33,16 +34,22 @@ int hal_log_open(const char *pathname)
 }
 
 void logger(const char *file, const char *function, long line,
-				const char *args, const char *category)
+		const char *category, const char *format, ...)
 {
-	int len = strlen(file) + strlen(function) + strlen(args) +
-					strlen(category) + SIZE_CHAR_BUF + 1;
-	char buf[len];
+	char buf[1024] = {0};
+	va_list args;
+	int len = 0;
 
-	snprintf(buf, len, "%s%s::%s(%lu):%s\n", category, file, function,
-								line, args);
+	len = snprintf(buf, 1024, "%s%s::%s(%lu):", category, file, function,
+								line);
 
-	write(fd, buf, strlen(buf));
+	va_start(args, format);
+	len += vsnprintf(&(buf[len]), 1024-len, format, args);
+	va_end(args);
+
+	len += snprintf(&(buf[len]), 1024-len, "\n");
+
+	write(fd, buf, len);
 }
 
 void hal_log_close(void)

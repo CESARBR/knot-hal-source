@@ -17,18 +17,18 @@ extern "C" {
 int hal_log_open(const char *pathname);
 
 void logger(const char *file, const char *function, long line,
-				const char *args, const char *category);
+		const char *category, const char *format, ...);
 
-#define hal_log_info(...) {						\
-	logger(__FILE__, __func__, __LINE__, __VA_ARGS__, "[info] ");	\
+#define hal_log_info(format, ...) {						\
+	logger(__FILE__, __func__, __LINE__, "[info] ", format, __VA_ARGS__);	\
 }
 
-#define hal_log_warn(...) {						\
-	logger(__FILE__, __func__, __LINE__, __VA_ARGS__, "[warn] ");	\
+#define hal_log_warn(format, ...) {						\
+	logger(__FILE__, __func__, __LINE__, "[warn] ", format, __VA_ARGS__);	\
 }
 
-#define hal_log_error(...) {						\
-	logger(__FILE__, __func__, __LINE__, __VA_ARGS__, "[error] ");	\
+#define hal_log_error(format, ...) {						\
+	logger(__FILE__, __func__, __LINE__, "[error] ", format, __VA_ARGS__);	\
 }
 
 void hal_log_close(void);

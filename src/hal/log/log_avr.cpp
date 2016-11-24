@@ -62,8 +62,11 @@ int hal_log_open(const char *pathname)
 }
 
 void logger(const char *file, const char *function, long line,
-				const char *args, const char *category)
+		const char *category, const char *format, ...)
 {
+	char buf[50] = {0};
+	va_list args;
+
 	_serial->print(category);
 	_serial->print(file);
 	_serial->print("::");
@@ -71,7 +74,12 @@ void logger(const char *file, const char *function, long line,
 	_serial->print("(");
 	_serial->print(line);
 	_serial->print("): ");
-	_serial->println(args);
+
+	va_start(args, format);
+	vsnprintf(buf, 50, format, args);
+	va_end(args);
+
+	_serial->println(buf);
 }
 
 void hal_log_close(void)
