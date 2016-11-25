@@ -10,7 +10,8 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer tools/rpiecho
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer tools/rpiecho \
+						src/seriald/seriald
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -61,6 +62,13 @@ tools_rpiecho_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/spi \
 				-I$(top_srcdir)/src/nrf24l01 \
 				-I$(top_srcdir)/nrf
+
+src_seriald_seriald_SOURCES = src/seriald/main.c \
+				src/seriald/manager.h src/seriald/manager.c
+src_seriald_seriald_LDADD = libs/libhalcommserial.a @GLIB_LIBS@
+src_seriald_seriald_LDFLAGS = $(AM_LDFLAGS)
+src_seriald_seriald_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+				-I$(top_srcdir)/src
 
 DISTCLEANFILES =
 

@@ -22,7 +22,7 @@
 #include "manager.h"
 
 static GMainLoop *main_loop;
-static const char *opt_serial = NULL;
+static const char *opt_serial;
 
 static void sig_term(int sig)
 {
