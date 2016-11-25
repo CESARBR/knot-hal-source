@@ -23,7 +23,6 @@
 
 static GMainLoop *main_loop;
 static const char *opt_serial = NULL;
-static gboolean opt_unix = FALSE;
 
 static void sig_term(int sig)
 {
@@ -33,8 +32,6 @@ static void sig_term(int sig)
 static GOptionEntry options[] = {
 	{ "serial", 's', 0, G_OPTION_ARG_STRING, &opt_serial,
 					"serial", "Serial device" },
-	{ "unix", 'u', 0, G_OPTION_ARG_NONE, &opt_unix,
-		"Unix socket", "Enable unix socket clients" },
 	{ NULL },
 };
 
@@ -56,12 +53,12 @@ int main(int argc, char *argv[])
 
 	g_option_context_free(context);
 
-	if (!opt_unix && opt_serial == NULL) {
+	if (opt_serial == NULL) {
 		printf("Missing arguments\n");
 		return EXIT_FAILURE;
 	}
 
-	err = manager_start(opt_serial, opt_unix);
+	err = manager_start(opt_serial);
 	if (err < 0)
 		return EXIT_FAILURE;
 

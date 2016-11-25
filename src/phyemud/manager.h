@@ -7,5 +7,5 @@
  *
  */
 
-int manager_start(const char *serial, gboolean unix_sock);
+int manager_start(const char *serial);
 void manager_stop(void);
