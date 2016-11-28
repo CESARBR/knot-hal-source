@@ -289,13 +289,24 @@ done:
 	return mgmtfd;
 }
 
+static void close_clients(void)
+{
+	int i;
+
+	for (i = 0; i < MAX_PEERS; i++) {
+		hal_comm_close(peers[i].socket_fd);
+		peers[i].socket_fd = -1;
+		peers[i].mac.address.uint64 = 0;
+	}
+}
+
 static void radio_stop(void)
 {
 	if (mgmtwatch)
 		g_source_remove(mgmtwatch);
 
 	hal_comm_close(mgmtfd);
-
+	close_clients();
 	hal_comm_deinit();
 }
 
