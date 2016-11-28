@@ -17,6 +17,10 @@
 #include <netinet/in.h>
 #include <glib.h>
 #include <json-c/json.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include "include/comm.h"
 #include "include/nrf24.h"
@@ -24,6 +28,7 @@
 #include "nrf24l01_io.h"
 #include "manager.h"
 
+#define KNOTD_UNIX_ADDRESS		"knot"
 #define MAX_PEERS 5
 static int mgmtfd;
 static guint mgmtwatch;
@@ -31,6 +36,9 @@ static guint mgmtwatch;
 struct peer {
 	struct nrf24_mac mac;
 	int8_t socket_fd;
+	int8_t knotd_fd;
+	GIOChannel *knotd_io;
+	unsigned int knotd_id;
 };
 
 static struct peer peers[MAX_PEERS] = {
@@ -67,8 +75,66 @@ static int8_t get_peer_index(void)
 	return -EINVAL;
 }
 
+static int connect_unix(void)
+{
+	struct sockaddr_un addr;
+	int sock;
+
+	sock = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+	if (sock < 0)
+		return -errno;
+
+	/* Represents unix socket from nrfd to knotd */
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path + 1, KNOTD_UNIX_ADDRESS,
+					strlen(KNOTD_UNIX_ADDRESS));
+
+	if (connect(sock, (struct sockaddr *) &addr, sizeof(addr)) == -1)
+		return -errno;
+
+	return sock;
+}
+
+static void knotd_io_destroy(gpointer user_data)
+{
+
+	struct peer *p = (struct peer *)user_data;
+
+	hal_comm_close(p->socket_fd);
+	p->socket_fd = -1;
+	p->knotd_id = 0;
+	p->knotd_io = NULL;
+}
+
+static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
+							gpointer user_data)
+{
+
+	char buffer[128];
+	ssize_t readbytes_knotd;
+	struct peer *p = (struct peer *)user_data;
+
+	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
+		return FALSE;
+
+	/* Read data from Knotd */
+	readbytes_knotd = read(p->knotd_fd, buffer, sizeof(buffer));
+	if (readbytes_knotd < 0) {
+		printf("read_knotd() error\n\r");
+		return FALSE;
+	}
+
+	/* Send data to thing */
+	/* TODO: put data in list for transmission */
+	hal_comm_write(p->socket_fd, buffer, readbytes_knotd);
+
+	return TRUE;
+}
+
 static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 {
+	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	int8_t position;
 	int err;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
@@ -84,28 +150,50 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	if (position < 0) {
 		/* Get free peers position */
 		position = get_peer_index();
-		/* Set mac value for this position */
-		peers[position].mac.address.uint64 =
-				evt_pre->src.address.uint64;
-		/*Create Socket */
-		err =
-			hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
+		if (position < 0)
+			return position;
 
+		/*Create Socket */
+		err = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
 		if (err < 0)
 			return err;
 
 		peers[position].socket_fd = err;
 
-		/*Send Connect */
-		hal_comm_connect(peers[position].socket_fd,
-					&evt_pre->src.address.uint64);
+		peers[position].knotd_fd = connect_unix();
+		if (peers[position].knotd_fd < 0) {
+			hal_comm_close(peers[position].socket_fd);
+			peers[position].socket_fd = -1;
+			return peers[position].knotd_fd;
+		}
+
+		/* Set mac value for this position */
+		peers[position].mac.address.uint64 =
+				evt_pre->src.address.uint64;
+
+		/* Watch knotd socket */
+		peers[position].knotd_io =
+			g_io_channel_unix_new(peers[position].knotd_fd);
+		g_io_channel_set_flags(peers[position].knotd_io,
+			G_IO_FLAG_NONBLOCK, NULL);
+		g_io_channel_set_close_on_unref(peers[position].knotd_io,
+			TRUE);
+
+		peers[position].knotd_id =
+			g_io_add_watch_full(peers[position].knotd_io,
+						G_PRIORITY_DEFAULT,
+						cond,
+						knotd_io_watch,
+						&peers[position],
+						knotd_io_destroy);
+		g_io_channel_unref(peers[position].knotd_io);
 
 		count_clients++;
-	} else {
-		/* Resend connect */
-		hal_comm_connect(peers[position].socket_fd,
-			&evt_pre->src.address.uint64);
 	}
+
+	/*Send Connect */
+	hal_comm_connect(peers[position].socket_fd,
+			&evt_pre->src.address.uint64);
 	return 0;
 }
 
