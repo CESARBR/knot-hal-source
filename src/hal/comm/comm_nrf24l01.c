@@ -361,8 +361,15 @@ static int write_raw(int spi_fd, int sockfd)
 
 		/* Send packet */
 		err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
-		if (err < 0)
+		/*
+		 * If write error then reset tx len
+		 * and sequence number
+		 */
+		if (err < 0) {
+			peers[sockfd-1].len_tx = 0;
+			peers[sockfd-1].seqnumber_tx = 0;
 			return err;
+		}
 
 		left -= plen;
 		peers[sockfd-1].seqnumber_tx++;
