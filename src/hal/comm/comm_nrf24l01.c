@@ -592,10 +592,10 @@ static void running(void)
 			 */
 
 			if (check_keepalive(driverIndex, sockIndex) == -ETIMEDOUT &&
-				peers[sockIndex-1].len_rx == 0) {
+				mgmt.len_rx == 0) {
 
 				struct mgmt_nrf24_header *evt =
-					(struct mgmt_nrf24_header *)peers[sockIndex-1].buffer_rx;
+					(struct mgmt_nrf24_header *) mgmt.buffer_rx;
 
 				struct mgmt_evt_nrf24_disconnected *evt_discon =
 					(struct mgmt_evt_nrf24_disconnected *)evt->payload;
@@ -608,7 +608,7 @@ static void running(void)
 				evt_discon->dst.address.uint64 =
 					addr_gw.address.uint64;
 
-				peers[sockIndex-1].len_rx =
+				mgmt.len_rx =
 					sizeof(struct mgmt_nrf24_header) +
 					sizeof(struct mgmt_evt_nrf24_disconnected);
 
