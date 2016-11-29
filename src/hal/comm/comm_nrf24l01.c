@@ -164,8 +164,8 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op)
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu =
 		(struct nrf24_ll_data_pdu *)p.payload;
-	struct nrf14_ll_crtl_pdu *ctrl =
-		(struct nrf14_ll_crtl_pdu *)opdu->payload;
+	struct nrf24_ll_crtl_pdu *ctrl =
+		(struct nrf24_ll_crtl_pdu *)opdu->payload;
 
 	opdu->lid = NRF24_PDU_LID_CONTROL;
 	p.pipe = sockfd;
@@ -174,7 +174,7 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op)
 
 	/* Sends keep alive packet */
 	err = phy_write(spi_fd, &p, sizeof(struct nrf24_ll_data_pdu) +
-		sizeof(struct nrf14_ll_crtl_pdu));
+		sizeof(struct nrf24_ll_crtl_pdu));
 
 	if (err < 0)
 		return err;
@@ -396,8 +396,8 @@ static int read_raw(int spi_fd, int sockfd)
 		/* If is Control */
 		case NRF24_PDU_LID_CONTROL:
 		{
-			struct nrf14_ll_crtl_pdu *ctrl =
-				(struct nrf14_ll_crtl_pdu *)ipdu->payload;
+			struct nrf24_ll_crtl_pdu *ctrl =
+				(struct nrf24_ll_crtl_pdu *)ipdu->payload;
 
 			/*
 			 * If is keep alive then resets keepalive_wait

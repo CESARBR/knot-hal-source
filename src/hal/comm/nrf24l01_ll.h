@@ -84,7 +84,7 @@ struct nrf24_ll_data_pdu {
 /* 6 bits (64 packets) are reserved to sequence number*/
 #define NRF24_MAX_MSG_SIZE		(64 * NRF24_PW_MSG_SIZE)
 
-struct nrf14_ll_crtl_pdu {
+struct nrf24_ll_crtl_pdu {
 	uint8_t opcode;
 	uint8_t payload[0];
 } __attribute__ ((packed));
