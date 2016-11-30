@@ -610,11 +610,8 @@ static void running(void)
 
 				evt->opcode = MGMT_EVT_NRF24_DISCONNECTED;
 
-				evt_discon->src.address.uint64 =
+				evt_discon->mac.address.uint64 =
 					addr_thing.address.uint64;
-
-				evt_discon->dst.address.uint64 =
-					addr_gw.address.uint64;
 
 				mgmt.len_rx =
 					sizeof(struct mgmt_nrf24_header) +
