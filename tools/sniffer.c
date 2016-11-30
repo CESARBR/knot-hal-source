@@ -25,6 +25,7 @@ static char *opt_mode = "mgmt";
 static GMainLoop *main_loop;
 
 int cli_fd;
+int quit = 0;
 
 static int channel_mgmt = 20;
 static int channel_raw = 10;
@@ -37,6 +38,8 @@ static uint8_t aa_pipes[2][5] = {
 
 static void sig_term(int sig)
 {
+	quit = 1;
+	phy_close(cli_fd);
 	g_main_loop_quit(main_loop);
 }
 
@@ -48,12 +51,63 @@ static void listen_raw(void)
 
 static void listen_mgmt(void)
 {
+	struct nrf24_io_pack p;
+	ssize_t ilen;
+	struct nrf24_ll_mgmt_pdu *ipdu =
+				(struct nrf24_ll_mgmt_pdu *)p.payload;
+	int i;
+	/* Read from management pipe */
+	p.pipe = 0;
+	while (!quit) {
+		ilen = phy_read(cli_fd, &p, NRF24_MTU);
+		if (ilen < 0)
+			continue;
 
+		switch (ipdu->type) {
+		/* If is a presente type */
+		case NRF24_PDU_TYPE_PRESENCE:
+		{
+			/* Mac address structure */
+			struct nrf24_mac *mac =
+				(struct nrf24_mac *)ipdu->payload;
+			printf("NRF24_PDU_TYPE_PRESENCE\n");
+			printf("mac: ");
+			for(i =0; i< 8; i++)
+				printf("%lX", (long unsigned int)
+					mac->address.b[i]);
+			printf("\n");
+		}
+			break;
+		/* If is a connect request type */
+		case NRF24_PDU_TYPE_CONNECT_REQ:
+		{
+			/* Link layer connect structure */
+			struct nrf24_ll_mgmt_connect *connect =
+				(struct nrf24_ll_mgmt_connect *) ipdu->payload;
+
+			/* Header type is a connect request type */
+			printf("NRF24_PDU_TYPE_CONNECT_REQ\n");
+			printf("src_addr = %llX\n",
+				(long long int)connect->src_addr.address.uint64);
+			printf("dst_addr = %llX\n",
+				(long long int)connect->dst_addr.address.uint64);
+			printf("channel = %d\n",connect->channel);
+			printf("Access Address: ");
+			for ( i =0; i< 5; i++)
+				printf("%llX", (long long int) connect->aa[i]);
+			printf("\n");
+		}
+			break;
+		default:
+			printf("CODE INVALID %d\n", ipdu->type);
+		}
+		printf("\n\n");
+	}
 }
 
 static GOptionEntry options[] = {
 	{ "mode", 'm', 0, G_OPTION_ARG_STRING, &opt_mode,
-					"mode", "Operation mode: server or client" },
+				"mode", "Operation mode: server or client" },
 	{ NULL },
 };
 
