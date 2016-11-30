@@ -100,6 +100,10 @@ struct nrf24_ll_crtl_pdu {
 #define NRF24_LL_CRTL_OP_KEEPALIVE_REQ	0x01
 #define NRF24_LL_CRTL_OP_KEEPALIVE_RSP	0x02
 
+struct nrf24_ll_keepalive {
+	struct nrf24_mac src_addr;	/* Source address */
+	struct nrf24_mac dst_addr;	/* Destination address */
+} __attribute__ ((packed));
 
 
 /* Sent automatically from both sides after establishing connection */
