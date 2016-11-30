@@ -270,7 +270,7 @@ static int read_mgmt(int spi_fd)
 		evt->opcode = MGMT_EVT_NRF24_BCAST_PRESENCE;
 		evt->index = 0;
 		/* Copy source address */
-		evt_presence->src.address.uint64 = mac->address.uint64;
+		evt_presence->mac.address.uint64 = mac->address.uint64;
 
 		mgmt.len_rx = sizeof(struct nrf24_mac) +
 				sizeof(struct mgmt_nrf24_header);

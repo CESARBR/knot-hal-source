@@ -145,7 +145,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 		return -EUSERS; /*MAX PEERS*/
 
 	/*Check if this peer is already allocated */
-	position = get_peer(evt_pre->src);
+	position = get_peer(evt_pre->mac);
 	/* If this is a new peer */
 	if (position < 0) {
 		/* Get free peers position */
@@ -169,7 +169,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 
 		/* Set mac value for this position */
 		peers[position].mac.address.uint64 =
-				evt_pre->src.address.uint64;
+				evt_pre->mac.address.uint64;
 
 		/* Watch knotd socket */
 		peers[position].knotd_io =
@@ -193,7 +193,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 
 	/*Send Connect */
 	hal_comm_connect(peers[position].socket_fd,
-			&evt_pre->src.address.uint64);
+			&evt_pre->mac.address.uint64);
 	return 0;
 }
 

@@ -142,7 +142,7 @@ struct mgmt_evt_nrf24_bcast_setup {
 
 #define MGMT_EVT_NRF24_BCAST_PRESENCE		0x0205 /* Connectable */
 struct mgmt_evt_nrf24_bcast_presence {
-	struct nrf24_mac src;
+	struct nrf24_mac mac;
 	/* TODO: Add device/service infos? */
 } __attribute__ ((packed));
 
