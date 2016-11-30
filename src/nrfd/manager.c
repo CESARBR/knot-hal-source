@@ -57,7 +57,8 @@ static int8_t get_peer(struct nrf24_mac mac)
 	int8_t i;
 
 	for (i = 0; i < MAX_PEERS; i++)
-		if (peers[i].mac.address.uint64 == mac.address.uint64)
+		if (peers[i].socket_fd != -1 &&
+			peers[i].mac.address.uint64 == mac.address.uint64)
 			return i;
 
 	return -EINVAL;
@@ -100,8 +101,8 @@ static void knotd_io_destroy(gpointer user_data)
 {
 
 	struct peer *p = (struct peer *)user_data;
-
 	hal_comm_close(p->socket_fd);
+	close(p->knotd_fd);
 	p->socket_fd = -1;
 	p->knotd_id = 0;
 	p->knotd_io = NULL;
@@ -177,7 +178,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 		g_io_channel_set_flags(peers[position].knotd_io,
 			G_IO_FLAG_NONBLOCK, NULL);
 		g_io_channel_set_close_on_unref(peers[position].knotd_io,
-			TRUE);
+			FALSE);
 
 		peers[position].knotd_id =
 			g_io_add_watch_full(peers[position].knotd_io,
@@ -194,6 +195,26 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	/*Send Connect */
 	hal_comm_connect(peers[position].socket_fd,
 			&evt_pre->mac.address.uint64);
+	return 0;
+}
+
+static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
+{
+
+	int8_t position;
+
+	struct mgmt_evt_nrf24_disconnected *evt_disc =
+			(struct mgmt_evt_nrf24_disconnected *) mhdr->payload;
+
+	if (count_clients == 0)
+		return -EINVAL;
+
+	position = get_peer(evt_disc->mac);
+	if (position < 0)
+		return position;
+
+	close(peers[position].knotd_fd);
+	peers[position].knotd_fd = -1;
 	return 0;
 }
 
@@ -256,6 +277,7 @@ static int8_t mgmt_read(void)
 		break;
 
 	case MGMT_EVT_NRF24_DISCONNECTED:
+		evt_disconnected(mhdr);
 		break;
 	}
 	return 0;
