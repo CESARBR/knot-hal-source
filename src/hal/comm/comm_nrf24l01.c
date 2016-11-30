@@ -142,6 +142,7 @@ static inline int alloc_pipe(void)
 	for (i = 0; i < CONNECTION_COUNTER; i++) {
 		if (peers[i].pipe == -1) {
 
+			peers[i].keepalive_wait = 0;
 			peers[i].keepalive = 0;
 			peers[i].len_rx = 0;
 			peers[i].seqnumber_rx = 0;
@@ -863,8 +864,10 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	/* If accept then increment connection_live */
 	connection_live++;
 
-	/* Enable thing to send keep alive request */
-	peers[sockfd-1].keepalive = 1;
+	/* Enable peer to send keep alive request */
+	peers[pipe-1].keepalive = 1;
+	/* Start timeout */
+	peers[pipe-1].keepalive = hal_time_ms();
 
 	/* Return pipe */
 	return pipe;
@@ -905,6 +908,8 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 
 	/* If connect then increment connection_live */
 	connection_live++;
+	/* Start timeout */
+	peers[sockfd-1].keepalive_wait = hal_time_ms();
 	mgmt.len_tx = len;
 
 	return 0;
