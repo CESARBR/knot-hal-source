@@ -118,8 +118,8 @@ static int driverIndex = -1;
 /* Channel to management and raw data */
 static int channel_mgmt = 20;
 static int channel_raw = 10;
-static uint16_t window_bcast = 1;	/* ms */
-static uint16_t interval_bcast = 2;	/* ms */
+static uint16_t window_bcast = 5;	/* ms */
+static uint16_t interval_bcast = 6;	/* ms */
 
 enum {
 	START_MGMT,
