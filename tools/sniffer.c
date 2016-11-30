@@ -46,7 +46,60 @@ static void sig_term(int sig)
 
 static void listen_raw(void)
 {
+	struct nrf24_io_pack p;
+	ssize_t ilen;
+	const struct nrf24_ll_data_pdu *ipdu = (void *)p.payload;
+	p.pipe = 1;
+	while (!quit) {
+		ilen = phy_read(cli_fd, &p, NRF24_MTU);
+		if (ilen < 0)
+			continue;
 
+		switch (ipdu->lid) {
+
+		/* If is Control */
+		case NRF24_PDU_LID_CONTROL:
+		{
+			struct nrf24_ll_crtl_pdu *ctrl =
+				(struct nrf24_ll_crtl_pdu *)ipdu->payload;
+
+			struct nrf24_ll_keepalive *kpalive =
+				(struct nrf24_ll_keepalive *) ctrl->payload;
+
+			printf("NRF24_PDU_LID_CONTROL\n");
+			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP)
+				printf("NRF24_LL_CRTL_OP_KEEPALIVE_RSP\n");
+
+			if(ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ)
+				printf("NRF24_LL_CRTL_OP_KEEPALIVE_REQ\n");
+
+			printf("src_addr : %llX\n",
+				(long long int)kpalive->src_addr.address.uint64);
+			printf("dst_addr : %llX\n",
+				(long long int)kpalive->dst_addr.address.uint64);
+
+		}
+			break;
+
+		/* If is Data */
+		case NRF24_PDU_LID_DATA_FRAG:
+		{
+			printf("NRF24_PDU_LID_DATA_FRAG\n");
+			printf("nseq : %d\n",ipdu->nseq);
+			printf("payload: %s\n", ipdu->payload);
+		}
+		case NRF24_PDU_LID_DATA_END:
+		{
+			printf("NRF24_PDU_LID_DATA_END\n");
+			printf("nseq : %d\n",ipdu->nseq);
+			printf("payload: %s\n", ipdu->payload);
+			break;
+		}
+		default:
+			printf("CODE INVALID %d\n", ipdu->lid);
+		}
+		printf("\n\n");
+	}
 }
 
 static void listen_mgmt(void)
@@ -73,7 +126,7 @@ static void listen_mgmt(void)
 			printf("NRF24_PDU_TYPE_PRESENCE\n");
 			printf("mac: ");
 			for(i =0; i< 8; i++)
-				printf("%lX", (long unsigned int)
+				printf("%llX", (long long int)
 					mac->address.b[i]);
 			printf("\n");
 		}
