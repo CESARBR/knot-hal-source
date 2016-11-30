@@ -72,7 +72,7 @@ static int8_t get_peer_index(void)
 		if (peers[i].socket_fd == -1)
 			return i;
 
-	return -EINVAL;
+	return -EUSERS;
 }
 
 static int connect_unix(void)
