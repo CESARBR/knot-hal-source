@@ -9,8 +9,8 @@
 
 #include <Arduino.h>
 
-#include "avr_errno.h"
-#include "log.h"
+#include "include/avr_errno.h"
+#include "include/log.h"
 
 #define SERIAL_BAUD_RATE	9600
 #define LOG_BUFFER_LEN		50

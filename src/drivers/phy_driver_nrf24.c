@@ -12,8 +12,8 @@
 #include <stdbool.h>
 
 #ifdef ARDUINO
-#include "avr_errno.h"
-#include "avr_unistd.h"
+#include "include/avr_errno.h"
+#include "include/avr_unistd.h"
 #else
 #include <errno.h>
 #include <unistd.h>

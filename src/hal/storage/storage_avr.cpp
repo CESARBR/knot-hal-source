@@ -7,8 +7,8 @@
  *
  */
 #include <avr/eeprom.h>
-#include "avr_errno.h"
-#include "storage.h"
+#include "include/avr_errno.h"
+#include "include/storage.h"
 
 #define UUID_SIZE		36
 #define TOKEN_SIZE		40
