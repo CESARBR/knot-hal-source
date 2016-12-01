@@ -3,11 +3,6 @@ MKDIR=mkdir
 CP=cp
 ZIP=zip
 
-HAL = ./hal
-HEADERS_DIR = ./include
-HAL_DIR = ./src/hal
-HAL_TARGET = hal.zip
-
 AM_MAKEFLAGS = --no-print-directory
 SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 					src/hal/comm src/drivers
@@ -46,19 +41,5 @@ MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
 	ltmain.sh depcomp compile missing install-sh
 
-# TODO: add comm implementation
-arduino-lib:
-	$(MKDIR) -p $(HAL)
-
-	$(CP) $(HEADERS_DIR)/*.h $(HAL)
-
-	$(CP) $(HAL_DIR)/log/*cpp $(HAL)
-	$(CP) $(HAL_DIR)/storage/*cpp $(HAL)
-	$(CP) $(HAL_DIR)/time/*cpp $(HAL)
-
-	$(ZIP) -r $(HAL_TARGET) $(HAL)
-
-	$(RM) -r $(HAL)
-
 clean-local:
-	$(RM) -r proxy/spiproxyd nrf/nrfd $(HAL_TARGET)
+	$(RM) -r proxy/spiproxyd nrf/nrfd
