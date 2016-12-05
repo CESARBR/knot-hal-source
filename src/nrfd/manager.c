@@ -106,6 +106,7 @@ static void knotd_io_destroy(gpointer user_data)
 	p->socket_fd = -1;
 	p->knotd_id = 0;
 	p->knotd_io = NULL;
+	count_clients--;
 }
 
 static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
