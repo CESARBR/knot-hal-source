@@ -38,7 +38,7 @@ struct peer {
 	int8_t socket_fd;
 	int8_t knotd_fd;
 	GIOChannel *knotd_io;
-	unsigned int knotd_id;
+	guint knotd_id;
 };
 
 static struct peer peers[MAX_PEERS] = {
