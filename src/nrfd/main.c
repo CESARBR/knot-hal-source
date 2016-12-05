@@ -69,50 +69,11 @@ static GOptionEntry options[] = {
 	{ NULL },
 };
 
-static char *load_nodes(const char *file)
-{
-	int length;
-	char *buffer;
-	FILE *fl;
-
-	fl = fopen(file, "r");
-	if (fl == NULL) {
-		printf("Failed to open file: %s", file);
-		return NULL;
-	}
-
-	fseek(fl, 0, SEEK_END);
-	length = ftell(fl);
-	fseek(fl, 0, SEEK_SET);
-
-	buffer = (char *) malloc((length + 1) * sizeof(char));
-	if (buffer == NULL) {
-		fclose(fl);
-		return NULL;
-	}
-
-	if (fread(buffer, length, 1, fl) != 1) {
-		free(buffer);
-		fclose(fl);
-		return NULL;
-	}
-
-	buffer[length] = '\0';
-
-	fclose(fl);
-
-	return buffer;
-}
-
-static int parse_nodes(const char *nodes_str)
+static int parse_nodes(json_object *jobj)
 {
 	int array_len;
 	int i;
-	json_object *jobj, *obj_keys, *obj_nodes, *obj_tmp;
-
-	jobj = json_tokener_parse(nodes_str);
-	if (jobj == NULL)
-		return -EINVAL;
+	json_object *obj_keys, *obj_nodes, *obj_tmp;
 
 	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
 		goto failure;
@@ -133,13 +94,9 @@ static int parse_nodes(const char *nodes_str)
 			goto failure;
 	}
 
-	/* Free mem used in json parse: */
-	json_object_put(jobj);
 	return 0;
 
 failure:
-	/* Free mem used in json parse: */
-	json_object_put(jobj);
 	return -EINVAL;
 }
 
@@ -165,7 +122,6 @@ static gboolean inotify_cb(GIOChannel *gio, GIOCondition condition,
 
 int main(int argc, char *argv[])
 {
-	char *nodes_str;
 	GOptionContext *context;
 	GError *gerr = NULL;
 	GIOChannel *inotify_io;
@@ -173,6 +129,7 @@ int main(int argc, char *argv[])
 	int err;
 	int inotifyFD, wd;
 	guint watch_id;
+	json_object *jobj;
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
@@ -202,13 +159,13 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	/* Load nodes' info from json file */
-	nodes_str = load_nodes(opt_nodes);
-	if (!nodes_str)
+	jobj = json_object_from_file(opt_nodes);
+	if (!jobj)
 		return EXIT_FAILURE;
-
 	/* Parse info loaded and writes it to known_peers */
-	err = parse_nodes(nodes_str);
-	free(nodes_str);
+	err = parse_nodes(jobj);
+	/* Free mem used to parse json */
+	json_object_put(jobj);
 	if (err < 0)
 		return EXIT_FAILURE;
 
