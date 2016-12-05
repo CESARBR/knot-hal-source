@@ -34,7 +34,7 @@ static int mgmtfd;
 static guint mgmtwatch;
 
 struct peer {
-	struct nrf24_mac mac;
+	uint64_t mac;
 	int8_t socket_fd;
 	int8_t knotd_fd;
 	GIOChannel *knotd_io;
@@ -42,11 +42,11 @@ struct peer {
 };
 
 static struct peer peers[MAX_PEERS] = {
-	{.mac.address.uint64 = 0, .socket_fd = -1},
-	{.mac.address.uint64 = 0, .socket_fd = -1},
-	{.mac.address.uint64 = 0, .socket_fd = -1},
-	{.mac.address.uint64 = 0, .socket_fd = -1},
-	{.mac.address.uint64 = 0, .socket_fd = -1}
+	{.socket_fd = -1},
+	{.socket_fd = -1},
+	{.socket_fd = -1},
+	{.socket_fd = -1},
+	{.socket_fd = -1}
 };
 
 static uint8_t count_clients;
@@ -58,7 +58,7 @@ static int8_t get_peer(struct nrf24_mac mac)
 
 	for (i = 0; i < MAX_PEERS; i++)
 		if (peers[i].socket_fd != -1 &&
-			peers[i].mac.address.uint64 == mac.address.uint64)
+			peers[i].mac == mac.address.uint64)
 			return i;
 
 	return -EINVAL;
@@ -169,7 +169,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 		}
 
 		/* Set mac value for this position */
-		peers[position].mac.address.uint64 =
+		peers[position].mac =
 				evt_pre->mac.address.uint64;
 
 		/* Watch knotd socket */
@@ -318,7 +318,7 @@ static void close_clients(void)
 	for (i = 0; i < MAX_PEERS; i++) {
 		hal_comm_close(peers[i].socket_fd);
 		peers[i].socket_fd = -1;
-		peers[i].mac.address.uint64 = 0;
+		peers[i].mac = 0;
 	}
 }
 
