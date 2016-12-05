@@ -25,7 +25,7 @@ static char *opt_mode = "mgmt";
 static GMainLoop *main_loop;
 
 int cli_fd;
-int quit = 0;
+int quit;
 
 static int channel_mgmt = 20;
 static int channel_raw = 10;
@@ -49,6 +49,7 @@ static void listen_raw(void)
 	struct nrf24_io_pack p;
 	ssize_t ilen;
 	const struct nrf24_ll_data_pdu *ipdu = (void *)p.payload;
+
 	p.pipe = 1;
 	while (!quit) {
 		ilen = phy_read(cli_fd, &p, NRF24_MTU);
@@ -61,7 +62,7 @@ static void listen_raw(void)
 		case NRF24_PDU_LID_CONTROL:
 		{
 			struct nrf24_ll_crtl_pdu *ctrl =
-				(struct nrf24_ll_crtl_pdu *)ipdu->payload;
+				(struct nrf24_ll_crtl_pdu *) ipdu->payload;
 
 			struct nrf24_ll_keepalive *kpalive =
 				(struct nrf24_ll_keepalive *) ctrl->payload;
@@ -70,13 +71,13 @@ static void listen_raw(void)
 			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP)
 				printf("NRF24_LL_CRTL_OP_KEEPALIVE_RSP\n");
 
-			if(ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ)
+			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ)
 				printf("NRF24_LL_CRTL_OP_KEEPALIVE_REQ\n");
 
 			printf("src_addr : %llX\n",
-				(long long int)kpalive->src_addr.address.uint64);
+			(long long int) kpalive->src_addr.address.uint64);
 			printf("dst_addr : %llX\n",
-				(long long int)kpalive->dst_addr.address.uint64);
+			(long long int)kpalive->dst_addr.address.uint64);
 
 		}
 			break;
@@ -85,16 +86,17 @@ static void listen_raw(void)
 		case NRF24_PDU_LID_DATA_FRAG:
 		{
 			printf("NRF24_PDU_LID_DATA_FRAG\n");
-			printf("nseq : %d\n",ipdu->nseq);
+			printf("nseq : %d\n", ipdu->nseq);
 			printf("payload: %s\n", ipdu->payload);
 		}
+			break;
 		case NRF24_PDU_LID_DATA_END:
 		{
 			printf("NRF24_PDU_LID_DATA_END\n");
-			printf("nseq : %d\n",ipdu->nseq);
+			printf("nseq : %d\n", ipdu->nseq);
 			printf("payload: %s\n", ipdu->payload);
-			break;
 		}
+			break;
 		default:
 			printf("CODE INVALID %d\n", ipdu->lid);
 		}
@@ -124,10 +126,8 @@ static void listen_mgmt(void)
 			struct nrf24_mac *mac =
 				(struct nrf24_mac *)ipdu->payload;
 			printf("NRF24_PDU_TYPE_PRESENCE\n");
-			printf("mac: ");
-			for(i =0; i< 8; i++)
-				printf("%llX", (long long int)
-					mac->address.b[i]);
+			printf("mac: %llX", (long long int)
+				mac->address.uint64);
 			printf("\n");
 		}
 			break;
@@ -141,12 +141,12 @@ static void listen_mgmt(void)
 			/* Header type is a connect request type */
 			printf("NRF24_PDU_TYPE_CONNECT_REQ\n");
 			printf("src_addr = %llX\n",
-				(long long int)connect->src_addr.address.uint64);
+			(long long int) connect->src_addr.address.uint64);
 			printf("dst_addr = %llX\n",
-				(long long int)connect->dst_addr.address.uint64);
-			printf("channel = %d\n",connect->channel);
+			(long long int) connect->dst_addr.address.uint64);
+			printf("channel = %d\n", connect->channel);
 			printf("Access Address: ");
-			for ( i =0; i< 5; i++)
+			for (i = 0; i < 5; i++)
 				printf("%llX", (long long int) connect->aa[i]);
 			printf("\n");
 		}
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 	printf("Sniffer nrfd knot %s\n", opt_mode);
 
 	/* Sniffer in broadcast channel*/
-	if (strcmp(opt_mode, "mgmt") == 0){
+	if (strcmp(opt_mode, "mgmt") == 0) {
 		printf("listen mgmt\n");
 		/* Set Channel */
 		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel_mgmt);
@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
 		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
 		listen_mgmt();
 
-	}else{
+	} else{
 		/*Sniffer in data channel*/
 		printf("listen raw\n");
 		/* Set Channel */
@@ -238,3 +238,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
