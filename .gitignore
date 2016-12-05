@@ -21,8 +21,7 @@ missing
 stamp-h1
 autom4te.cache
 
-rpi/rpiptd
-nrf/nrfd
+tools/sniffer
 
 cscope.in.out
 cscope.out

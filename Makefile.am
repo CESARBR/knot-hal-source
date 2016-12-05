@@ -63,4 +63,4 @@ MAINTAINERCLEANFILES = Makefile.in \
 	ltmain.sh depcomp compile missing install-sh
 
 clean-local:
-	$(RM) -r proxy/spiproxyd nrf/nrfd
+	$(RM) -r proxy/spiproxyd src/nrfd/nrfd tools/sniffer
