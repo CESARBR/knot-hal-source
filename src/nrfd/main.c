@@ -29,8 +29,7 @@
 
 static GMainLoop *main_loop;
 
-/* Temporary default configuration file path */
-static const char *opt_cfg = "gatewayConfig.json";
+static const char *opt_cfg = "/etc/knot/gatewayConfig.json";
 static const char *opt_host = NULL;
 static unsigned int opt_port = 9000;
 static const char *opt_spi = "/dev/spidev0.0";
