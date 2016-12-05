@@ -214,8 +214,7 @@ static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
 	if (position < 0)
 		return position;
 
-	close(peers[position].knotd_fd);
-	peers[position].knotd_fd = -1;
+	g_source_remove(peers[position].knotd_id);
 	return 0;
 }
 
@@ -317,19 +316,17 @@ static void close_clients(void)
 	int i;
 
 	for (i = 0; i < MAX_PEERS; i++) {
-		hal_comm_close(peers[i].socket_fd);
-		peers[i].socket_fd = -1;
-		peers[i].mac = 0;
+		if (peers[i].socket_fd != -1)
+			g_source_remove(peers[i].knotd_id);
 	}
 }
 
 static void radio_stop(void)
 {
+	close_clients();
+	hal_comm_close(mgmtfd);
 	if (mgmtwatch)
 		g_source_remove(mgmtwatch);
-
-	hal_comm_close(mgmtfd);
-	close_clients();
 	hal_comm_deinit();
 }
 
