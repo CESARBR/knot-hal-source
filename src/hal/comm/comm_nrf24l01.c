@@ -254,7 +254,7 @@ static int read_mgmt(int spi_fd)
 
 	/* Read from management pipe */
 	p.pipe = 0;
-
+	p.payload[0] = 0;
 	/* Read data */
 	ilen = phy_read(spi_fd, &p, NRF24_MTU);
 	if (ilen < 0)
@@ -410,6 +410,7 @@ static int read_raw(int spi_fd, int sockfd)
 	const struct nrf24_ll_data_pdu *ipdu = (void *)p.payload;
 
 	p.pipe = sockfd;
+	p.payload[0] = 0;
 	/*
 	 * Reads the data while to exist,
 	 * on success, the number of bytes read is returned
