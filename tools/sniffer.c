@@ -22,8 +22,6 @@
 
 static char *opt_mode = "mgmt";
 
-static GMainLoop *main_loop;
-
 int cli_fd;
 int quit;
 
@@ -40,7 +38,6 @@ static void sig_term(int sig)
 {
 	quit = 1;
 	phy_close(cli_fd);
-	g_main_loop_quit(main_loop);
 }
 
 
@@ -191,14 +188,10 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (cli_fd < 0) {
-		g_main_loop_unref(main_loop);
+	if (cli_fd < 0)
 		return -1;
-	}
 
 	g_option_context_free(context);
-
-	main_loop = g_main_loop_new(NULL, FALSE);
 
 	printf("Sniffer nrfd knot %s\n", opt_mode);
 
@@ -230,11 +223,6 @@ int main(int argc, char *argv[])
 		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
 		listen_raw();
 	}
-
-	g_main_loop_run(main_loop);
-
-
-	g_main_loop_unref(main_loop);
 
 	return 0;
 }
