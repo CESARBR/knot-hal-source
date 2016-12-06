@@ -12,6 +12,8 @@
 #include <time.h>
 #include <limits.h>
 
+#include <linux/random.h>
+#include <sys/syscall.h>
 #include "include/time.h"
 
 #define MS 1
@@ -71,4 +73,9 @@ int hal_timeout(uint32_t current,  uint32_t start,  uint32_t timeout)
 
 	/* Timeout is flagged */
 	return (current >= timeout);
+}
+
+int hal_getrandom(void *buf, size_t buflen)
+{
+	return syscall(SYS_getrandom, buf, buflen, 0);
 }

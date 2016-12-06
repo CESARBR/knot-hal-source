@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include "include/time.h"
 
@@ -44,4 +45,21 @@ int hal_timeout(uint32_t current,  uint32_t start,  uint32_t timeout)
 
 	/* Timeout is flagged */
 	return (current >= timeout);
+}
+
+int hal_getrandom(void *buf, size_t buflen)
+{
+	uint32_t value = 9973 * ~hal_time_us();
+	unsigned int rd, i;
+	uint8_t *buf_cpy = buf;
+
+	srand((unsigned int)value);
+
+	for (i = 0; i < buflen; i += sizeof(rd)) {
+		rd = rand();
+		(buflen <= i + sizeof(rd))? memcpy(buf_cpy + i, &rd, buflen - i) :
+					memcpy(buf_cpy + i, &rd, sizeof(rd));
+	}
+
+	return 0;
 }
