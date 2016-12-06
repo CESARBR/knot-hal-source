@@ -63,7 +63,7 @@ size_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len)
 	return i;
 }
 
-size_t hal_storage_write_end(uint8_t id, void *value, size_t len)
+ssize_t hal_storage_write_end(uint8_t id, void *value, size_t len)
 {
 	/* Position where the data will be stored */
 	uint16_t dst;
@@ -111,7 +111,7 @@ size_t hal_storage_write_end(uint8_t id, void *value, size_t len)
 	return len;
 }
 
-size_t hal_storage_read_end(uint8_t id, void *value, size_t len)
+ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 {
 	/* Position where the data will be stored */
 	uint16_t src;
@@ -157,7 +157,7 @@ size_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 		return -EINVAL;
 	}
 
-	/*Read all the block in the calculated position*/
+	/* Read all the block in the calculated position */
 	eeprom_read_block(value, (const void *) src, len);
 
 	return len;

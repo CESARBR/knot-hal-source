@@ -10,6 +10,8 @@
 #ifndef __STORAGE_H__
 #define __STORAGE_H__
 
+#include "avr_unistd.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,8 +24,8 @@ extern "C" {
 
 size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len);
 size_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len);
-size_t hal_storage_write_end(uint8_t id, void *value, size_t len);
-size_t hal_storage_read_end(uint8_t id, void *value, size_t len);
+ssize_t hal_storage_write_end(uint8_t id, void *value, size_t len);
+ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len);
 
 #ifdef __cplusplus
 }
