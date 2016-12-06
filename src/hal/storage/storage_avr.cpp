@@ -32,14 +32,18 @@ size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
 	uint8_t *offset = (uint8_t *) addr;
 	union {
 		uint8_t *offset;
-		uint16_t address;
+		uint16_t size;
 	} config;
 	size_t i;
 
 	/* Safe guard to avoid reading 'protected' EEPROM area: config/uuid/token */
-        config.address = eeprom_read_word((const uint16_t*) ADDR_OFFSET_CONFIG);
+        config.size = eeprom_read_word((const uint16_t*) ADDR_OFFSET_CONFIG);
+	if (config.size > EEPROM_SIZE_FREE)
+		return 0;
 
-	/* E2END represents the last EEPROM address */
+	/* Compute config address offset at eeprom */
+	config.size = ADDR_OFFSET_CONFIG - config.size;
+
 	for (i = 0; i < len && offset < config.offset; ++i, ++offset)
 		value[i] = eeprom_read_byte((const uint8_t *) offset);
 
@@ -51,14 +55,18 @@ size_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len)
 	uint8_t *offset = (uint8_t *) addr;
 	union {
 		uint8_t *offset;
-		uint16_t address;
+		uint16_t size;
 	} config;
 	size_t i;
 
 	/* Safe guard to avoid writing 'protected' EEPROM area: config/uuid/token */
-        config.address = eeprom_read_word((const uint16_t*) ADDR_OFFSET_CONFIG);
+        config.size = eeprom_read_word((const uint16_t*) ADDR_OFFSET_CONFIG);
+	if (config.size > EEPROM_SIZE_FREE)
+		return 0;
 
-	/* E2END represents the last EEPROM address */
+	/* Compute config address offset at eeprom */
+	config.size = ADDR_OFFSET_CONFIG - config.size;
+
 	for (i = 0; i < len && offset < config.offset; ++i, ++offset)
 		eeprom_write_byte(offset, value[i]);
 
@@ -96,19 +104,22 @@ ssize_t hal_storage_write_end(uint8_t id, void *value, size_t len)
 		if(len > EEPROM_SIZE_FREE)
 			return -EINVAL;
 
-		dst = ADDR_OFFSET_CONFIG - len;
 		/*
-		 * Stores the offset of the config(beginning of config area),
+		 * Stores the size of the config,
 		 * 2 bytes, to know where it end in the EEPROM.
 		 */
-		eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, dst);
+		eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, len);
+
+		/* Compute config address offset at eeprom */
+		dst = ADDR_OFFSET_CONFIG - len;
 		break;
 	default:
 		return -EINVAL;
 	}
 
 	/*Store all the block in the calculated position*/
-	eeprom_write_block(value, (void *) dst, len);
+	if (len != 0)
+		eeprom_write_block(value, (void *) dst, len);
 
 	return len;
 }
@@ -144,14 +155,20 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 		break;
 
 	case HAL_STORAGE_ID_CONFIG:
+
 		/*
-		 * Read the offset of the config(beginning of config area),
+		 * Read the size of the config,
 		 * 2 bytes, to know where it end in the EEPROM.
 		 */
-
 		src = eeprom_read_word((const uint16_t*) ADDR_OFFSET_CONFIG);
-		if (len > (ADDR_OFFSET_CONFIG - src))
-			return -EINVAL;
+		if (src > EEPROM_SIZE_FREE)
+			return -EFAULT;
+
+		if (src == 0)
+			return 0;
+
+		/* Compute config address offset at eeprom */
+		src = ADDR_OFFSET_CONFIG - src;
 
 		break;
 
@@ -160,7 +177,8 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 	}
 
 	/* Read all the block in the calculated position */
-	eeprom_read_block(value, (const void *) src, len);
+	if (len != 0)
+		eeprom_read_block(value, (const void *) src, len);
 
 	return len;
 }
@@ -178,5 +196,5 @@ void hal_storage_reset_end(void)
 	hal_storage_write_end(HAL_STORAGE_ID_UUID, data.uuid, UUID_SIZE);
 	hal_storage_write_end(HAL_STORAGE_ID_TOKEN, data.token, TOKEN_SIZE);
 	hal_storage_write_end(HAL_STORAGE_ID_MAC, data.mac, MAC_SIZE);
-	hal_storage_write_end(HAL_STORAGE_ID_CONFIG, &data, sizeof(data));
+	eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, 0);
 }
