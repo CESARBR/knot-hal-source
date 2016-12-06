@@ -162,3 +162,19 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 
 	return len;
 }
+
+void hal_storage_reset_end(void)
+{
+	union {
+		uint8_t uuid[UUID_SIZE];
+		uint8_t token[TOKEN_SIZE];
+		uint8_t mac[MAC_SIZE];
+	} data;
+
+	memset(&data, 0, sizeof(data));
+
+	hal_storage_write_end(HAL_STORAGE_ID_UUID, data.uuid, UUID_SIZE);
+	hal_storage_write_end(HAL_STORAGE_ID_TOKEN, data.token, TOKEN_SIZE);
+	hal_storage_write_end(HAL_STORAGE_ID_MAC, data.mac, MAC_SIZE);
+	hal_storage_write_end(HAL_STORAGE_ID_CONFIG, &data, sizeof(data));
+}
