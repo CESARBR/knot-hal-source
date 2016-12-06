@@ -21,6 +21,9 @@ missing
 stamp-h1
 autom4te.cache
 
+proxy/spiproxyd
+src/nrfd/nrfd
+tools/rpiecho
 tools/sniffer
 
 cscope.in.out
