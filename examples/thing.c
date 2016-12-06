@@ -13,15 +13,6 @@
 #define MESSAGE "The quick brown fox jumps over the lazy dog"
 #define MESSAGE_SIZE	(sizeof(MESSAGE)-1)
 
-int sock_srv,
-		sock_raw,
-		nbytes,
-		nread,
-		size,
-		msg_count,
-		count,
-		inc;
-
 unsigned long start;
 bool  connected;
 char  msg[PACKET_SIZE_MAX],
@@ -31,7 +22,15 @@ uint64_t my_addr = 0xACDCDEAD98765490;
 
 int main(void)
 {
-	int err;
+	int sock_srv,
+		sock_raw,
+		nbytes,
+		nread,
+		msg_count,
+		inc,
+		err;
+
+	size_t size, count;
 
 	err = hal_comm_init("NRF0");
 	if (err < 0)
