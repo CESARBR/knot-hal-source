@@ -92,6 +92,7 @@ int main(void)
 			switch (evt->opcode) {
 			case MGMT_EVT_NRF24_DISCONNECTED:
 				printf("evt->disconnect %llX\n",
+					(long long)
 					evt_discon->mac.address.uint64);
 				hal_comm_close(sock_raw);
 				sock_raw = -1;
