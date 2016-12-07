@@ -540,7 +540,7 @@ static void presence_connect(int spi_fd)
 	size_t len;
 	static unsigned long start;
 	/* Start timeout */
-	static uint8_t state = 0;
+	static uint8_t state = PRESENCE;
 
 	switch (state) {
 	case PRESENCE:
@@ -577,7 +577,7 @@ static void presence_connect(int spi_fd)
 static void running(void)
 {
 
-	static int state = 0;
+	static int state = START_MGMT;
 	/* Index peers */
 	static int sockIndex = 1;
 	static unsigned long start;
