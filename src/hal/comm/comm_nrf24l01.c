@@ -29,6 +29,7 @@
 
 #define _MIN(a, b)		((a) < (b) ? (a) : (b))
 #define DATA_SIZE 128
+#define MGMT_SIZE 32
 
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
@@ -42,9 +43,9 @@ static struct nrf24_mac addr_thing = {.address.uint64 = 0 };
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
 	int8_t pipe;
-	uint8_t buffer_rx[DATA_SIZE];
+	uint8_t buffer_rx[MGMT_SIZE];
 	size_t len_rx;
-	uint8_t buffer_tx[DATA_SIZE];
+	uint8_t buffer_tx[MGMT_SIZE];
 	size_t len_tx;
 };
 
