@@ -766,7 +766,7 @@ int hal_comm_close(int sockfd)
 		return -EPERM;
 
 	/* Pipe 0 is not closed because ACK arrives in this pipe */
-	if (sockfd >= 1 && sockfd <= 5) {
+	if (sockfd >= 1 && sockfd <= 5 && peers[sockfd-1].pipe != -1) {
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
