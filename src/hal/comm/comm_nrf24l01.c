@@ -30,6 +30,8 @@
 #define _MIN(a, b)		((a) < (b) ? (a) : (b))
 #define DATA_SIZE 128
 #define MGMT_SIZE 32
+#define MGMT_TIMEOUT 10
+#define RAW_TIMEOUT 60
 
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
@@ -596,7 +598,7 @@ static void running(void)
 
 	case MGMT:
 		/* Check if 10ms timeout occurred */
-		if (hal_timeout(hal_time_ms(), start, 10) > 0)
+		if (hal_timeout(hal_time_ms(), start, MGMT_TIMEOUT) > 0)
 			state = START_RAW;
 
 		if (listen)
@@ -618,7 +620,7 @@ static void running(void)
 
 	case RAW:
 		/* Check if 60ms timeout occurred */
-		if (hal_timeout(hal_time_ms(), start, 60) > 0)
+		if (hal_timeout(hal_time_ms(), start, RAW_TIMEOUT) > 0)
 			state = START_MGMT;
 
 		/* Check if pipe is allocated */
