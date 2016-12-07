@@ -683,11 +683,17 @@ int hal_comm_init(const char *pathname)
 int hal_comm_deinit(void)
 {
 	int err;
+	uint8_t i;
 
 	/* If try to close driver with no driver open */
 	if (driverIndex == -1)
 		return -EPERM;
 
+	/* Clear all peers*/
+	for (i = 0; i < CONNECTION_COUNTER; i++) {
+		if (peers[i].pipe != -1)
+			peers[i].pipe = -1;
+	}
 	/* Close driver */
 	err = phy_close(driverIndex);
 	if (err < 0)
