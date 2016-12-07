@@ -32,8 +32,6 @@
 
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
-/* Global to know to number of live connections */
-static uint8_t connection_live = 0;
 
 /* TODO: Get this values from config file */
 static const struct nrf24_mac addr_gw = {
@@ -598,8 +596,7 @@ static void running(void)
 	case MGMT:
 		/* Check if 10ms timeout occurred */
 		if (hal_timeout(hal_time_ms(), start, 10) > 0)
-			if (connection_live > 0)
-				state = START_RAW;
+			state = START_RAW;
 
 		if (listen)
 			presence_connect(driverIndex);
@@ -770,7 +767,6 @@ int hal_comm_close(int sockfd)
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
-		connection_live--;
 		/* Disable to send keep alive request */
 		peers[sockfd-1].keepalive = 0;
 	}
@@ -895,8 +891,6 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	/*open pipe*/
 	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &p_addr);
 
-	/* If accept then increment connection_live */
-	connection_live++;
 	/* Source address for keepalive message */
 	peers[pipe-1].mac.address.uint64 =
 		evt_connect->src.address.uint64;
@@ -945,8 +939,6 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	len = sizeof(struct nrf24_ll_mgmt_connect);
 	len += sizeof(struct nrf24_ll_mgmt_pdu);
 
-	/* If connect then increment connection_live */
-	connection_live++;
 	/* Start timeout */
 	peers[sockfd-1].keepalive_wait = hal_time_ms();
 	mgmt.len_tx = len;
