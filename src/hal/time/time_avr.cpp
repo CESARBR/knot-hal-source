@@ -51,13 +51,14 @@ int hal_getrandom(void *buf, size_t buflen)
 {
 	uint32_t value = 9973 * ~hal_time_us();
 	unsigned int rd, i;
-	uint8_t *buf_cpy = buf;
+	uint8_t *buf_cpy = (uint8_t *) buf;
 
 	srand((unsigned int)value);
 
 	for (i = 0; i < buflen; i += sizeof(rd)) {
 		rd = rand();
-		(buflen <= i + sizeof(rd))? memcpy(buf_cpy + i, &rd, buflen - i) :
+		(buflen <= i + sizeof(rd))?
+					memcpy(buf_cpy + i, &rd, buflen - i) :
 					memcpy(buf_cpy + i, &rd, sizeof(rd));
 	}
 
