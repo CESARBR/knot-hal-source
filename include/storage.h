@@ -10,8 +10,11 @@
 #ifndef __STORAGE_H__
 #define __STORAGE_H__
 
-#include <string.h>
+#ifdef ARDUINO
 #include "avr_unistd.h"
+#endif
+
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
