@@ -339,7 +339,7 @@ static int write_raw(int spi_fd, int sockfd)
 		return -EAGAIN;
 
 	/* If len is larger than the maximum message size */
-	if (peers[sockfd-1].len_tx > NRF24_MAX_MSG_SIZE)
+	if (peers[sockfd-1].len_tx > DATA_SIZE)
 		return -EINVAL;
 
 	/* Set pipe to be sent */
