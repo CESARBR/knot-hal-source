@@ -3,8 +3,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include "include/comm.h"
+
 #include "include/nrf24.h"
+#include "include/comm.h"
 #include "include/time.h"
 
 /* application packet size maximum */

@@ -20,8 +20,8 @@
 #include <unistd.h>
 #endif
 
-#include "include/comm.h"
 #include "include/nrf24.h"
+#include "include/comm.h"
 #include "include/time.h"
 #include "phy_driver.h"
 #include "phy_driver_nrf24.h"
@@ -36,9 +36,7 @@
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
 
-/* TODO: Get this values from config file */
-static const struct nrf24_mac addr_gw = {
-					.address.uint64 = 0xDEADBEEF12345678};
+static struct nrf24_mac addr_gw = {.address.uint64 = 0};
 
 static struct nrf24_mac addr_thing = {.address.uint64 = 0 };
 
@@ -669,7 +667,7 @@ static void running(void)
 }
 
 /* Global functions */
-int hal_comm_init(const char *pathname)
+int hal_comm_init(const char *pathname, struct nrf24_mac *mac)
 {
 	/* If driver not opened */
 	if (driverIndex != -1)
@@ -679,6 +677,8 @@ int hal_comm_init(const char *pathname)
 	driverIndex = phy_open(pathname);
 	if (driverIndex < 0)
 		return driverIndex;
+
+	addr_gw.address.uint64 = mac->address.uint64;
 
 	return 0;
 }

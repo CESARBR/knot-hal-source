@@ -25,9 +25,11 @@ extern "C" {
  * nRF24 and other radios. Returns -ENFILE (limit of resources/pipes has
  * been reached) or an id representing the logical communication channel
  * for a new client.
+ * FIXME: MAC should be replaced by a generic structure since init is
+ * common to any transport.
  */
 
-int hal_comm_init(const char *pathname);
+int hal_comm_init(const char *pathname, struct nrf24_mac *mac);
 int hal_comm_deinit(void);
 
 int hal_comm_socket(int domain, int protocol);

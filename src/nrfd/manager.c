@@ -22,8 +22,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "include/comm.h"
 #include "include/nrf24.h"
+#include "include/comm.h"
+#include "include/time.h"
 
 #include "nrf24l01_io.h"
 #include "manager.h"
@@ -290,11 +291,12 @@ static gboolean read_idle(gpointer user_data)
 	return TRUE;
 }
 
-static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr)
+static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr,
+							struct nrf24_mac *mac)
 {
 	int err;
 
-	err = hal_comm_init("NRF0");
+	err = hal_comm_init("NRF0", mac);
 	if (err < 0)
 		return err;
 
@@ -473,12 +475,53 @@ static uint8_t dbm_int2rfpwr(int dbm)
 	return NRF24_PWR_0DBM;
 }
 
+static int gen_save_mac(const char *config, const char *file,
+							struct nrf24_mac *mac)
+{
+	json_object *jobj, *obj_radio, *obj_tmp;
+
+	int err = -EINVAL;
+
+	jobj = json_tokener_parse(config);
+	if (jobj == NULL)
+		return -EINVAL;
+
+	if (!json_object_object_get_ex(jobj, "radio", &obj_radio))
+		goto done;
+
+	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp)){
+
+			char mac_string[24];
+			uint8_t mac_mask = 4;
+			mac->address.uint64 = 0;
+
+			hal_getrandom(mac->address.b + mac_mask,
+						sizeof(*mac) - mac_mask);
+
+			nrf24_mac2str(mac, mac_string);
+
+			json_object_object_add(obj_radio, "mac",
+					json_object_new_string(mac_string));
+
+			json_object_to_file(file, jobj);
+	}
+
+	/* Success */
+	err = 0;
+
+done:
+	/* Free mem used in json parse: */
+	json_object_put(jobj);
+	return err;
+}
+
 /*
  * TODO: Get "host", "spi" and "port"
  * parameters when/if implemented
  * in the json configuration file
  */
-static int parse_config(const char *config, int *channel, int *dbm)
+static int parse_config(const char *config, int *channel, int *dbm,
+							struct nrf24_mac *mac)
 {
 	json_object *jobj, *obj_radio, *obj_tmp;
 
@@ -497,6 +540,10 @@ static int parse_config(const char *config, int *channel, int *dbm)
 	if (json_object_object_get_ex(obj_radio,  "TxPower", &obj_tmp))
 		*dbm = json_object_get_int(obj_tmp);
 
+	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp))
+		if (json_object_get_string(obj_tmp) != NULL)
+			nrf24_str2mac(json_object_get_string(obj_tmp), mac);
+
 	/* Success */
 	err = 0;
 
@@ -511,12 +558,17 @@ int manager_start(const char *file, const char *host, int port,
 {
 	int cfg_channel = NRF24_CH_MIN, cfg_dbm = 0;
 	char *json_str;
-	int err;
+	struct nrf24_mac mac = {.address.uint64 = 0};
+	int err = -1;
 
 	/* Command line arguments have higher priority */
 	json_str = load_config(file);
 	if (json_str != NULL) {
-		err = parse_config(json_str, &cfg_channel, &cfg_dbm);
+		err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
+
+		if (mac.address.uint64 == 0)
+			err = gen_save_mac(json_str, file, &mac);
+
 		free(json_str);
 	}
 
@@ -537,7 +589,7 @@ int manager_start(const char *file, const char *host, int port,
 		dbm = cfg_dbm;
 
 	if (host == NULL)
-		return radio_init(spi, channel, dbm_int2rfpwr(dbm));
+		return radio_init(spi, channel, dbm_int2rfpwr(dbm), &mac);
 	/*
 	 * TCP development mode: Linux connected to RPi(phynrfd radio
 	 * proxy). Connect to phynrfd routing all traffic over TCP.

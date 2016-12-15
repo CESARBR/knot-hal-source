@@ -17,6 +17,9 @@
 
 #include <stdint.h>
 
+/* FIXME: Remove this header */
+#include "include/nrf24.h"
+
 #include "include/comm.h"
 
 int hal_comm_socket(int domain, int protocol)
