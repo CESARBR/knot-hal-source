@@ -159,6 +159,34 @@ static inline int alloc_pipe(void)
 	return -1;
 }
 
+static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
+				struct nrf24_mac src)
+{
+	int err;
+	struct nrf24_io_pack p;
+	struct nrf24_ll_data_pdu *opdu =
+		(struct nrf24_ll_data_pdu *)p.payload;
+	struct nrf24_ll_crtl_pdu *ctrl =
+		(struct nrf24_ll_crtl_pdu *)opdu->payload;
+	struct nrf24_ll_disconnect *disconnect =
+		(struct nrf24_ll_disconnect *) ctrl->payload;
+
+	opdu->lid = NRF24_PDU_LID_CONTROL;
+	p.pipe = sockfd;
+	ctrl->opcode = NRF24_LL_CRTL_OP_DISCONNECT;
+	disconnect->dst_addr.address.uint64 = dst.address.uint64;
+	disconnect->src_addr.address.uint64 = src.address.uint64;
+	err = phy_write(spi_fd, &p,
+					sizeof(struct nrf24_ll_data_pdu) +
+					sizeof(struct nrf24_ll_crtl_pdu) +
+					sizeof(struct nrf24_ll_disconnect));
+
+	if (err < 0)
+		return err;
+
+	return 0;
+}
+
 static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 				struct nrf24_mac dst, struct nrf24_mac src)
 {
@@ -773,6 +801,11 @@ int hal_comm_close(int sockfd)
 
 	/* Pipe 0 is not closed because ACK arrives in this pipe */
 	if (sockfd >= 1 && sockfd <= 5 && peers[sockfd-1].pipe != -1) {
+		/* Send disconnect package */
+		if (addr_thing.address.uint64 != 0)
+			/* Slave side */
+			write_disconnect(driverIndex, sockfd,
+					peers[sockfd-1].mac, addr_thing);
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
