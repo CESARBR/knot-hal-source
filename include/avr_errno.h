@@ -15,6 +15,7 @@ extern "C" {
 
 #define	EINVAL			22	/* Invalid argument */
 #define EAGAIN			11	/* Resource temporarily unavailable */
+#define EFAULT			14	/* Bad address */
 #define EBADMSG			74	/* Not a data message */
 #define EILSEQ			84	/* Illegal byte sequence */
 #define ENOSYS			38	/*  Function not implemented */
