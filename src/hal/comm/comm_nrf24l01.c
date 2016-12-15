@@ -454,6 +454,9 @@ static int read_raw(int spi_fd, int sockfd)
 
 			struct nrf24_ll_keepalive *kpalive =
 				(struct nrf24_ll_keepalive *) ctrl->payload;
+
+			struct nrf24_ll_disconnect *disconnect =
+				(struct nrf24_ll_disconnect *) ctrl->payload;
 			/*
 			 * If is keep alive then resets keepalive_wait
 			 * Thing side
@@ -482,6 +485,25 @@ static int read_raw(int spi_fd, int sockfd)
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
 					peers[sockfd-1].mac,
 					addr_gw);
+			}
+
+			/* If package is disconnect request */
+			else if (ctrl->opcode == NRF24_LL_CRTL_OP_DISCONNECT
+						&& mgmt.len_rx == 0) {
+				struct mgmt_nrf24_header *evt =
+				(struct mgmt_nrf24_header *) mgmt.buffer_rx;
+
+				struct mgmt_evt_nrf24_disconnected *evt_discon =
+				(struct mgmt_evt_nrf24_disconnected *)
+								evt->payload;
+
+				evt->opcode = MGMT_EVT_NRF24_DISCONNECTED;
+
+				evt_discon->mac.address.uint64 =
+					disconnect->src_addr.address.uint64;
+				mgmt.len_rx =
+					sizeof(struct mgmt_nrf24_header) +
+				sizeof(struct mgmt_evt_nrf24_disconnected);
 			}
 
 		}
