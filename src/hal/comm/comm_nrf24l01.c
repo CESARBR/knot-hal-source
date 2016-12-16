@@ -38,7 +38,7 @@ static uint8_t listen = 0;
 
 static struct nrf24_mac addr_gw = {.address.uint64 = 0};
 
-static struct nrf24_mac addr_thing = {.address.uint64 = 0 };
+static struct nrf24_mac addr_slave = {.address.uint64 = 0 };
 
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
@@ -92,7 +92,7 @@ static uint8_t aa_pipes[6][5] = {
 	{0xF0, 0x96, 0xB6, 0xC1, 0x6B}
 };
 
-#else	/* If thing then 1 peer */
+#else	/* If slave then 1 peer */
 static struct nrf24_data peers[1] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
 		.seqnumber_rx = 0, .offset_rx = 0},
@@ -240,7 +240,7 @@ static int check_keepalive(int spi_fd, int sockfd)
 		/* Sends keepalive packet */
 		err = write_keepalive(spi_fd, sockfd,
 				NRF24_LL_CRTL_OP_KEEPALIVE_REQ,
-				peers[sockfd-1].mac, addr_thing);
+				peers[sockfd-1].mac, addr_slave);
 
 		peers[sockfd-1].keepalive += 1;
 	}
@@ -459,13 +459,13 @@ static int read_raw(int spi_fd, int sockfd)
 				(struct nrf24_ll_disconnect *) ctrl->payload;
 			/*
 			 * If is keep alive then resets keepalive_wait
-			 * Thing side
+			 * Slave side
 			 */
 			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP &&
 				kpalive->src_addr.address.uint64 ==
 				peers[sockfd-1].mac.address.uint64 &&
 				kpalive->dst_addr.address.uint64 ==
-				addr_thing.address.uint64) {
+				addr_slave.address.uint64) {
 				peers[sockfd-1].keepalive_wait = hal_time_ms();
 				peers[sockfd-1].keepalive = 1;
 			}
@@ -596,12 +596,12 @@ static void presence_connect(int spi_fd)
 	switch (state) {
 	case PRESENCE:
 		/* Send Presence */
-		if (addr_thing.address.uint64 == 0)
+		if (addr_slave.address.uint64 == 0)
 			break;
 
 		p.pipe = 0;
 		opdu->type = NRF24_PDU_TYPE_PRESENCE;
-		payload->address.uint64 = addr_thing.address.uint64;
+		payload->address.uint64 = addr_slave.address.uint64;
 		len = sizeof(struct nrf24_ll_mgmt_pdu)+sizeof(struct nrf24_mac);
 		phy_write(spi_fd, &p, len);
 		/* Init time */
@@ -702,7 +702,7 @@ static void running(void)
 				peers[sockIndex-1].keepalive_wait
 					= hal_time_ms();
 
-				/* TODO: Send disconnect packet to thing */
+				/* TODO: Send disconnect packet to slave */
 			}
 		}
 
@@ -824,10 +824,10 @@ int hal_comm_close(int sockfd)
 	/* Pipe 0 is not closed because ACK arrives in this pipe */
 	if (sockfd >= 1 && sockfd <= 5 && peers[sockfd-1].pipe != -1) {
 		/* Send disconnect packet */
-		if (addr_thing.address.uint64 != 0)
+		if (addr_slave.address.uint64 != 0)
 			/* Slave side */
 			write_disconnect(driverIndex, sockfd,
-					peers[sockfd-1].mac, addr_thing);
+					peers[sockfd-1].mac, addr_slave);
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
@@ -927,8 +927,8 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	/* Run background procedures */
 	running();
 
-	/* Save thing address */
-	addr_thing.address.uint64 = *addr;
+	/* Save slave address */
+	addr_slave.address.uint64 = *addr;
 
 	if (mgmt.len_rx == 0)
 		return -EAGAIN;
