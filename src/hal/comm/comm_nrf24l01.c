@@ -36,7 +36,7 @@
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
 
-static struct nrf24_mac addr_gw = {.address.uint64 = 0};
+static struct nrf24_mac addr_master = {.address.uint64 = 0};
 
 static struct nrf24_mac addr_slave = {.address.uint64 = 0 };
 
@@ -66,7 +66,7 @@ struct nrf24_data {
 	struct nrf24_mac mac;
 };
 
-#ifndef ARDUINO	/* If gateway then 5 peers */
+#ifndef ARDUINO	/* If master then 5 peers */
 static struct nrf24_data peers[5] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
 		.seqnumber_rx = 0, .offset_rx = 0},
@@ -479,12 +479,12 @@ static int read_raw(int spi_fd, int sockfd)
 				kpalive->src_addr.address.uint64 ==
 				peers[sockfd-1].mac.address.uint64 &&
 				kpalive->dst_addr.address.uint64 ==
-				addr_gw.address.uint64) {
+				addr_master.address.uint64) {
 				peers[sockfd-1].keepalive_wait = hal_time_ms();
 				write_keepalive(spi_fd, sockfd,
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
 					peers[sockfd-1].mac,
-					addr_gw);
+					addr_master);
 			}
 
 			/* If packet is disconnect request */
@@ -728,7 +728,7 @@ int hal_comm_init(const char *pathname, struct nrf24_mac *mac)
 	if (driverIndex < 0)
 		return driverIndex;
 
-	addr_gw.address.uint64 = mac->address.uint64;
+	addr_master.address.uint64 = mac->address.uint64;
 
 	return 0;
 }
@@ -986,7 +986,7 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 
 	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
 
-	payload->src_addr = addr_gw;
+	payload->src_addr = addr_master;
 	payload->dst_addr.address.uint64 = *addr;
 	payload->channel = channel_raw;
 	/*
