@@ -569,14 +569,15 @@ int manager_start(const char *file, const char *host, int port,
 
 	/* Command line arguments have higher priority */
 	json_str = load_config(file);
-	if (json_str != NULL) {
-		err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
+	if (json_str == NULL)
+		return err;
 
-		if (mac.address.uint64 == 0)
-			err = gen_save_mac(json_str, file, &mac);
+	err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
 
-		free(json_str);
-	}
+	if (mac.address.uint64 == 0)
+		err = gen_save_mac(json_str, file, &mac);
+
+	free(json_str);
 
 	if (err < 0) {
 		fprintf(stderr, "Invalid configuration file: %s\n", file);
