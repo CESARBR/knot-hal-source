@@ -80,7 +80,7 @@ static struct nrf24_data peers[5] = {
 		.seqnumber_rx = 0, .offset_rx = 0}
 };
 
-/* TODO: TODO: Get this values from config file
+/* TODO: Get this values from config file
  * Access Address for each pipe
  */
 static uint8_t aa_pipes[6][5] = {
@@ -98,7 +98,7 @@ static struct nrf24_data peers[1] = {
 		.seqnumber_rx = 0, .offset_rx = 0},
 };
 
-/* TODO: TODO: Get this value from config file
+/* TODO: Get this value from config file
  * Access Address for pipe 0
  * AA for pipe 1 are in connect req pkt
  */
