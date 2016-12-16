@@ -1031,5 +1031,5 @@ int nrf24_mac2str(const struct nrf24_mac *mac, char *str)
 			mac->address.b[3], mac->address.b[4], mac->address.b[5],
 			mac->address.b[6], mac->address.b[7]);
 
-	return (rc != 8 ? -1 : 0);
+	return (rc != 23 ? -1 : 0);
 }
