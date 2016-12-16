@@ -292,7 +292,7 @@ static gboolean read_idle(gpointer user_data)
 }
 
 static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr,
-							struct nrf24_mac *mac)
+						const struct nrf24_mac *mac)
 {
 	int err;
 
@@ -498,7 +498,8 @@ static int gen_save_mac(const char *config, const char *file,
 			hal_getrandom(mac->address.b + mac_mask,
 						sizeof(*mac) - mac_mask);
 
-			err = nrf24_mac2str(mac, mac_string);
+			err = nrf24_mac2str((const struct nrf24_mac *) mac,
+								mac_string);
 			if (err == -1)
 				goto done;
 
@@ -596,7 +597,8 @@ int manager_start(const char *file, const char *host, int port,
 		dbm = cfg_dbm;
 
 	if (host == NULL)
-		return radio_init(spi, channel, dbm_int2rfpwr(dbm), &mac);
+		return radio_init(spi, channel, dbm_int2rfpwr(dbm),
+						(const struct nrf24_mac*) &mac);
 	/*
 	 * TCP development mode: Linux connected to RPi(phynrfd radio
 	 * proxy). Connect to phynrfd routing all traffic over TCP.

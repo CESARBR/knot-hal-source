@@ -29,7 +29,7 @@ extern "C" {
  * common to any transport.
  */
 
-int hal_comm_init(const char *pathname, struct nrf24_mac *mac);
+int hal_comm_init(const char *pathname, const struct nrf24_mac *mac);
 int hal_comm_deinit(void);
 
 int hal_comm_socket(int domain, int protocol);
