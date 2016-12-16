@@ -191,7 +191,7 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 				struct nrf24_mac dst, struct nrf24_mac src)
 {
 	int err;
-	/* Assemble keep alive package */
+	/* Assemble keep alive packet */
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu =
 		(struct nrf24_ll_data_pdu *)p.payload;
@@ -487,7 +487,7 @@ static int read_raw(int spi_fd, int sockfd)
 					addr_gw);
 			}
 
-			/* If package is disconnect request */
+			/* If packet is disconnect request */
 			else if (ctrl->opcode == NRF24_LL_CRTL_OP_DISCONNECT
 						&& mgmt.len_rx == 0) {
 				struct mgmt_nrf24_header *evt =
@@ -823,7 +823,7 @@ int hal_comm_close(int sockfd)
 
 	/* Pipe 0 is not closed because ACK arrives in this pipe */
 	if (sockfd >= 1 && sockfd <= 5 && peers[sockfd-1].pipe != -1) {
-		/* Send disconnect package */
+		/* Send disconnect packet */
 		if (addr_thing.address.uint64 != 0)
 			/* Slave side */
 			write_disconnect(driverIndex, sockfd,
