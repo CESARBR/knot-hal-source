@@ -503,7 +503,7 @@ static int gen_save_mac(const char *config, const char *file,
 			json_object_object_add(obj_radio, "mac",
 					json_object_new_string(mac_string));
 
-			json_object_to_file(file, jobj);
+			json_object_to_file((char *) file, jobj);
 	}
 
 	/* Success */
