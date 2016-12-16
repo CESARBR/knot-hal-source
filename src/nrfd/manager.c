@@ -498,7 +498,9 @@ static int gen_save_mac(const char *config, const char *file,
 			hal_getrandom(mac->address.b + mac_mask,
 						sizeof(*mac) - mac_mask);
 
-			nrf24_mac2str(mac, mac_string);
+			err = nrf24_mac2str(mac, mac_string);
+			if (err == -1)
+				goto done;
 
 			json_object_object_add(obj_radio, "mac",
 					json_object_new_string(mac_string));
@@ -541,8 +543,12 @@ static int parse_config(const char *config, int *channel, int *dbm,
 		*dbm = json_object_get_int(obj_tmp);
 
 	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp))
-		if (json_object_get_string(obj_tmp) != NULL)
+		if (json_object_get_string(obj_tmp) != NULL){
+			err =
 			nrf24_str2mac(json_object_get_string(obj_tmp), mac);
+			if (err == -1)
+				goto done;
+		}
 
 	/* Success */
 	err = 0;
