@@ -79,40 +79,22 @@ static struct nrf24_data peers[5] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
 		.seqnumber_rx = 0, .offset_rx = 0}
 };
-
-/*
- * TODO: Get this values from config file
- * Access Address for each pipe
- */
-static uint8_t aa_pipes[6][5] = {
-	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
-	{0x35, 0x96, 0xB6, 0xC1, 0x6B},
-	{0x77, 0x96, 0xB6, 0xC1, 0x6B},
-	{0xD3, 0x96, 0xB6, 0xC1, 0x6B},
-	{0xE7, 0x96, 0xB6, 0xC1, 0x6B},
-	{0xF0, 0x96, 0xB6, 0xC1, 0x6B}
-};
-
 #else	/* If slave then 1 peer */
 static struct nrf24_data peers[1] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
 		.seqnumber_rx = 0, .offset_rx = 0},
 };
-
-/*
- * TODO: Get this value from config file
- * Access Address for pipe 0
- * AA for pipe 1 are in connect req pkt
- */
-static uint8_t aa_pipes[1][5] = {
-	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
-};
-
 #endif
 
 /* ARRAY SIZE */
 #define CONNECTION_COUNTER	((int) (sizeof(peers) \
 				 / sizeof(peers[0])))
+
+/*
+ * TODO: Get this values from config file
+ * Access Address for each pipe
+ */
+static uint8_t aa_pipe0[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
 
 /* Global to save driver index */
 static int driverIndex = -1;
@@ -143,7 +125,6 @@ static inline int alloc_pipe(void)
 
 	for (i = 0; i < CONNECTION_COUNTER; i++) {
 		if (peers[i].pipe == -1) {
-
 			peers[i].keepalive_wait = 0;
 			peers[i].keepalive = 0;
 			peers[i].mac.address.uint64 = 0;
@@ -340,7 +321,7 @@ static int read_mgmt(int spi_fd)
 		/* Copy channel */
 		evt_connect->channel = connect->channel;
 		/* Copy access address */
-		memcpy(evt_connect->aa, connect->aa, sizeof(aa_pipes[0]));
+		memcpy(evt_connect->aa, connect->aa, sizeof(evt_connect->aa));
 
 		mgmt.len_rx = sizeof(struct mgmt_nrf24_header) +
 				sizeof(struct mgmt_evt_nrf24_connected);
@@ -782,6 +763,9 @@ int hal_comm_socket(int domain, int protocol)
 		ap.ack = false;
 		retval = 0;
 		mgmt.pipe = 0;
+
+		/* Copy broadcast address */
+		memcpy(ap.aa, aa_pipe0, sizeof(ap.aa));
 		break;
 
 	case HAL_COMM_PROTO_RAW:
@@ -790,6 +774,8 @@ int hal_comm_socket(int domain, int protocol)
 			ap.ack = false;
 			mgmt.pipe = 0;
 			retval = 0;
+			/* Copy broadcast address */
+			memcpy(ap.aa, aa_pipe0, sizeof(ap.aa));
 			break;
 		}
 		/*
@@ -803,6 +789,15 @@ int hal_comm_socket(int domain, int protocol)
 			return -EUSERS; /* Returns too many users */
 
 		ap.ack = true;
+
+		/*
+		 * Copy the 5 LSBs of master mac addres
+		 * to access address and the last least
+		 * significant byte is the pipe index.
+		 */
+		memcpy(ap.aa, &addr_master.address.b[3], sizeof(ap.aa));
+		ap.aa[0] = (uint8_t)retval;
+
 		break;
 
 	default:
@@ -810,7 +805,6 @@ int hal_comm_socket(int domain, int protocol)
 	}
 
 	ap.pipe = retval;
-	memcpy(ap.aa, aa_pipes[retval], sizeof(aa_pipes[retval]));
 
 	/* Open pipe */
 	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &ap);
@@ -952,7 +946,7 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 
 	/* Set aa in pipe */
 	p_addr.pipe = pipe;
-	memcpy(p_addr.aa, evt_connect->aa, sizeof(evt_connect->aa));
+	memcpy(p_addr.aa, evt_connect->aa, sizeof(p_addr.aa));
 	p_addr.ack = 1;
 	/*open pipe*/
 	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &p_addr);
@@ -996,8 +990,16 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	 * sockfd contains the pipe allocated for the client
 	 * aa_pipes contains the Access Address for each pipe
 	 */
-	memcpy(payload->aa, aa_pipes[sockfd],
-		sizeof(aa_pipes[sockfd]));
+
+	/*
+	 * Copy the 5 LSBs of master mac addres
+	 * to access address and the last least
+	 * significant byte is the socket index.
+	 */
+
+	memcpy(payload->aa, &addr_master.address.b[3],
+		sizeof(payload->aa));
+	payload->aa[0] = (uint8_t)sockfd;
 
 	/* Source address for keepalive message */
 	peers[sockfd-1].mac.address.uint64 = *addr;
