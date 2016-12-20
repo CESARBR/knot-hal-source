@@ -188,6 +188,15 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	/* Set user id to nobody */
+	if (setuid(65534) != 0) {
+		err = errno;
+		printf("Set uid to nobody failed. %s(%d). Exiting...\n",
+							strerror(err), err);
+		manager_stop();
+		return EXIT_FAILURE;
+	}
+
 	/* Starting inotify */
 	inotifyFD = inotify_init();
 
