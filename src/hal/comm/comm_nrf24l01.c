@@ -125,14 +125,9 @@ static inline int alloc_pipe(void)
 
 	for (i = 0; i < CONNECTION_COUNTER; i++) {
 		if (peers[i].pipe == -1) {
-			peers[i].keepalive_wait = 0;
-			peers[i].keepalive = 0;
-			peers[i].mac.address.uint64 = 0;
-			peers[i].len_rx = 0;
-			peers[i].seqnumber_rx = 0;
-			peers[i].seqnumber_tx = 0;
-			peers[i].offset_rx = 0;
-			/* one peer for pipe*/
+			/* Peers initialization */
+			memset(&peers[i], 0, sizeof(peers[i]));
+			/* One peer for pipe*/
 			peers[i].pipe = i+1;
 			return peers[i].pipe;
 		}
