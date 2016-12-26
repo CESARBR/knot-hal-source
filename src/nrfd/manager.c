@@ -50,7 +50,22 @@ static struct peer peers[MAX_PEERS] = {
 	{.socket_fd = -1}
 };
 
+static struct nrf24_mac *known_peers;
+
 static uint8_t count_clients;
+
+/* Check if peer is on list of known peers */
+static int8_t check_permission(struct nrf24_mac mac)
+{
+	uint8_t i;
+
+	for (i = 0; i < MAX_PEERS; i++) {
+		if (mac.address.uint64 == known_peers[i].address.uint64)
+			return 0;
+	}
+
+	return -EPERM;
+}
 
 /* Get peer position in vector of peers*/
 static int8_t get_peer(struct nrf24_mac mac)
@@ -143,6 +158,9 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
 			(struct mgmt_evt_nrf24_bcast_presence *) mhdr->payload;
 
+	/* Check if peer is allowed to connect */
+	if (check_permission(evt_pre->mac) < 0)
+		return -EPERM;
 
 	if (count_clients >= MAX_PEERS)
 		return -EUSERS; /*MAX PEERS*/
@@ -561,12 +579,14 @@ done:
 }
 
 int manager_start(const char *file, const char *host, int port,
-				const char *spi, int channel, int dbm)
+					const char *spi, int channel, int dbm,
+					struct nrf24_mac *known_nodes)
 {
 	int cfg_channel = NRF24_CH_MIN, cfg_dbm = 0;
 	char *json_str;
 	struct nrf24_mac mac = {.address.uint64 = 0};
 	int err = -1;
+	known_peers = known_nodes;
 
 	/* Command line arguments have higher priority */
 	json_str = load_config(file);
