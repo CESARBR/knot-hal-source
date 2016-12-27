@@ -98,9 +98,18 @@ static uint8_t aa_pipe0[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
 
 /* Global to save driver index */
 static int driverIndex = -1;
-/* Channel to management and raw data */
-static int channel_mgmt = 20;
-static int channel_raw = 10;
+
+/*
+ * Channel to management and raw data
+ *
+ * nRF24 channels has been selected to avoid common interference sources:
+ * Wi-Fi channels (1, 6 and 11) and Bluetooth adversiting channels (37,
+ * 38 and 39). Suggested nRF24 channels are channels 22 (2422 MHz), 50
+ * (2450 MHz), 74 (2474 MHz), 76 (2476 MHz) and 97 (2497 MHz).
+ */
+static int channel_mgmt = 76;
+static int channel_raw = 22;
+
 static uint16_t window_bcast = 5;	/* ms */
 static uint16_t interval_bcast = 6;	/* ms */
 
