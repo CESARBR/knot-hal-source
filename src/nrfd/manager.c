@@ -30,7 +30,6 @@
 #include "manager.h"
 
 #define KNOTD_UNIX_ADDRESS		"knot"
-#define MAX_PEERS 5
 static int mgmtfd;
 static guint mgmtwatch;
 

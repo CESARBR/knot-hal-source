@@ -6,6 +6,7 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
+#define MAX_PEERS 5
 
 int manager_start(const char *file, const char *host, int port,
 			const char *spi, int channel, int dbm,

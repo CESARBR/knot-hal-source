@@ -25,7 +25,6 @@
 
 #define BUF_LEN (sizeof(struct inotify_event))
 #define CHANNEL_DEFAULT NRF24_CH_MIN
-#define MAX_NODES 5
 
 static GMainLoop *main_loop;
 
@@ -43,7 +42,7 @@ static void sig_term(int sig)
 }
 
 /* Struct with the mac address of the known peers */
-static struct nrf24_mac known_peers[MAX_NODES];
+static struct nrf24_mac known_peers[MAX_PEERS];
 
 /*
  * OPTIONAL: describe the valid values ranges
@@ -79,7 +78,7 @@ static int parse_nodes(json_object *jobj)
 		goto failure;
 
 	array_len = json_object_array_length(obj_keys);
-	if (array_len > MAX_NODES) {
+	if (array_len > MAX_PEERS) {
 		printf("Invalid numbers of nodes in input archive");
 		goto failure;
 	}
