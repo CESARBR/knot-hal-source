@@ -117,6 +117,7 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	char buffer[PACKET_SIZE_MAX];
 	ssize_t nbytes;
 	int sock, knotdfd, offset, msg_size, err, remaining;
+	ssize_t i;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
 		session->thing_id = 0;
@@ -127,16 +128,20 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 
 	printf("Generic IO Watch, reading from (%d)\n\r", sock);
 
-	nbytes = hal_comm_read(sock, buffer, sizeof(buffer));
+	nbytes = hal_comm_read(sock, (void *)buffer, sizeof(buffer));
 	if (nbytes < 0) {
 		printf("read() error\n");
 		return FALSE;
 	}
-	printf("Read (%ld) bytes from thing\n\r", nbytes);
+	printf("Read (%zu) bytes from thing\n\r", nbytes);
 
-	printf("Opt type = (%02X), Payload length = (%d)\n", buffer[0],
+	printf("Opt type = (0x%02X), Payload length = (%d)\n", buffer[0],
 								buffer[1]);
 
+	printf("Read \"");
+	for (i = 0; i < nbytes; i++)
+		printf("%c ", buffer[(int)i]);
+	printf("\" from thing\n\r");
 	/*
 	 * At the moment there isn't a header describing the size of
 	 * the datagram. The field 'payload_len' (see buffer[1]) defined
@@ -145,7 +150,7 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	 */
 	msg_size = buffer[1] + 2;
 
-	offset = nbytes;
+	offset = (int)nbytes;
 	/* If payload + header (2 Bytes) < nbytes, keep reading */
 	while (offset < msg_size) {
 		remaining = sizeof(buffer) - offset;
@@ -164,9 +169,13 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	}
 
 	printf("Total bytes read = %d\n", offset);
+	//printf("Read %s from thing.\n\r", buffer);
+	printf("Read \"");
+	for (i = 0; (int)i < offset; i++)
+		printf("%c ", buffer[(int)i]);
+	printf("\" from thing\n\r");
 
 	knotdfd = g_io_channel_unix_get_fd(session->knotd_io);
-
 
 	if (write(knotdfd, buffer, msg_size) < 0) {
 		printf("write_knotd() error\n\r");
@@ -229,6 +238,7 @@ static int serial_start(const char *pathname)
 
 static void serial_stop(void)
 {
+	printf("serial_stop\n\r");
 	hal_comm_close(commfd);
 }
 
