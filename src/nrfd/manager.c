@@ -49,7 +49,8 @@ static struct peer peers[MAX_PEERS] = {
 	{.socket_fd = -1}
 };
 
-static struct nrf24_mac *known_peers;
+/* Struct with the mac address of the known peers */
+static struct nrf24_mac known_peers[MAX_PEERS];
 
 static uint8_t count_clients;
 
@@ -577,22 +578,63 @@ done:
 	return err;
 }
 
+static int parse_nodes(json_object *jobj)
+{
+	int array_len;
+	int i;
+	json_object *obj_keys, *obj_nodes, *obj_tmp;
+
+	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
+		goto failure;
+
+	array_len = json_object_array_length(obj_keys);
+	if (array_len > MAX_PEERS) {
+		printf("Invalid numbers of nodes in input archive");
+		goto failure;
+	}
+	for (i = 0; i < array_len; i++) {
+		obj_nodes = json_object_array_get_idx(obj_keys, i);
+		if (!json_object_object_get_ex(obj_nodes, "mac", &obj_tmp))
+			goto failure;
+
+		/* Parse mac address string into struct nrf24_mac known_peers */
+		if (nrf24_str2mac(json_object_get_string(obj_tmp),
+						known_peers + i) < 0)
+			goto failure;
+	}
+
+	return 0;
+
+failure:
+	return -EINVAL;
+}
+
 int manager_start(const char *file, const char *host, int port,
 					const char *spi, int channel, int dbm,
-					struct nrf24_mac *known_nodes)
+					const char *nodes_file)
 {
 	int cfg_channel = NRF24_CH_MIN, cfg_dbm = 0;
 	char *json_str;
 	struct nrf24_mac mac = {.address.uint64 = 0};
 	int err = -1;
-	known_peers = known_nodes;
+	json_object *jobj;
 
 	/* Command line arguments have higher priority */
 	json_str = load_config(file);
 	if (json_str == NULL)
 		return err;
-
 	err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
+
+	/* Load nodes' info from json file */
+	jobj = json_object_from_file(nodes_file);
+	if (!jobj)
+		return -EINVAL;
+	/* Parse info loaded and writes it to known_peers */
+	err = parse_nodes(jobj);
+	/* Free mem used to parse json */
+	json_object_put(jobj);
+	if (err < 0)
+		return err;
 
 	if (mac.address.uint64 == 0)
 		err = gen_save_mac(json_str, file, &mac);

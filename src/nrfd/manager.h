@@ -10,5 +10,5 @@
 
 int manager_start(const char *file, const char *host, int port,
 			const char *spi, int channel, int dbm,
-			struct nrf24_mac *known_nodes);
+			const char *nodes_file);
 void manager_stop(void);

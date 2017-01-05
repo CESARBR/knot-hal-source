@@ -17,7 +17,6 @@
 
 #include <glib.h>
 #include <sys/inotify.h>
-#include <json-c/json.h>
 
 #include "nrf24l01_io.h"
 #include "include/nrf24.h"
@@ -40,9 +39,6 @@ static void sig_term(int sig)
 {
 	g_main_loop_quit(main_loop);
 }
-
-/* Struct with the mac address of the known peers */
-static struct nrf24_mac known_peers[MAX_PEERS];
 
 /*
  * OPTIONAL: describe the valid values ranges
@@ -67,37 +63,6 @@ static GOptionEntry options[] = {
 		"TX power: transmition signal strength in dBm" },
 	{ NULL },
 };
-
-static int parse_nodes(json_object *jobj)
-{
-	int array_len;
-	int i;
-	json_object *obj_keys, *obj_nodes, *obj_tmp;
-
-	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
-		goto failure;
-
-	array_len = json_object_array_length(obj_keys);
-	if (array_len > MAX_PEERS) {
-		printf("Invalid numbers of nodes in input archive");
-		goto failure;
-	}
-	for (i = 0; i < array_len; i++) {
-		obj_nodes = json_object_array_get_idx(obj_keys, i);
-		if (!json_object_object_get_ex(obj_nodes, "mac", &obj_tmp))
-			goto failure;
-
-		/* Parse mac address string into struct nrf24_mac known_peers */
-		if (nrf24_str2mac(json_object_get_string(obj_tmp),
-						known_peers + i) < 0)
-			goto failure;
-	}
-
-	return 0;
-
-failure:
-	return -EINVAL;
-}
 
 static gboolean inotify_cb(GIOChannel *gio, GIOCondition condition,
 								gpointer data)
@@ -131,7 +96,6 @@ int main(int argc, char *argv[])
 	int inotify_keys_fd, wd_keys;
 	guint watch_id;
 	guint watch_keys_id;
-	json_object *jobj;
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
@@ -160,16 +124,6 @@ int main(int argc, char *argv[])
 		printf("Missing KNOT known nodes file!\n");
 		return EXIT_FAILURE;
 	}
-	/* Load nodes' info from json file */
-	jobj = json_object_from_file(opt_nodes);
-	if (!jobj)
-		return EXIT_FAILURE;
-	/* Parse info loaded and writes it to known_peers */
-	err = parse_nodes(jobj);
-	/* Free mem used to parse json */
-	json_object_put(jobj);
-	if (err < 0)
-		return EXIT_FAILURE;
 
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
@@ -184,7 +138,7 @@ int main(int argc, char *argv[])
 		printf("Native SPI mode\n");
 
 	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
-							opt_dbm, known_peers);
+							opt_dbm, opt_nodes);
 	if (err < 0) {
 		g_main_loop_unref(main_loop);
 		return EXIT_FAILURE;
