@@ -15,6 +15,7 @@
 #define UUID_SIZE		36
 #define TOKEN_SIZE		40
 #define MAC_SIZE		8
+#define SCHEMA_FLAG_SIZE	1
 
 #define CONFIG_SIZE 		sizeof(uint16_t)
 
@@ -23,7 +24,8 @@
 #define ADDR_UUID		(EEPROM_SIZE - UUID_SIZE)
 #define ADDR_TOKEN		(ADDR_UUID - TOKEN_SIZE)
 #define ADDR_MAC		(ADDR_TOKEN - MAC_SIZE)
-#define ADDR_OFFSET_CONFIG	(ADDR_MAC - CONFIG_SIZE)
+#define ADDR_SCHEMA_FLAG	(ADDR_MAC - SCHEMA_FLAG_SIZE)
+#define ADDR_OFFSET_CONFIG	(ADDR_SCHEMA_FLAG - CONFIG_SIZE)
 
 #define EEPROM_SIZE_FREE	ADDR_OFFSET_CONFIG
 
@@ -100,6 +102,11 @@ ssize_t hal_storage_write_end(uint8_t id, void *value, size_t len)
 
 		dst = ADDR_MAC;
 		break;
+	case HAL_STORAGE_ID_SCHEMA_FLAG:
+		if (len != SCHEMA_FLAG_SIZE)
+			return -EINVAL;
+		dst = ADDR_SCHEMA_FLAG;
+		break;
 	case HAL_STORAGE_ID_CONFIG:
 		if(len > EEPROM_SIZE_FREE)
 			return -EINVAL;
@@ -154,6 +161,13 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 		src = ADDR_MAC;
 		break;
 
+	case HAL_STORAGE_ID_SCHEMA_FLAG:
+		if(len != SCHEMA_FLAG_SIZE)
+			return -EINVAL;
+
+		src = ADDR_SCHEMA_FLAG;
+		break;
+
 	case HAL_STORAGE_ID_CONFIG:
 
 		/*
@@ -189,6 +203,7 @@ void hal_storage_reset_end(void)
 		uint8_t uuid[UUID_SIZE];
 		uint8_t token[TOKEN_SIZE];
 		uint8_t mac[MAC_SIZE];
+		uint8_t schema_flag[SCHEMA_FLAG_SIZE];
 	} data;
 
 	memset(&data, 0, sizeof(data));
@@ -196,5 +211,7 @@ void hal_storage_reset_end(void)
 	hal_storage_write_end(HAL_STORAGE_ID_UUID, data.uuid, UUID_SIZE);
 	hal_storage_write_end(HAL_STORAGE_ID_TOKEN, data.token, TOKEN_SIZE);
 	hal_storage_write_end(HAL_STORAGE_ID_MAC, data.mac, MAC_SIZE);
+	hal_storage_write_end(HAL_STORAGE_ID_SCHEMA_FLAG, data.schema_flag,
+							SCHEMA_FLAG_SIZE);
 	eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, 0);
 }
