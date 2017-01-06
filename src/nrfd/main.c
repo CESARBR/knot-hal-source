@@ -12,14 +12,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 
 #include <glib.h>
 #include <sys/inotify.h>
 
-#include "nrf24l01_io.h"
-#include "include/nrf24.h"
 #include "manager.h"
 
 #define BUF_LEN (sizeof(struct inotify_event))
@@ -155,17 +152,15 @@ int main(int argc, char *argv[])
 
 	/* Starting inotify */
 	inotifyFD = inotify_init();
-	inotify_keys_fd = inotify_init();
-
 	wd = inotify_add_watch(inotifyFD, opt_cfg, IN_MODIFY);
 	if (wd == -1) {
 		printf("Error adding watch on: %s\n", opt_cfg);
 		close(inotifyFD);
-		close(inotify_keys_fd);
 		manager_stop();
 		return EXIT_FAILURE;
 	}
-
+	/* Starting inotify for known peers file*/
+	inotify_keys_fd = inotify_init();
 	wd_keys = inotify_add_watch(inotify_keys_fd, opt_nodes, IN_MODIFY);
 	if (wd_keys == -1) {
 		printf("Error adding watch on: %s\n", opt_nodes);
