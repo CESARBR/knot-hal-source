@@ -28,7 +28,7 @@
 
 #define EEPROM_SIZE_FREE	ADDR_OFFSET_CONFIG
 
-size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
+ssize_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
 {
 	uint8_t *offset = (uint8_t *) addr;
 	union {
@@ -51,7 +51,7 @@ size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
 	return i;
 }
 
-size_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len)
+ssize_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len)
 {
 	uint8_t *offset = (uint8_t *) addr;
 	union {

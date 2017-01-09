@@ -32,7 +32,7 @@ static GKeyFile *storage_open_file(void)
 	return gfile;
 }
 
-size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
+ssize_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
 {
 	GKeyFile *gfile;
 	int retval = -EIO;
@@ -59,7 +59,7 @@ size_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len)
 	return retval;
 }
 
-size_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len)
+ssize_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len)
 {
 	GKeyFile *gfile;
 	char saddr[ADDR_LEN];
