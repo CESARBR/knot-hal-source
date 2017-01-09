@@ -8,7 +8,6 @@
  */
 #include <avr/eeprom.h>
 #include "include/avr_errno.h"
-#include "include/avr_unistd.h"
 #include <string.h>
 #include "include/storage.h"
 

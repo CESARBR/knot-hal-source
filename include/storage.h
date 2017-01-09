@@ -14,6 +14,10 @@
 extern "C" {
 #endif
 
+#ifdef ARDUINO
+#include "include/avr_unistd.h"
+#endif
+
 // Identifier of data type to be stored
 #define HAL_STORAGE_ID_UUID		0
 #define HAL_STORAGE_ID_TOKEN		1
