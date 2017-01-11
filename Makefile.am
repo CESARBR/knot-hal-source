@@ -50,9 +50,10 @@ tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 		-I$(top_srcdir)/src/spi \
 		-I$(top_srcdir)/src/nrf24l01
 
-tools_rpiecho_SOURCES = tools/rpiecho.c src/hal/time/time_linux.c
+tools_rpiecho_SOURCES = tools/rpiecho.c
 tools_rpiecho_LDADD = libs/libphy_driver.a \
 				 libs/libnrf24l01.a libs/libspi.a \
+				 libs/libhaltime.a \
 				 @GLIB_LIBS@
 tools_rpiecho_LDFLAGS = $(AM_LDFLAGS)
 tools_rpiecho_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
