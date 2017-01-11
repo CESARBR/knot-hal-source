@@ -10,7 +10,7 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd tools/sniffer tools/rpiecho
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer tools/rpiecho
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -34,6 +34,11 @@ src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm \
 				-I$(top_srcdir)/src/nrf24l01 @JSON_CFLAGS@
+
+src_lorad_lorad_SOURCES = src/lorad/main.c
+src_lorad_lorad_LDADD =
+src_lorad_lorad_LDFLAGS = $(AM_LDFLAGS)
+src_lorad_lorad_CFLAGS = $(AM_CFLAGS)
 
 tools_sniffer_SOURCES = tools/sniffer.c
 tools_sniffer_LDADD = libs/libphy_driver.a \
@@ -63,4 +68,4 @@ MAINTAINERCLEANFILES = Makefile.in \
 	ltmain.sh depcomp compile missing install-sh
 
 clean-local:
-	$(RM) -r proxy/spiproxyd src/nrfd/nrfd tools/rpiecho tools/sniffer
+	$(RM) -r proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/rpiecho tools/sniffer
