@@ -36,9 +36,9 @@ src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/nrf24l01 @JSON_CFLAGS@
 
 src_lorad_lorad_SOURCES = src/lorad/main.c
-src_lorad_lorad_LDADD =
+src_lorad_lorad_LDADD = @GLIB_LIBS@
 src_lorad_lorad_LDFLAGS = $(AM_LDFLAGS)
-src_lorad_lorad_CFLAGS = $(AM_CFLAGS)
+src_lorad_lorad_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 tools_sniffer_SOURCES = tools/sniffer.c
 tools_sniffer_LDADD = libs/libphy_driver.a \
