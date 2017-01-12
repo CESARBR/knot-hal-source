@@ -578,11 +578,18 @@ done:
 	return err;
 }
 
-static int parse_nodes(json_object *jobj)
+static int parse_nodes(const char *nodes_file)
 {
 	int array_len;
 	int i;
+	int err = -EINVAL;
+	json_object *jobj;
 	json_object *obj_keys, *obj_nodes, *obj_tmp;
+
+	/* Load nodes' info from json file */
+	jobj = json_object_from_file(nodes_file);
+	if (!jobj)
+		return -EINVAL;
 
 	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
 		goto failure;
@@ -603,10 +610,11 @@ static int parse_nodes(json_object *jobj)
 			goto failure;
 	}
 
-	return 0;
-
+	err = 0;
 failure:
-	return -EINVAL;
+	/* Free mem used to parse json */
+	json_object_put(jobj);
+	return err;
 }
 
 int manager_start(const char *file, const char *host, int port,
@@ -617,22 +625,17 @@ int manager_start(const char *file, const char *host, int port,
 	char *json_str;
 	struct nrf24_mac mac = {.address.uint64 = 0};
 	int err = -1;
-	json_object *jobj;
 
 	/* Command line arguments have higher priority */
 	json_str = load_config(file);
 	if (json_str == NULL)
 		return err;
 	err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
+	if (err < 0)
+		return err;
 
-	/* Load nodes' info from json file */
-	jobj = json_object_from_file(nodes_file);
-	if (!jobj)
-		return -EINVAL;
-	/* Parse info loaded and writes it to known_peers */
-	err = parse_nodes(jobj);
-	/* Free mem used to parse json */
-	json_object_put(jobj);
+	/* Parse nodes info from nodes_file and writes it to known_peers */
+	err = parse_nodes(nodes_file);
 	if (err < 0)
 		return err;
 
