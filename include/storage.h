@@ -24,6 +24,8 @@ extern "C" {
 #define HAL_STORAGE_ID_MAC		2
 #define HAL_STORAGE_ID_SCHEMA_FLAG	3
 #define HAL_STORAGE_ID_CONFIG		4
+#define HAL_STORAGE_ID_PRIVATE_KEY      5
+#define HAL_STORAGE_ID_PUBLIC_KEY       6
 
 ssize_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len);
 ssize_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len);
