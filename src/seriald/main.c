@@ -6,17 +6,12 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+
 #include <glib.h>
 
 #include "manager.h"
