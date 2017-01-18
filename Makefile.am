@@ -27,9 +27,11 @@ src_nrfd_nrfd_LDADD = libs/libhalcommnrf24.a \
 				libs/libhalstorage.a \
 				libs/libnrf24l01.a \
 				libs/libspi.a \
-				@GLIB_LIBS@ @JSON_LIBS@
+				@GLIB_LIBS@ @JSON_LIBS@ \
+				@GIO_UNIX_LIBS@
 src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
 src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+				@GIO_UNIX_CFLAGS@ \
 				-I$(top_srcdir)/src \
 				-I$(top_srcdir)/src/nrf24l01 \
 				-I$(top_srcdir)/src/drivers \
