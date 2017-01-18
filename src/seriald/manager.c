@@ -55,7 +55,7 @@ static int connect_unix(void)
 	return sock;
 }
 
-static void knotd_io_destroy(gpointer user_data)
+static void unix_io_destroy(gpointer user_data)
 {
 	struct session *session = user_data;
 
@@ -63,7 +63,7 @@ static void knotd_io_destroy(gpointer user_data)
 	session->knotd_io = NULL;
 }
 
-static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
+static gboolean unix_io_watch(GIOChannel *io, GIOCondition cond,
 							gpointer user_data)
 {
 	struct session *session = user_data;
@@ -215,8 +215,8 @@ static int serial_start(const char *pathname)
 	session->knotd_id = g_io_add_watch_full(session->knotd_io,
 							G_PRIORITY_DEFAULT,
 							cond,
-							knotd_io_watch, session,
-							knotd_io_destroy);
+							unix_io_watch, session,
+							unix_io_destroy);
 	g_io_channel_unref(session->knotd_io);
 
 	session->thing_io = io;
