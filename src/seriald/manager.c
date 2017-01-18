@@ -29,8 +29,8 @@ static int commfd;
 
 struct session {
 	unsigned int serial_id;	/* Thing event source */
-	unsigned int knotd_id;	/* KNoT event source */
-	GIOChannel *knotd_io;	/* Knotd GIOChannel reference */
+	unsigned int unix_id;	/* KNoT event source */
+	GIOChannel *unix_io;	/* Knotd GIOChannel reference */
 	GIOChannel *serial_io;	/* Knotd GIOChannel reference */
 };
 
@@ -59,8 +59,8 @@ static void unix_io_destroy(gpointer user_data)
 {
 	struct session *session = user_data;
 
-	session->knotd_id = 0;
-	session->knotd_io = NULL;
+	session->unix_id = 0;
+	session->unix_io = NULL;
 }
 
 static gboolean unix_io_watch(GIOChannel *io, GIOCondition cond,
@@ -68,25 +68,25 @@ static gboolean unix_io_watch(GIOChannel *io, GIOCondition cond,
 {
 	struct session *session = user_data;
 	char buffer[PACKET_SIZE_MAX];
-	int serial_sock, knotd_sock;
-	ssize_t readbytes_knotd;
+	int serial_sock, unix_sock;
+	ssize_t readbytes_unix;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
 		return FALSE;
 
-	knotd_sock = g_io_channel_unix_get_fd(io);
+	unix_sock = g_io_channel_unix_get_fd(io);
 	serial_sock = g_io_channel_unix_get_fd(session->serial_io);
 
-	printf("Incoming data from knotd (%d)\n\r", knotd_sock);
+	printf("Incoming data from knotd (%d)\n\r", unix_sock);
 
-	readbytes_knotd = read(knotd_sock, buffer, sizeof(buffer));
-	if (readbytes_knotd < 0) {
-		printf("read_knotd() error\n\r");
+	readbytes_unix = read(unix_sock, buffer, sizeof(buffer));
+	if (readbytes_unix < 0) {
+		printf("read_unix() error\n\r");
 		return FALSE;
 	}
-	printf("RX_KNOTD: '%ld'\n\r", readbytes_knotd);
+	printf("RX_KNOTD: '%ld'\n\r", readbytes_unix);
 
-	if (hal_comm_write(serial_sock, buffer, readbytes_knotd) < 0) {
+	if (hal_comm_write(serial_sock, buffer, readbytes_unix) < 0) {
 		printf("send_serial() error\n\r");
 		return FALSE;
 	}
@@ -110,7 +110,7 @@ static gboolean serial_io_watch(GIOChannel *io, GIOCondition cond,
 	struct session *session = user_data;
 	char buffer[PACKET_SIZE_MAX];
 	ssize_t nbytes;
-	int sock, knotdfd, offset, msg_size, err, remaining;
+	int sock, unixfd, offset, msg_size, err, remaining;
 	ssize_t i;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
@@ -168,10 +168,10 @@ static gboolean serial_io_watch(GIOChannel *io, GIOCondition cond,
 		printf("%c ", buffer[(int)i]);
 	printf("\" from serial\n\r");
 
-	knotdfd = g_io_channel_unix_get_fd(session->knotd_io);
+	unixfd = g_io_channel_unix_get_fd(session->unix_io);
 
-	if (write(knotdfd, buffer, msg_size) < 0) {
-		printf("write_knotd() error\n\r");
+	if (write(unixfd, buffer, msg_size) < 0) {
+		printf("write_unix() error\n\r");
 		return FALSE;
 	}
 
@@ -185,15 +185,15 @@ static int serial_start(const char *pathname)
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	struct session *session;
 	GIOChannel *io;
-	int knotdfd;
+	int unixfd;
 
 	commfd = hal_comm_init(pathname, NULL);
 	printf("commfd = (%d)\n\r", commfd);
 	if (commfd < 0)
 		return -errno;
 
-	knotdfd = connect_unix();
-	if (knotdfd < 0) {
+	unixfd = connect_unix();
+	if (unixfd < 0) {
 		hal_comm_close(commfd);
 		return FALSE;
 	}
@@ -208,16 +208,16 @@ static int serial_start(const char *pathname)
 	session = g_new0(struct session, 1);
 
 	/* Watch knotd socket */
-	session->knotd_io = g_io_channel_unix_new(knotdfd);
-	g_io_channel_set_flags(session->knotd_io, G_IO_FLAG_NONBLOCK, NULL);
-	g_io_channel_set_close_on_unref(session->knotd_io, TRUE);
+	session->unix_io = g_io_channel_unix_new(unixfd);
+	g_io_channel_set_flags(session->unix_io, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_set_close_on_unref(session->unix_io, TRUE);
 
-	session->knotd_id = g_io_add_watch_full(session->knotd_io,
+	session->unix_id = g_io_add_watch_full(session->unix_io,
 							G_PRIORITY_DEFAULT,
 							cond,
 							unix_io_watch, session,
 							unix_io_destroy);
-	g_io_channel_unref(session->knotd_io);
+	g_io_channel_unref(session->unix_io);
 
 	session->serial_io = io;
 
