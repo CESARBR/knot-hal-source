@@ -94,10 +94,9 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 	return TRUE;
 }
 /* If thing initiated disconnection decrement ref count */
-static void generic_io_destroy(gpointer user_data)
+static void serial_io_destroy(gpointer user_data)
 {
 	struct session *session = user_data;
-	printf("generic_io_destroy\n\r");
 
 	if (session->thing_id > 0) {
 		g_io_channel_shutdown(session->thing_io, FALSE, NULL);
@@ -105,7 +104,7 @@ static void generic_io_destroy(gpointer user_data)
 	}
 }
 
-static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
+static gboolean serial_io_watch(GIOChannel *io, GIOCondition cond,
 							gpointer user_data)
 {
 	struct session *session = user_data;
@@ -164,7 +163,6 @@ static gboolean generic_io_watch(GIOChannel *io, GIOCondition cond,
 	}
 
 	printf("Total bytes read = %d\n", offset);
-	//printf("Read %s from thing.\n\r", buffer);
 	printf("Read \"");
 	for (i = 0; (int)i < offset; i++)
 		printf("%c ", buffer[(int)i]);
@@ -224,8 +222,8 @@ static int serial_start(const char *pathname)
 	session->thing_io = io;
 
 	session->thing_id = g_io_add_watch_full(io, G_PRIORITY_DEFAULT,
-						cond, generic_io_watch, session,
-							generic_io_destroy);
+						cond, serial_io_watch, session,
+						serial_io_destroy);
 	g_io_channel_unref(io);
 
 	return 0;
