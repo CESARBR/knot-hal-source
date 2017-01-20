@@ -38,6 +38,15 @@ static int mgmtfd;
 static guint mgmtwatch;
 static guint dbus_id;
 
+static struct adapter {
+	struct nrf24_mac *mac;
+	gboolean powered;
+	/* Struct with the mac address of the known peers */
+	struct nrf24_mac known_peers[MAX_PEERS];
+	guint registration_id[MAX_PEERS];
+	guint known_peers_size;
+} adapter;
+
 struct peer {
 	char name[10];
 	uint64_t mac;
@@ -54,9 +63,6 @@ static struct peer peers[MAX_PEERS] = {
 	{.socket_fd = -1},
 	{.socket_fd = -1}
 };
-
-/* Struct with the mac address of the known peers */
-static struct nrf24_mac known_peers[MAX_PEERS];
 
 static uint8_t count_clients;
 
@@ -112,12 +118,14 @@ static GVariant *handle_get_property(GDBusConnection  *connection,
 				gpointer user_data)
 {
 	GVariant *gvar = NULL;
-	/* TODO: add variable to store mac of gateway and power boolean */
-	if (g_strcmp0(property_name, "Address") == 0)
-		gvar = g_variant_new_string("mac");
+	char str_mac[24];
 
-	else if (g_strcmp0(property_name, "Powered") == 0)
-		gvar = g_variant_new_boolean(TRUE);
+	if (g_strcmp0(property_name, "Address") == 0) {
+		nrf24_mac2str(adapter.mac, str_mac);
+		gvar = g_variant_new("s", str_mac);
+	} else if (g_strcmp0(property_name, "Powered") == 0) {
+		gvar = g_variant_new_boolean(adapter.powered);
+	}
 
 	return gvar;
 }
@@ -131,7 +139,7 @@ static gboolean handle_set_property(GDBusConnection  *connection,
 				GError **gerr,
 				gpointer user_data)
 {
-	/*TODO: set boolean power property */
+	/*TODO: set boolean power property and turn radio on or off*/
 	return TRUE;
 }
 
@@ -178,7 +186,7 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name,
 	exit(EXIT_FAILURE);
 }
 
-static guint dbus_init(void)
+static guint dbus_init(struct nrf24_mac *mac)
 {
 	guint owner_id;
 
@@ -191,6 +199,8 @@ static guint dbus_init(void)
 					G_BUS_NAME_OWNER_FLAGS_NONE,
 					on_bus_acquired, on_name_acquired,
 					on_name_lost, NULL, NULL);
+	adapter.mac = mac;
+	adapter.powered = TRUE;
 
 	return owner_id;
 }
@@ -207,7 +217,8 @@ static int8_t check_permission(struct nrf24_mac mac)
 	uint8_t i;
 
 	for (i = 0; i < MAX_PEERS; i++) {
-		if (mac.address.uint64 == known_peers[i].address.uint64)
+		if (mac.address.uint64 ==
+				adapter.known_peers[i].address.uint64)
 			return 0;
 	}
 
@@ -763,8 +774,9 @@ static int parse_nodes(const char *nodes_file)
 
 		/* Parse mac address string into struct nrf24_mac known_peers */
 		if (nrf24_str2mac(json_object_get_string(obj_tmp),
-						known_peers + i) < 0)
+					adapter.known_peers + i) < 0)
 			goto failure;
+		adapter.known_peers_size++;
 	}
 
 	err = 0;
@@ -791,6 +803,7 @@ int manager_start(const char *file, const char *host, int port,
 	if (err < 0)
 		return err;
 
+	memset(&adapter, 0, sizeof(struct adapter));
 	/* Parse nodes info from nodes_file and writes it to known_peers */
 	err = parse_nodes(nodes_file);
 	if (err < 0)
@@ -806,7 +819,7 @@ int manager_start(const char *file, const char *host, int port,
 		return err;
 	}
 	/* Start server dbus */
-	dbus_id = dbus_init();
+	dbus_id = dbus_init(&mac);
 
 	 /* Validate and set the channel */
 	if (channel < 0 || channel > 125)
