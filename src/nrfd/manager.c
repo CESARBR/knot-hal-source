@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <glib.h>
+#include <gio/gio.h>
 #include <json-c/json.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -35,6 +36,7 @@
 
 static int mgmtfd;
 static guint mgmtwatch;
+static guint dbus_id;
 
 struct peer {
 	char name[10];
@@ -57,6 +59,147 @@ static struct peer peers[MAX_PEERS] = {
 static struct nrf24_mac known_peers[MAX_PEERS];
 
 static uint8_t count_clients;
+
+static GDBusNodeInfo *introspection_data = NULL;
+
+/* Introspection data for the service we are exporting */
+static const gchar introspection_xml[] =
+	"<node>"
+	"  <interface name='org.cesar.knot.nrf.Manager'>"
+	"    <method name='AddDevice'>"
+	"      <arg type='s' name='mac' direction='in'/>"
+	"      <arg type='s' name='key' direction='in'/>"
+	"      <arg type='b' name='response' direction='out'/>"
+	"    </method>"
+	"    <property type='s' name='Address' access='read'/>"
+	"    <property type='s' name='Powered' access='readwrite'/>"
+	"  </interface>"
+	"</node>";
+
+static gboolean add_device(const gchar *mac, const gchar *key)
+{
+	return TRUE;
+}
+
+static void handle_method_call(GDBusConnection *connection,
+					const gchar *sender,
+					const gchar *object_path,
+					const gchar *interface_name,
+					const gchar *method_name,
+					GVariant *parameters,
+					GDBusMethodInvocation *invocation,
+					gpointer user_data)
+{
+	if (g_strcmp0("AddDevice", method_name) == 0) {
+		const gchar *mac;
+		const gchar *key;
+		gboolean response;
+
+		g_variant_get(parameters, "(&s&s)", &mac, &key);
+		/* Add or Update mac address */
+		response = add_device(mac, key);
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(b)", response));
+	}
+}
+
+static GVariant *handle_get_property(GDBusConnection  *connection,
+				const gchar *sender,
+				const gchar *object_path,
+				const gchar *interface_name,
+				const gchar *property_name,
+				GError **gerr,
+				gpointer user_data)
+{
+	GVariant *gvar = NULL;
+	/* TODO: add variable to store mac of gateway and power boolean */
+	if (g_strcmp0(property_name, "Address") == 0)
+		gvar = g_variant_new_string("mac");
+
+	else if (g_strcmp0(property_name, "Powered") == 0)
+		gvar = g_variant_new_boolean(TRUE);
+
+	return gvar;
+}
+
+static gboolean handle_set_property(GDBusConnection  *connection,
+				const gchar *sender,
+				const gchar *object_path,
+				const gchar *interface_name,
+				const gchar *property_name,
+				GVariant *value,
+				GError **gerr,
+				gpointer user_data)
+{
+	/*TODO: set boolean power property */
+	return TRUE;
+}
+
+static const GDBusInterfaceVTable interface_vtable = {
+	handle_method_call,
+	handle_get_property,
+	handle_set_property
+};
+
+static void on_bus_acquired(GDBusConnection *connection, const gchar *name,
+							gpointer user_data)
+{
+	guint registration_id;
+
+	registration_id = g_dbus_connection_register_object(connection,
+					"/org/cesar/knot/nrf0",
+					introspection_data->interfaces[0],
+					&interface_vtable,
+					NULL,  /* user_data */
+					NULL,  /* user_data_free_func */
+					NULL); /* GError** */
+	g_assert(registration_id > 0);
+}
+
+static void on_name_acquired(GDBusConnection *connection, const gchar *name,
+							gpointer user_data)
+{
+	/* Connection successfully estabilished */
+	log_info("Connection estabilished");
+}
+
+static void on_name_lost(GDBusConnection *connection, const gchar *name,
+							gpointer user_data)
+{
+	if (!connection) {
+		/* Connection error */
+		log_error("Connection failure");
+	} else {
+		/* Name not owned */
+		log_error("Name can't be obtained");
+	}
+
+	g_dbus_node_info_unref(introspection_data);
+	exit(EXIT_FAILURE);
+}
+
+static guint dbus_init(void)
+{
+	guint owner_id;
+
+	introspection_data = g_dbus_node_info_new_for_xml(introspection_xml,
+									NULL);
+	g_assert(introspection_data != NULL);
+
+	owner_id = g_bus_own_name(G_BUS_TYPE_SYSTEM,
+					"org.cesar.knot.nrf",
+					G_BUS_NAME_OWNER_FLAGS_NONE,
+					on_bus_acquired, on_name_acquired,
+					on_name_lost, NULL, NULL);
+
+	return owner_id;
+}
+
+static void dbus_on_close(guint owner_id)
+{
+	g_bus_unown_name(owner_id);
+	g_dbus_node_info_unref(introspection_data);
+}
 
 /* Check if peer is on list of known peers */
 static int8_t check_permission(struct nrf24_mac mac)
@@ -119,7 +262,6 @@ static int connect_unix(void)
 
 static void knotd_io_destroy(gpointer user_data)
 {
-
 	struct peer *p = (struct peer *)user_data;
 	hal_comm_close(p->socket_fd);
 	close(p->knotd_fd);
@@ -663,6 +805,8 @@ int manager_start(const char *file, const char *host, int port,
 		log_error("Invalid configuration file: %s", file);
 		return err;
 	}
+	/* Start server dbus */
+	dbus_id = dbus_init();
 
 	 /* Validate and set the channel */
 	if (channel < 0 || channel > 125)
@@ -687,5 +831,6 @@ int manager_start(const char *file, const char *host, int port,
 
 void manager_stop(void)
 {
+	dbus_on_close(dbus_id);
 	radio_stop();
 }
