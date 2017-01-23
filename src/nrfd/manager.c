@@ -77,6 +77,10 @@ static const gchar introspection_xml[] =
 	"      <arg type='s' name='key' direction='in'/>"
 	"      <arg type='b' name='response' direction='out'/>"
 	"    </method>"
+	"    <method name='RemoveDevice'>"
+	"      <arg type='s' name='mac' direction='in'/>"
+	"      <arg type='b' name='response' direction='out'/>"
+	"    </method>"
 	"    <property type='s' name='Address' access='read'/>"
 	"    <property type='s' name='Powered' access='readwrite'/>"
 	"  </interface>"
@@ -123,23 +127,51 @@ done:
 	return response;
 }
 
-static void handle_method_call(GDBusConnection *connection,
-					const gchar *sender,
-					const gchar *object_path,
-					const gchar *interface_name,
-					const gchar *method_name,
-					GVariant *parameters,
-					GDBusMethodInvocation *invocation,
-					gpointer user_data)
+static gboolean remove_known_device(const gchar *mac)
 {
-	if (g_strcmp0("AddDevice", method_name) == 0) {
-		const gchar *mac;
-		const gchar *key;
-		gboolean response;
+	uint8_t i;
+	gboolean response = FALSE;
+	struct nrf24_mac dev;
 
+	nrf24_str2mac(mac, &dev);
+	/* TODO: update keys file to remove mac */
+	for (i = 0; i < MAX_PEERS; i++) {
+		if (adapter.known_peers[i].address.uint64 ==
+							dev.address.uint64) {
+			/* Remove mac from struct */
+			adapter.known_peers[i].address.uint64 = 0;
+			adapter.known_peers_size--;
+			response = TRUE;
+			break;
+		}
+	}
+
+	return response;
+}
+
+static void handle_method_call(GDBusConnection *connection,
+				const gchar *sender,
+				const gchar *object_path,
+				const gchar *interface_name,
+				const gchar *method_name,
+				GVariant *parameters,
+				GDBusMethodInvocation *invocation,
+				gpointer user_data)
+{
+	const gchar *mac;
+	const gchar *key;
+	gboolean response;
+
+	if (g_strcmp0(method_name, "AddDevice") == 0) {
 		g_variant_get(parameters, "(&s&s)", &mac, &key);
 		/* Add or Update mac address */
 		response = add_known_device(mac, key);
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(b)", response));
+	} else if (g_strcmp0(method_name, "RemoveDevice") == 0) {
+		g_variant_get(parameters, "(&s)", &mac);
+		/* Remove device */
+		response = remove_known_device(mac);
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(b)", response));
 	}
