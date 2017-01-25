@@ -45,7 +45,7 @@ static void sig_term(int sig)
  */
 static GOptionEntry options[] = {
 
-	{ "config", 'f', 0, G_OPTION_ARG_STRING, &opt_cfg,
+	{ "config", 'c', 0, G_OPTION_ARG_STRING, &opt_cfg,
 					"configuration file path", NULL },
 	{ "host", 'h', 0, G_OPTION_ARG_STRING, &opt_host,
 					"host", "Host exposing nRF24L01 SPI" },
@@ -53,14 +53,14 @@ static GOptionEntry options[] = {
 					"port", "Remote port" },
 	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
 					"spi", "SPI device path" },
-	{ "nodes", 'n', 0, G_OPTION_ARG_STRING, &opt_nodes,
+	{ "nodes", 'f', 0, G_OPTION_ARG_STRING, &opt_nodes,
 					"nodes", "Known nodes file path" },
 	{ "channel", 'c', 0, G_OPTION_ARG_INT, &opt_channel,
 					"channel", "Broadcast channel" },
 	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_dbm,
 					"tx_power",
 		"TX power: transmition signal strength in dBm" },
-	{ "nodetach", 'd', G_OPTION_FLAG_REVERSE,
+	{ "nodetach", 'n', G_OPTION_FLAG_REVERSE,
 					G_OPTION_ARG_NONE, &opt_detach,
 					"Logging in foreground" },
 	{ NULL },
