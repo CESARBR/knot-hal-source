@@ -32,6 +32,7 @@ static const char *opt_spi = "/dev/spidev0.0";
 static int opt_channel = -1;
 static int opt_dbm = -255;
 static const char *opt_nodes = "/etc/knot/keys.json";
+static gboolean opt_detach = TRUE;
 
 static void sig_term(int sig)
 {
@@ -59,6 +60,9 @@ static GOptionEntry options[] = {
 	{ "tx", 't', 0, G_OPTION_ARG_INT, &opt_dbm,
 					"tx_power",
 		"TX power: transmition signal strength in dBm" },
+	{ "nodetach", 'd', G_OPTION_FLAG_REVERSE,
+					G_OPTION_ARG_NONE, &opt_detach,
+					"Logging in foreground" },
 	{ NULL },
 };
 
@@ -89,7 +93,7 @@ int main(int argc, char *argv[])
 	GIOChannel *inotify_io;
 	GIOChannel *inotify_keys_io;
 	struct stat sb;
-	int err;
+	int err, retval = 0;
 	int inotifyFD, wd;
 	int inotify_keys_fd, wd_keys;
 	guint watch_id;
@@ -129,7 +133,7 @@ int main(int argc, char *argv[])
 
 	main_loop = g_main_loop_new(NULL, FALSE);
 
-	log_init("nrfd", TRUE);
+	log_init("nrfd", opt_detach);
 	log_info("KNOT HAL nrfd");
 
 	if (opt_host)
@@ -140,8 +144,8 @@ int main(int argc, char *argv[])
 	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
 							opt_dbm, opt_nodes);
 	if (err < 0) {
-		g_main_loop_unref(main_loop);
 		log_error("manager_start(): %s(%d)", strerror(-err), -err);
+		g_main_loop_unref(main_loop);
 		log_close();
 		return EXIT_FAILURE;
 	}
@@ -187,8 +191,18 @@ int main(int argc, char *argv[])
 									 NULL);
 	g_io_channel_set_close_on_unref(inotify_io, TRUE);
 	g_io_channel_set_close_on_unref(inotify_keys_io, TRUE);
+
+	if (opt_detach) {
+		if (daemon(0, 0)) {
+			log_error("Can't start daemon!");
+			retval = EXIT_FAILURE;
+			goto done;
+		}
+	}
+
 	g_main_loop_run(main_loop);
 
+done:
 	g_source_remove(watch_id);
 	g_source_remove(watch_keys_id);
 	g_io_channel_unref(inotify_io);
@@ -207,5 +221,5 @@ int main(int argc, char *argv[])
 
 	g_main_loop_unref(main_loop);
 
-	return 0;
+	return retval;
 }
