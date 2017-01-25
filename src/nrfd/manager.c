@@ -27,6 +27,7 @@
 #include "include/time.h"
 
 #include "nrf24l01_io.h"
+#include "log.h"
 #include "manager.h"
 
 #define KNOTD_UNIX_ADDRESS		"knot"
@@ -139,7 +140,7 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 	/* Read data from Knotd */
 	readbytes_knotd = read(p->knotd_fd, buffer, sizeof(buffer));
 	if (readbytes_knotd < 0) {
-		printf("read_knotd() error\n\r");
+		log_error("read_knotd() error");
 		return FALSE;
 	}
 
@@ -256,7 +257,7 @@ static int8_t clients_read()
 			sizeof(buffer));
 		if (ret > 0) {
 			if (write(peers[i].knotd_fd, buffer, ret) < 0)
-				printf("write_knotd() error\n\r");
+				log_error("write_knotd() error");
 		}
 	}
 	return 0;
@@ -372,7 +373,7 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 	status = g_io_channel_read_chars(io, buffer, sizeof(buffer),
 						 &rbytes, &gerr);
 	if (status == G_IO_STATUS_ERROR) {
-		printf("read(): %s\n", gerr->message);
+		log_error("read(): %s", gerr->message);
 		g_error_free(gerr);
 		return FALSE;
 	}
@@ -384,7 +385,7 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 	 * Decode based on nRF PIPE information and forward
 	 * the data through a unix socket to knotd.
 	 */
-	printf("read(): %lu bytes\n", rbytes);
+	log_info("read(): %lu bytes", rbytes);
 
 	return TRUE;
 }
@@ -401,8 +402,7 @@ static int tcp_init(const char *host, int port)
 	hostent = gethostbyname(host);
 	if (hostent == NULL) {
 		err = errno;
-		fprintf(stderr, "gethostbyname(): %s(%d)\n",
-						strerror(err), err);
+		log_error("gethostbyname(): %s(%d)", strerror(err), err);
 		return -err;
 	}
 
@@ -411,7 +411,7 @@ static int tcp_init(const char *host, int port)
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock < 0) {
 		err = errno;
-		fprintf(stderr, "socket(): %s(%d)\n", strerror(err), err);
+		log_error("socket(): %s(%d)", strerror(err), err);
 		return -err;
 	}
 
@@ -423,12 +423,12 @@ static int tcp_init(const char *host, int port)
 	err = connect(sock, (struct sockaddr *) &server, sizeof(server));
 	if (err < 0) {
 		err = errno;
-		fprintf(stderr, "connect(): %s(%d)\n", strerror(err), err);
+		log_error("connect(): %s(%d)", strerror(err), err);
 		close(sock);
 		return -err;
 	}
 
-	fprintf(stdout, "nRF Proxy address: %s\n", inet_ntoa(h_addr));
+	log_info("nRF Proxy address: %s", inet_ntoa(h_addr));
 
 	io = g_io_channel_unix_new(sock);
 	g_io_channel_set_close_on_unref(io, TRUE);
@@ -453,7 +453,7 @@ static char *load_config(const char *file)
 	FILE *fl = fopen(file, "r");
 
 	if (fl == NULL) {
-		fprintf(stderr, "No such file available: %s\n", file);
+		log_error("No such file available: %s", file);
 		return NULL;
 	}
 
@@ -596,7 +596,7 @@ static int parse_nodes(const char *nodes_file)
 
 	array_len = json_object_array_length(obj_keys);
 	if (array_len > MAX_PEERS) {
-		printf("Invalid numbers of nodes in input archive");
+		log_error("Invalid numbers of nodes in input archive");
 		goto failure;
 	}
 	for (i = 0; i < array_len; i++) {
@@ -645,7 +645,7 @@ int manager_start(const char *file, const char *host, int port,
 	free(json_str);
 
 	if (err < 0) {
-		fprintf(stderr, "Invalid configuration file: %s\n", file);
+		log_error("Invalid configuration file: %s", file);
 		return err;
 	}
 

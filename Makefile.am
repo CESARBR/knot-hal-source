@@ -19,6 +19,7 @@ proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
 proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 src_nrfd_nrfd_SOURCES = src/nrfd/main.c \
+				src/nrfd/log.h src/nrfd/log.c \
 				src/nrfd/manager.h src/nrfd/manager.c
 src_nrfd_nrfd_LDADD = libs/libhalcommnrf24.a \
 				libs/libphy_driver.a \

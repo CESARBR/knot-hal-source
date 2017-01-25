@@ -17,6 +17,7 @@
 #include <glib.h>
 #include <sys/inotify.h>
 
+#include "log.h"
 #include "manager.h"
 
 #define BUF_LEN (sizeof(struct inotify_event))
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
 	g_option_context_add_main_entries(context, options, NULL);
 
 	if (!g_option_context_parse(context, &argc, &argv, &gerr)) {
-		printf("Invalid arguments: %s\n", gerr->message);
+		g_printerr("Invalid arguments: %s\n", gerr->message);
 		g_error_free(gerr);
 		g_option_context_free(context);
 		return EXIT_FAILURE;
@@ -108,17 +109,17 @@ int main(int argc, char *argv[])
 
 	if (stat(opt_cfg, &sb) == -1) {
 		err = errno;
-		printf("%s: %s(%d)\n", opt_cfg, strerror(err), err);
+		g_printerr("%s: %s(%d)\n", opt_cfg, strerror(err), err);
 		return EXIT_FAILURE;
 	}
 
 	if ((sb.st_mode & S_IFMT) != S_IFREG) {
-		printf("%s is not a regular file!\n", opt_cfg);
+		g_printerr("%s is not a regular file!\n", opt_cfg);
 		return EXIT_FAILURE;
 	}
 
 	if (!opt_nodes) {
-		printf("Missing KNOT known nodes file!\n");
+		g_printerr("Missing KNOT known nodes file!\n");
 		return EXIT_FAILURE;
 	}
 
@@ -128,25 +129,30 @@ int main(int argc, char *argv[])
 
 	main_loop = g_main_loop_new(NULL, FALSE);
 
-	printf("KNOT HAL phynrfd\n");
+	log_init("nrfd", TRUE);
+	log_info("KNOT HAL nrfd");
+
 	if (opt_host)
-		printf("Development mode: %s:%u\n", opt_host, opt_port);
+		log_error("Development mode: %s:%u", opt_host, opt_port);
 	else
-		printf("Native SPI mode\n");
+		log_error("Native SPI mode");
 
 	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
 							opt_dbm, opt_nodes);
 	if (err < 0) {
 		g_main_loop_unref(main_loop);
+		log_error("manager_start(): %s(%d)", strerror(-err), -err);
+		log_close();
 		return EXIT_FAILURE;
 	}
 
 	/* Set user id to nobody */
 	if (setuid(65534) != 0) {
 		err = errno;
-		printf("Set uid to nobody failed. %s(%d). Exiting...\n",
+		log_error("Set uid to nobody failed. %s(%d). Exiting...",
 							strerror(err), err);
 		manager_stop();
+		log_close();
 		return EXIT_FAILURE;
 	}
 
@@ -154,20 +160,22 @@ int main(int argc, char *argv[])
 	inotifyFD = inotify_init();
 	wd = inotify_add_watch(inotifyFD, opt_cfg, IN_MODIFY);
 	if (wd == -1) {
-		printf("Error adding watch on: %s\n", opt_cfg);
+		log_error("Error adding watch on: %s", opt_cfg);
 		close(inotifyFD);
 		manager_stop();
+		log_close();
 		return EXIT_FAILURE;
 	}
 	/* Starting inotify for known peers file*/
 	inotify_keys_fd = inotify_init();
 	wd_keys = inotify_add_watch(inotify_keys_fd, opt_nodes, IN_MODIFY);
 	if (wd_keys == -1) {
-		printf("Error adding watch on: %s\n", opt_nodes);
+		log_error("Error adding watch on: %s", opt_nodes);
 		inotify_rm_watch(inotifyFD, wd);
 		close(inotifyFD);
 		close(inotify_keys_fd);
 		manager_stop();
+		log_close();
 		return EXIT_FAILURE;
 	}
 
@@ -193,6 +201,9 @@ int main(int argc, char *argv[])
 	close(inotify_keys_fd);
 
 	manager_stop();
+
+	log_error("exiting ...");
+	log_close();
 
 	g_main_loop_unref(main_loop);
 
