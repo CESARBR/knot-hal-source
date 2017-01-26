@@ -108,6 +108,8 @@ static GVariant *handle_device_get_property(GDBusConnection *connection,
 	} else if (g_strcmp0(property_name, "Status") == 0) {
 		/* check if peer is connected */
 		ret = g_variant_new_boolean(TRUE);
+	} else {
+		ret = g_variant_new_string("Unknown property requested");
 	}
 
 	return ret;
@@ -209,6 +211,9 @@ static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
 
 	/* If struct has free space add device to struct */
 	if (adapter.known_peers_size < MAX_PEERS) {
+		if (new_device_object(connection, free_pos) < 0)
+			goto done;
+
 		adapter.known_peers[free_pos].address.uint64 =
 							new_dev.address.uint64;
 		/* TODO: Set key for this mac */
@@ -228,7 +233,8 @@ static gboolean remove_known_device(GDBusConnection *connection,
 	gboolean response = FALSE;
 	struct nrf24_mac dev;
 
-	nrf24_str2mac(mac, &dev);
+	if (nrf24_str2mac(mac, &dev) < 0)
+		return FALSE;
 	/* TODO: update keys file to remove mac */
 	for (i = 0; i < MAX_PEERS; i++) {
 		if (adapter.known_peers[i].address.uint64 ==
@@ -291,6 +297,8 @@ static GVariant *handle_get_property(GDBusConnection  *connection,
 		gvar = g_variant_new("s", str_mac);
 	} else if (g_strcmp0(property_name, "Powered") == 0) {
 		gvar = g_variant_new_boolean(adapter.powered);
+	} else {
+		gvar = g_variant_new_string("Unknown property requested");
 	}
 
 	return gvar;
@@ -328,6 +336,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name,
 					NULL,  /* user_data_free_func */
 					NULL); /* GError** */
 	g_assert(registration_id > 0);
+	/* TODO Register on dbus every object already in keys.json */
 }
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name,
