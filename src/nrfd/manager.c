@@ -40,6 +40,8 @@ static guint dbus_id;
 
 static struct adapter {
 	struct nrf24_mac mac;
+	/* file with struct keys */
+	gchar *file_name;
 	gboolean powered;
 	/* Struct with the known peers */
 	struct {
@@ -89,6 +91,64 @@ static const gchar introspection_xml[] =
 	"    <property type='s' name='Powered' access='readwrite'/>"
 	"  </interface>"
 	"</node>";
+
+static int write_file(const gchar *addr, const gchar *key, const gchar *name)
+{
+	int array_len;
+	int i;
+	int err = -EINVAL;
+	json_object *jobj, *jobj2;
+	json_object *obj_keys, *obj_array, *obj_tmp, *obj_mac;
+
+	/* Load nodes' info from json file */
+	jobj = json_object_from_file(adapter.file_name);
+	if (!jobj)
+		return -EINVAL;
+
+	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
+		goto failure;
+
+	array_len = json_object_array_length(obj_keys);
+	/*
+	 * If name and key are NULL it means to remove element
+	 * If only name is NULL, update some element
+	 * Otherwise add some element to file
+	 */
+	if (name == NULL && key == NULL) {
+		jobj2 = json_object_new_object();
+		obj_array = json_object_new_array();
+		for (i = 0; i < array_len; i++) {
+			obj_tmp = json_object_array_get_idx(obj_keys, i);
+			if (!json_object_object_get_ex(obj_tmp, "mac",
+								&obj_mac))
+				goto failure;
+
+		/* Parse mac address string into struct nrf24_mac known_peers */
+			if (g_strcmp0(json_object_get_string(obj_mac), addr)
+									!= 0)
+				json_object_array_add(obj_array,
+						json_object_get(obj_tmp));
+		}
+		json_object_object_add(jobj2, "keys", obj_array);
+		json_object_to_file(adapter.file_name, jobj2);
+		json_object_put(jobj2);
+	} else if (name == NULL) {
+	/* TODO update key of some mac (depends on adding keys to file) */
+	} else {
+		obj_tmp = json_object_new_object();
+		json_object_object_add(obj_tmp, "name",
+						json_object_new_string(name));
+		json_object_object_add(obj_tmp, "mac",
+						json_object_new_string(addr));
+		json_object_array_add(obj_keys, obj_tmp);
+		json_object_to_file(adapter.file_name, jobj);
+	}
+
+	err = 0;
+failure:
+	json_object_put(jobj);
+	return err;
+}
 
 static GVariant *handle_device_get_property(GDBusConnection *connection,
 				const gchar *sender,
@@ -194,19 +254,20 @@ static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
 
 	if (nrf24_str2mac(mac, &new_dev) < 0)
 		goto done;
-	/* TODO: update keys file whith any change to struct*/
+
 	for (i = 0, alloc_pos = 0, free_pos = -1; alloc_pos <
 					adapter.known_peers_size; i++) {
 		if (adapter.known_peers[i].addr.address.uint64 ==
 						new_dev.address.uint64) {
-			/* TODO: Update key of existing mac */
+			if (write_file(mac, key, NULL) < 0)
+				log_error("Error writing to file");
 			response = TRUE;
 			goto done;
 
 		} else if (adapter.known_peers[i].addr.address.uint64 != 0) {
 			alloc_pos++;
 		} else if (free_pos < 0) {
-			/* store available position in array */
+			/* store available position */
 			free_pos = i;
 		}
 	}
@@ -225,6 +286,8 @@ static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
 		adapter.known_peers[free_pos].alias = g_strdup(alias);
 		adapter.known_peers[free_pos].status = FALSE;
 		/* TODO: Set key for this mac */
+		if (write_file(mac, key, alias) < 0)
+			log_error("Error writing to file");
 		adapter.known_peers_size++;
 		response = TRUE;
 	}
@@ -242,7 +305,7 @@ static gboolean remove_known_device(GDBusConnection *connection,
 
 	if (nrf24_str2mac(mac, &dev) < 0)
 		return FALSE;
-	/* TODO: update keys file to remove mac */
+
 	for (i = 0; i < MAX_PEERS; i++) {
 		if (adapter.known_peers[i].addr.address.uint64 ==
 							dev.address.uint64) {
@@ -253,6 +316,8 @@ static gboolean remove_known_device(GDBusConnection *connection,
 			adapter.known_peers[i].addr.address.uint64 = 0;
 			g_free(adapter.known_peers[i].alias);
 			adapter.known_peers_size--;
+			if (write_file(mac, NULL, NULL) < 0)
+				log_error("Error writing to file");
 			response = TRUE;
 			break;
 		}
@@ -430,6 +495,7 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name,
 		log_error("Name can't be obtained");
 	}
 
+	g_free(adapter.file_name);
 	g_dbus_node_info_unref(introspection_data);
 	exit(EXIT_FAILURE);
 }
@@ -461,6 +527,7 @@ static void dbus_on_close(guint owner_id)
 		if (adapter.known_peers[i].addr.address.uint64 != 0)
 			g_free(adapter.known_peers[i].alias);
 	}
+	g_free(adapter.file_name);
 	g_bus_unown_name(owner_id);
 	g_dbus_node_info_unref(introspection_data);
 }
@@ -1084,6 +1151,7 @@ int manager_start(const char *file, const char *host, int port,
 		err = gen_save_mac(json_str, file, &mac);
 
 	free(json_str);
+	adapter.file_name = g_strdup(nodes_file);
 	adapter.mac = mac;
 	adapter.powered = TRUE;
 
