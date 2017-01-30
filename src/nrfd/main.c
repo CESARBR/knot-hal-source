@@ -91,13 +91,10 @@ int main(int argc, char *argv[])
 	GOptionContext *context;
 	GError *gerr = NULL;
 	GIOChannel *inotify_io;
-	GIOChannel *inotify_keys_io;
 	struct stat sb;
 	int err, retval = 0;
 	int inotifyFD, wd;
-	int inotify_keys_fd, wd_keys;
 	guint watch_id;
-	guint watch_keys_id;
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
@@ -170,27 +167,11 @@ int main(int argc, char *argv[])
 		log_close();
 		return EXIT_FAILURE;
 	}
-	/* Starting inotify for known peers file*/
-	inotify_keys_fd = inotify_init();
-	wd_keys = inotify_add_watch(inotify_keys_fd, opt_nodes, IN_MODIFY);
-	if (wd_keys == -1) {
-		log_error("Error adding watch on: %s", opt_nodes);
-		inotify_rm_watch(inotifyFD, wd);
-		close(inotifyFD);
-		close(inotify_keys_fd);
-		manager_stop();
-		log_close();
-		return EXIT_FAILURE;
-	}
 
 	/* Setting gio channel to watch inotify fd*/
 	inotify_io = g_io_channel_unix_new(inotifyFD);
-	inotify_keys_io = g_io_channel_unix_new(inotify_keys_fd);
 	watch_id = g_io_add_watch(inotify_io, G_IO_IN, inotify_cb, NULL);
-	watch_keys_id = g_io_add_watch(inotify_keys_io, G_IO_IN, inotify_cb,
-									 NULL);
 	g_io_channel_set_close_on_unref(inotify_io, TRUE);
-	g_io_channel_set_close_on_unref(inotify_keys_io, TRUE);
 
 	if (opt_detach) {
 		if (daemon(0, 0)) {
@@ -204,15 +185,11 @@ int main(int argc, char *argv[])
 
 done:
 	g_source_remove(watch_id);
-	g_source_remove(watch_keys_id);
 	g_io_channel_unref(inotify_io);
-	g_io_channel_unref(inotify_keys_io);
 	/* Removing from the watch list.*/
 	inotify_rm_watch(inotifyFD, wd);
-	inotify_rm_watch(inotify_keys_fd, wd_keys);
 	/* Closing the INOTIFY instance */
 	close(inotifyFD);
-	close(inotify_keys_fd);
 
 	manager_stop();
 
