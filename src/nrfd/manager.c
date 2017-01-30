@@ -86,10 +86,103 @@ static const gchar introspection_xml[] =
 	"  </interface>"
 	"</node>";
 
-static gboolean add_known_device(const gchar *mac, const gchar *key)
+static GVariant *handle_device_get_property(GDBusConnection *connection,
+				const gchar *sender,
+				const gchar *object_path,
+				const gchar *interface_name,
+				const gchar *property_name,
+				GError **error,
+				gpointer user_data)
+{
+	GVariant *ret = NULL;
+	char str_mac[24];
+	gint device;
+
+	device = GPOINTER_TO_INT(user_data);
+	/* TODO implement Alias and Status */
+	if (g_strcmp0(property_name, "Mac") == 0) {
+		nrf24_mac2str(adapter.known_peers + device, str_mac);
+		ret = g_variant_new("s", str_mac);
+	} else if (g_strcmp0(property_name, "Alias") == 0) {
+		ret = g_variant_new("s", "ALIAS");
+	} else if (g_strcmp0(property_name, "Status") == 0) {
+		/* check if peer is connected */
+		ret = g_variant_new_boolean(TRUE);
+	}
+
+	return ret;
+}
+
+static int8_t new_device_object(GDBusConnection *connection, uint32_t free_pos)
+{
+	uint8_t i;
+	guint registration_id;
+	GDBusInterfaceInfo *interface;
+	GDBusPropertyInfo **properties;
+	gchar object_path[21];
+	gchar *name[] = {"Mac", "Alias", "Status"};
+	gchar *signature[] = {"s", "s", "b"};
+	GDBusInterfaceVTable interface_device_vtable = {
+		NULL,
+		handle_device_get_property,
+		NULL
+	};
+
+	properties = g_new0(GDBusPropertyInfo *, 4);
+	for (i = 0; i < 3; i++) {
+		properties[i] = g_new0(GDBusPropertyInfo, 1);
+		/*
+		 * properties->ref_count is incremented here because when
+		 * registering an object the function only increments
+		 * interface->ref_count. Not doing this leads to the memory
+		 * of properties not being deallocated when we call
+		 * g_dbus_connection_unregister_object.
+		 */
+		g_atomic_int_inc(&properties[i]->ref_count);
+		properties[i]->name = g_strdup(name[i]);
+		properties[i]->signature = g_strdup(signature[i]);
+		properties[i]->flags = G_DBUS_PROPERTY_INFO_FLAGS_READABLE;
+		properties[i]->annotations = NULL;
+	}
+
+	interface = g_new0(GDBusInterfaceInfo, 1);
+	interface->name = g_strdup("org.cesar.knot.mac.manager");
+	interface->methods = NULL;
+	interface->signals = NULL;
+	interface->properties = properties;
+	interface->annotations = NULL;
+
+	snprintf(object_path, 21, "/org/cesar/knot/mac%d", free_pos);
+
+	registration_id = g_dbus_connection_register_object(
+					connection,
+					object_path,
+					interface,
+					&interface_device_vtable,
+					GINT_TO_POINTER(free_pos),  /* user data */
+					NULL,  /* user data free func */
+					NULL); /* GError** */
+	/* Free mem if fail */
+	if (registration_id <= 0) {
+		for (i = 0; properties[i] != NULL; i++) {
+			g_free(properties[i]->name);
+			g_free(properties[i]->signature);
+			g_free(properties[i]);
+		}
+		g_free(properties);
+		g_free(interface->name);
+		g_free(interface);
+		return -1;
+	}
+	adapter.registration_id[free_pos] = registration_id;
+	return 0;
+}
+
+static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
+							const gchar *key)
 {
 	uint8_t alloc_pos, i;
-	int8_t free_pos;
+	int32_t free_pos;
 	gboolean response = FALSE;
 	struct nrf24_mac new_dev;
 
@@ -121,13 +214,15 @@ static gboolean add_known_device(const gchar *mac, const gchar *key)
 		/* TODO: Set key for this mac */
 		adapter.known_peers_size++;
 		response = TRUE;
+		new_device_object(connection, free_pos);
 	}
 
 done:
 	return response;
 }
 
-static gboolean remove_known_device(const gchar *mac)
+static gboolean remove_known_device(GDBusConnection *connection,
+							const gchar *mac)
 {
 	uint8_t i;
 	gboolean response = FALSE;
@@ -138,6 +233,9 @@ static gboolean remove_known_device(const gchar *mac)
 	for (i = 0; i < MAX_PEERS; i++) {
 		if (adapter.known_peers[i].address.uint64 ==
 							dev.address.uint64) {
+			if (!g_dbus_connection_unregister_object(connection,
+				adapter.registration_id[i]))
+				break;
 			/* Remove mac from struct */
 			adapter.known_peers[i].address.uint64 = 0;
 			adapter.known_peers_size--;
@@ -165,13 +263,13 @@ static void handle_method_call(GDBusConnection *connection,
 	if (g_strcmp0(method_name, "AddDevice") == 0) {
 		g_variant_get(parameters, "(&s&s)", &mac, &key);
 		/* Add or Update mac address */
-		response = add_known_device(mac, key);
+		response = add_known_device(connection, mac, key);
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(b)", response));
 	} else if (g_strcmp0(method_name, "RemoveDevice") == 0) {
 		g_variant_get(parameters, "(&s)", &mac);
 		/* Remove device */
-		response = remove_known_device(mac);
+		response = remove_known_device(connection, mac);
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(b)", response));
 	}
