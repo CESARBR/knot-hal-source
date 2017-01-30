@@ -82,9 +82,45 @@ static const gchar introspection_xml[] =
 	"  </interface>"
 	"</node>";
 
-static gboolean add_device(const gchar *mac, const gchar *key)
+static gboolean add_known_device(const gchar *mac, const gchar *key)
 {
-	return TRUE;
+	uint8_t alloc_pos, i;
+	int8_t free_pos;
+	gboolean response = FALSE;
+	struct nrf24_mac new_dev;
+
+	if (nrf24_str2mac(mac, &new_dev) < 0)
+		goto done;
+	/* TODO: update keys file whith any change to struct*/
+	for (i = 0, alloc_pos = 0, free_pos = -1; alloc_pos <
+					adapter.known_peers_size; i++) {
+		if (adapter.known_peers[i].address.uint64 ==
+						new_dev.address.uint64) {
+			/* TODO: Update key of existing mac */
+			response = TRUE;
+			goto done;
+		} else if (adapter.known_peers[i].address.uint64 != 0) {
+			alloc_pos++;
+		} else if (free_pos < 0) {
+			/* store available position in array */
+			free_pos = i;
+		}
+	}
+	/* If there is no empty space between allocated spaces */
+	if (free_pos < 0)
+		free_pos = i;
+
+	/* If struct has free space add device to struct */
+	if (adapter.known_peers_size < MAX_PEERS) {
+		adapter.known_peers[free_pos].address.uint64 =
+							new_dev.address.uint64;
+		/* TODO: Set key for this mac */
+		adapter.known_peers_size++;
+		response = TRUE;
+	}
+
+done:
+	return response;
 }
 
 static void handle_method_call(GDBusConnection *connection,
@@ -103,7 +139,7 @@ static void handle_method_call(GDBusConnection *connection,
 
 		g_variant_get(parameters, "(&s&s)", &mac, &key);
 		/* Add or Update mac address */
-		response = add_device(mac, key);
+		response = add_known_device(mac, key);
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(b)", response));
 	}
