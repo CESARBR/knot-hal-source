@@ -31,6 +31,8 @@
 #include "manager.h"
 
 #define KNOTD_UNIX_ADDRESS		"knot"
+#define MAC_ADDRESS_SIZE		24
+
 static int mgmtfd;
 static guint mgmtwatch;
 
@@ -156,8 +158,16 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	int8_t position;
 	int err;
+	char mac_str[MAC_ADDRESS_SIZE];
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
 			(struct mgmt_evt_nrf24_bcast_presence *) mhdr->payload;
+
+	/*
+	 * Print every MAC sending presence in order to ease the discover of
+	 * things trying to connect to the gw.
+	 */
+	nrf24_mac2str(&evt_pre->mac, mac_str);
+	log_info("Thing sending presence. MAC = %s", mac_str);
 
 	/* Check if peer is allowed to connect */
 	if (check_permission(evt_pre->mac) < 0)
