@@ -174,14 +174,12 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 
 		src = ADDR_UUID;
 		break;
-
 	case HAL_STORAGE_ID_TOKEN:
 		if (len > TOKEN_SIZE)
 			len = TOKEN_SIZE;
 
 		src = ADDR_TOKEN;
 		break;
-
 	case HAL_STORAGE_ID_MAC:
 		if (len > MAC_SIZE)
 			len = MAC_SIZE;
@@ -205,6 +203,12 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 			len = PUBLIC_KEY_SIZE;
 
 		src = ADDR_PUBLIC_KEY;
+		break;
+	case HAL_STORAGE_ID_FOREIGN_KEY:
+		if (len > FOREIGN_KEY_SIZE)
+			len = FOREIGN_KEY_SIZE;
+
+		src = ADDR_FOREIGN_KEY;
 		break;
 	case HAL_STORAGE_ID_CONFIG:
 		/*
@@ -233,9 +237,7 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 
 		/* Compute config address offset at eeprom */
 		src = ADDR_OFFSET_CONFIG - src;
-
 		break;
-
 	default:
 		return -EINVAL;
 	}
