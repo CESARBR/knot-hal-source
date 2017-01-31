@@ -258,6 +258,7 @@ void hal_storage_reset_end(void)
 		uint8_t schema_flag[SCHEMA_FLAG_SIZE];
 		uint8_t private_key[PRIVATE_KEY_SIZE];
 		uint8_t public_key[PUBLIC_KEY_SIZE];
+		uint8_t foreign_key[FOREIGN_KEY_SIZE];
 	} data;
 
 	memset(&data, 0, sizeof(data));
@@ -271,5 +272,7 @@ void hal_storage_reset_end(void)
 		 sizeof(data.private_key));
 	hal_storage_write_end(HAL_STORAGE_ID_PUBLIC_KEY, data.public_key,
 		 sizeof(data.public_key));
+	hal_storage_write_end(HAL_STORAGE_ID_FOREIGN_KEY, data.foreign_key,
+		 sizeof(data.foreign_key));
 	eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, 0);
 }
