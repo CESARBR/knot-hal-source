@@ -21,10 +21,13 @@
 #define SCHEMA_FLAG_SIZE	1
 #define PRIVATE_KEY_SIZE	32
 #define PUBLIC_KEY_SIZE	64
+#define FOREIGN_KEY_SIZE	64
 #define TYPE_PRIVATE_KEY	0
 #define TYPE_PRIVATE_KEY_OUT	1
 #define TYPE_PUBLIC_KEY	2
 #define TYPE_PUBLIC_KEY_OUT	3
+#define TYPE_FOREIGN_KEY	4
+#define TYPE_FOREIGN_KEY_OUT	5
 
 #define CONFIG_SIZE 		sizeof(uint16_t)
 
@@ -35,8 +38,8 @@
 #define ADDR_SCHEMA_FLAG	(ADDR_MAC - SCHEMA_FLAG_SIZE)
 #define ADDR_PRIVATE_KEY	(ADDR_SCHEMA_FLAG - PRIVATE_KEY_SIZE)
 #define ADDR_PUBLIC_KEY	(ADDR_PRIVATE_KEY - PUBLIC_KEY_SIZE)
-
-#define ADDR_OFFSET_CONFIG	(ADDR_PUBLIC_KEY - CONFIG_SIZE)
+#define ADDR_FOREIGN_KEY	(ADDR_PUBLIC_KEY - FOREIGN_KEY_SIZE)
+#define ADDR_OFFSET_CONFIG	(ADDR_FOREIGN_KEY - CONFIG_SIZE)
 
 /* Sample values */
 static char value_UUID[UUID_SIZE] = "361ff48d-c534-4ac6-a7b7-70e648a80000";
@@ -59,6 +62,15 @@ static uint8_t value_PUBLIC_KEY[PUBLIC_KEY_SIZE] = {
 	     0xB0, 0xC5, 0x5A, 0x86, 0xB9, 0x60, 0xF4
 };
 static uint8_t value_PUBLIC_KEY_out[PUBLIC_KEY_SIZE];
+static uint8_t value_FOREIGN_KEY[FOREIGN_KEY_SIZE] = {
+	0x06, 0xE6, 0x9C, 0xFE, 0x72, 0x2A, 0xAC, 0x71, 0x55, 0xA3, 0x4A, 0x9A,
+	 0xD1, 0x6B, 0x21, 0xA7, 0x51, 0xCC, 0xE8, 0xA0, 0x5C, 0x65, 0xC2, 0xA8,
+	  0x77, 0xDD, 0x9D, 0x4C, 0x3D, 0xDC, 0x7A, 0x03, 0x84, 0x7E, 0x37,
+	   0xC3, 0x08, 0x70, 0x17, 0xDB, 0xCD, 0xF1, 0x31, 0xD0, 0x79, 0xEF,
+	    0x2E, 0xB0, 0xF2, 0x09, 0xBA, 0xDF, 0x57, 0xE8, 0xA5, 0x3D, 0x47,
+	     0xE1, 0x1D, 0x42, 0x1B, 0x32, 0x3F, 0x96
+};
+static uint8_t value_FOREIGN_KEY_out[FOREIGN_KEY_SIZE];
 
 static union {
 	uint64_t dw;
@@ -101,6 +113,12 @@ static void print_key(const uint8_t *key, uint16_t size,
 	case TYPE_PUBLIC_KEY_OUT:
 		printf("PUBLIC KEY read: \t");
 		break;
+	case TYPE_FOREIGN_KEY:
+		printf("FOREIGN KEY: \t\t");
+		break;
+	case TYPE_FOREIGN_KEY_OUT:
+		printf("FOREIGN KEY read: \t");
+		break;
 	default:
 		break;
 	}
@@ -140,6 +158,9 @@ void setup()
 	eeprom_write_block(&value_PUBLIC_KEY, (void *) ADDR_PUBLIC_KEY,
 	 sizeof(value_PUBLIC_KEY));
 
+	eeprom_write_block(&value_FOREIGN_KEY, (void *) ADDR_FOREIGN_KEY,
+	 sizeof(value_FOREIGN_KEY));
+
 	eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, sizeof(conf));
 	eeprom_write_block(conf, (void *) (ADDR_OFFSET_CONFIG - sizeof(conf)), sizeof(conf));
 
@@ -157,6 +178,9 @@ void setup()
 
 	hal_storage_read_end(HAL_STORAGE_ID_PUBLIC_KEY,
 		 (void *) value_PUBLIC_KEY_out, sizeof(value_PUBLIC_KEY_out));
+
+	hal_storage_read_end(HAL_STORAGE_ID_FOREIGN_KEY,
+		 (void *) value_FOREIGN_KEY_out, sizeof(value_FOREIGN_KEY_out));
 
 	hal_storage_read_end(HAL_STORAGE_ID_CONFIG, conf_out, sizeof(conf_out));
 
@@ -211,6 +235,19 @@ void setup()
 	printf("\n");
 	print_key(value_PUBLIC_KEY_out, sizeof(value_PUBLIC_KEY_out),
 	 TYPE_PUBLIC_KEY_OUT);
+	printf("\n\n");
+
+	/* FOREIGN KEY */
+	if ((memcmp(value_FOREIGN_KEY, value_FOREIGN_KEY_out,
+		 sizeof(value_FOREIGN_KEY))) == 0)
+		printf("FOREIGN KEY: \t\tOk\n");
+	else
+		printf("Problems reading FOREIGN KEY\n");
+	print_key(value_FOREIGN_KEY, sizeof(value_FOREIGN_KEY),
+	 TYPE_FOREIGN_KEY);
+	printf("\n");
+	print_key(value_FOREIGN_KEY_out, sizeof(value_FOREIGN_KEY_out),
+	 TYPE_FOREIGN_KEY_OUT);
 	printf("\n\n");
 
 	/* Config */
