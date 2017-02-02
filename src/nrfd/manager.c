@@ -99,6 +99,9 @@ static const gchar introspection_xml[] =
 	"    </method>"
 	"    <property type='s' name='Address' access='read'/>"
 	"    <property type='s' name='Powered' access='readwrite'/>"
+	"    <method name='GetBroadcastingDevices'>"
+	"      <arg type='s' name='response' direction='out'/>"
+	"    </method>"
 	"  </interface>"
 	"</node>";
 
@@ -336,6 +339,34 @@ static gboolean remove_known_device(GDBusConnection *connection,
 	return response;
 }
 
+static int peers_to_json(struct json_object *peers_bcast_json)
+{
+	GHashTableIter iter;
+	gpointer key, value;
+	struct json_object *jobj;
+
+	g_hash_table_iter_init (&iter, peer_bcast_table);
+
+	while (g_hash_table_iter_next (&iter, &key, &value)) {
+		struct bcast_presence *peer = value;
+
+		jobj = json_object_new_object();
+		if (peer == NULL)
+			continue;
+
+		json_object_object_add(jobj, "name",
+					json_object_new_string(peer->name));
+		json_object_object_add(jobj, "mac",
+					json_object_new_string((char *) key));
+		json_object_object_add(jobj, "last_beacon",
+				json_object_new_int(peer->last_beacon));
+
+		json_object_array_add(peers_bcast_json, jobj);
+	}
+
+	return 0;
+}
+
 static void handle_method_call(GDBusConnection *connection,
 				const gchar *sender,
 				const gchar *object_path,
@@ -348,6 +379,7 @@ static void handle_method_call(GDBusConnection *connection,
 	const gchar *mac;
 	const gchar *key;
 	gboolean response;
+	struct json_object *peers_bcast;
 
 	if (g_strcmp0(method_name, "AddDevice") == 0) {
 		g_variant_get(parameters, "(&s&s)", &mac, &key);
@@ -361,6 +393,14 @@ static void handle_method_call(GDBusConnection *connection,
 		response = remove_known_device(connection, mac);
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(b)", response));
+	} else if (g_strcmp0("GetBroadcastingDevices", method_name) == 0) {
+		/* FIXME: Temporary solution it will be replaced by signals */
+		peers_bcast = json_object_new_array();
+		peers_to_json(peers_bcast);
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(s)",
+				json_object_to_json_string(peers_bcast)));
+		json_object_put(peers_bcast);
 	}
 }
 
@@ -670,7 +710,8 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 						strlen((char *)evt_pre->name)));
 	/*
 	 * MAC and device name will be printed only once, but the last presence
-	 * time is updated.
+	 * time is updated. Every time a user refresh the list in the webui
+	 * we will discard devices that broadcasted
 	 */
 	g_hash_table_insert(peer_bcast_table, g_strdup(mac_str), peer);
 done:
