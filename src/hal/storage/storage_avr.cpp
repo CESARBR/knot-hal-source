@@ -88,36 +88,37 @@ ssize_t hal_storage_write_end(uint8_t id, void *value, size_t len)
 	 */
 	switch (id) {
 	case HAL_STORAGE_ID_UUID:
-		if(len != UUID_SIZE)
+		if(len > UUID_SIZE)
 			return -EINVAL;
 
 		dst = ADDR_UUID;
 		break;
 	case HAL_STORAGE_ID_TOKEN:
-		if(len != TOKEN_SIZE)
+		if(len > TOKEN_SIZE)
 			return -EINVAL;
 
 		dst = ADDR_TOKEN;
 		break;
 	case HAL_STORAGE_ID_MAC:
-		if(len != MAC_SIZE)
+		if(len > MAC_SIZE)
 			return -EINVAL;
 
 		dst = ADDR_MAC;
 		break;
 	case HAL_STORAGE_ID_SCHEMA_FLAG:
-		if (len != SCHEMA_FLAG_SIZE)
+		if (len > SCHEMA_FLAG_SIZE)
 			return -EINVAL;
+
 		dst = ADDR_SCHEMA_FLAG;
 		break;
 	case HAL_STORAGE_ID_PRIVATE_KEY:
-		if (len != PRIVATE_KEY_SIZE)
+		if (len > PRIVATE_KEY_SIZE)
 			return -EINVAL;
 
 		dst = ADDR_PRIVATE_KEY;
 		break;
 	case HAL_STORAGE_ID_PUBLIC_KEY:
-		if (len != PUBLIC_KEY_SIZE)
+		if (len > PUBLIC_KEY_SIZE)
 			return -EINVAL;
 
 		dst = ADDR_PUBLIC_KEY;
@@ -156,43 +157,42 @@ ssize_t hal_storage_read_end(uint8_t id, void *value, size_t len)
 	 */
 	switch (id) {
 	case HAL_STORAGE_ID_UUID:
-		if(len != UUID_SIZE)
-			return -EINVAL;
+		if(len > UUID_SIZE)
+			len = UUID_SIZE;
 
 		src = ADDR_UUID;
 		break;
 
 	case HAL_STORAGE_ID_TOKEN:
-		if(len != TOKEN_SIZE)
-			return -EINVAL;
+		if(len > TOKEN_SIZE)
+			len = TOKEN_SIZE;
 
 		src = ADDR_TOKEN;
 		break;
 
 	case HAL_STORAGE_ID_MAC:
-		if(len != MAC_SIZE)
-			return -EINVAL;
+		if(len > MAC_SIZE)
+			len = MAC_SIZE;
 
 		src = ADDR_MAC;
 		break;
+	case HAL_STORAGE_ID_SCHEMA_FLAG:
+		if(len > SCHEMA_FLAG_SIZE)
+			len = SCHEMA_FLAG_SIZE;
 
+		src = ADDR_SCHEMA_FLAG;
+		break;
 	case HAL_STORAGE_ID_PRIVATE_KEY:
-		if (len != PRIVATE_KEY_SIZE)
-				return -EINVAL;
+		if (len > PRIVATE_KEY_SIZE)
+			len = PRIVATE_KEY_SIZE;
 
 		src = ADDR_PRIVATE_KEY;
 		break;
 	case HAL_STORAGE_ID_PUBLIC_KEY:
-		if (len != PUBLIC_KEY_SIZE)
-			return -EINVAL;
+		if (len > PUBLIC_KEY_SIZE)
+			len = PUBLIC_KEY_SIZE;
 
 		src = ADDR_PUBLIC_KEY;
-		break;
-	case HAL_STORAGE_ID_SCHEMA_FLAG:
-		if(len != SCHEMA_FLAG_SIZE)
-			return -EINVAL;
-
-		src = ADDR_SCHEMA_FLAG;
 		break;
 	case HAL_STORAGE_ID_CONFIG:
 
