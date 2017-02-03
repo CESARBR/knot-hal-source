@@ -14,9 +14,9 @@
 #include <syslog.h>
 #include <stdarg.h>
 
-#include "log.h"
+#include "include/linux_log.h"
 
-void log_error(const char *format, ...)
+void hal_log_error(const char *format, ...)
 {
 	va_list ap;
 
@@ -25,7 +25,7 @@ void log_error(const char *format, ...)
 	va_end(ap);
 }
 
-void log_warn(const char *format, ...)
+void hal_log_warn(const char *format, ...)
 {
 	va_list ap;
 
@@ -34,7 +34,7 @@ void log_warn(const char *format, ...)
 	va_end(ap);
 }
 
-void log_info(const char *format, ...)
+void hal_log_info(const char *format, ...)
 {
 	va_list ap;
 
@@ -43,7 +43,7 @@ void log_info(const char *format, ...)
 	va_end(ap);
 }
 
-void log_dbg(const char *format, ...)
+void hal_log_dbg(const char *format, ...)
 {
 	va_list ap;
 
@@ -52,14 +52,14 @@ void log_dbg(const char *format, ...)
 	va_end(ap);
 }
 
-void log_init(const char *ident, int detach)
+void hal_log_init(const char *ident, int detach)
 {
 	int option = LOG_NDELAY | LOG_PID | LOG_PERROR;
 
 	openlog(ident, option, LOG_DAEMON);
 }
 
-void log_close(void)
+void hal_log_close(void)
 {
 	closelog();
 }

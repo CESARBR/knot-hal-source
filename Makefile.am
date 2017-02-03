@@ -4,7 +4,7 @@ CP=cp
 ZIP=zip
 
 AM_MAKEFLAGS = --no-print-directory
-SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time \
+SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 					src/hal/comm src/drivers
 
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
@@ -19,9 +19,8 @@ proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
 proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 src_nrfd_nrfd_SOURCES = src/nrfd/main.c \
-				src/nrfd/log.h src/nrfd/log.c \
 				src/nrfd/manager.h src/nrfd/manager.c
-src_nrfd_nrfd_LDADD = libs/libhalcommnrf24.a \
+src_nrfd_nrfd_LDADD = libs/libhallog.a libs/libhalcommnrf24.a \
 				libs/libphy_driver.a \
 				libs/libhaltime.a \
 				libs/libhalstorage.a \

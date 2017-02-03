@@ -28,7 +28,7 @@
 #include "include/time.h"
 
 #include "nrf24l01_io.h"
-#include "log.h"
+#include "include/linux_log.h"
 #include "manager.h"
 
 #define KNOTD_UNIX_ADDRESS		"knot"
@@ -274,7 +274,7 @@ static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
 		if (adapter.known_peers[i].addr.address.uint64 ==
 						new_dev.address.uint64) {
 			if (write_file(mac, key, NULL) < 0)
-				log_error("Error writing to file");
+				hal_log_error("Error writing to file");
 			response = TRUE;
 			goto done;
 
@@ -301,7 +301,7 @@ static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
 		adapter.known_peers[free_pos].status = FALSE;
 		/* TODO: Set key for this mac */
 		if (write_file(mac, key, alias) < 0)
-			log_error("Error writing to file");
+			hal_log_error("Error writing to file");
 		adapter.known_peers_size++;
 		response = TRUE;
 	}
@@ -331,7 +331,7 @@ static gboolean remove_known_device(GDBusConnection *connection,
 			g_free(adapter.known_peers[i].alias);
 			adapter.known_peers_size--;
 			if (write_file(mac, NULL, NULL) < 0)
-				log_error("Error writing to file");
+				hal_log_error("Error writing to file");
 			response = TRUE;
 			break;
 		}
@@ -533,7 +533,7 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name,
 							gpointer user_data)
 {
 	/* Connection successfully estabilished */
-	log_info("Connection estabilished");
+	hal_log_info("Connection estabilished");
 }
 
 static void on_name_lost(GDBusConnection *connection, const gchar *name,
@@ -541,10 +541,10 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name,
 {
 	if (!connection) {
 		/* Connection error */
-		log_error("Connection failure");
+		hal_log_error("Connection failure");
 	} else {
 		/* Name not owned */
-		log_error("Name can't be obtained");
+		hal_log_error("Name can't be obtained");
 	}
 
 	g_free(adapter.file_name);
@@ -669,7 +669,7 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 	/* Read data from Knotd */
 	readbytes_knotd = read(p->knotd_fd, buffer, sizeof(buffer));
 	if (readbytes_knotd < 0) {
-		log_error("read_knotd() error");
+		hal_log_error("read_knotd() error");
 		return FALSE;
 	}
 
@@ -704,7 +704,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	 * Print every MAC sending presence in order to ease the discover of
 	 * things trying to connect to the gw.
 	 */
-	log_info("Thing sending presence. MAC = %s Name = %s",
+	hal_log_info("Thing sending presence. MAC = %s Name = %s",
 							mac_str, evt_pre->name);
 	peer->last_beacon = hal_time_ms();
 	strncpy(peer->name, (char *) evt_pre->name,
@@ -830,7 +830,7 @@ static int8_t clients_read()
 			sizeof(buffer));
 		if (ret > 0) {
 			if (write(peers[i].knotd_fd, buffer, ret) < 0)
-				log_error("write_knotd() error");
+				hal_log_error("write_knotd() error");
 		}
 	}
 	return 0;
@@ -946,7 +946,7 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 	status = g_io_channel_read_chars(io, buffer, sizeof(buffer),
 						 &rbytes, &gerr);
 	if (status == G_IO_STATUS_ERROR) {
-		log_error("read(): %s", gerr->message);
+		hal_log_error("read(): %s", gerr->message);
 		g_error_free(gerr);
 		return FALSE;
 	}
@@ -958,7 +958,7 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 	 * Decode based on nRF PIPE information and forward
 	 * the data through a unix socket to knotd.
 	 */
-	log_info("read(): %zu bytes", rbytes);
+	hal_log_info("read(): %zu bytes", rbytes);
 
 	return TRUE;
 }
@@ -975,7 +975,7 @@ static int tcp_init(const char *host, int port)
 	hostent = gethostbyname(host);
 	if (hostent == NULL) {
 		err = errno;
-		log_error("gethostbyname(): %s(%d)", strerror(err), err);
+		hal_log_error("gethostbyname(): %s(%d)", strerror(err), err);
 		return -err;
 	}
 
@@ -984,7 +984,7 @@ static int tcp_init(const char *host, int port)
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock < 0) {
 		err = errno;
-		log_error("socket(): %s(%d)", strerror(err), err);
+		hal_log_error("socket(): %s(%d)", strerror(err), err);
 		return -err;
 	}
 
@@ -996,12 +996,12 @@ static int tcp_init(const char *host, int port)
 	err = connect(sock, (struct sockaddr *) &server, sizeof(server));
 	if (err < 0) {
 		err = errno;
-		log_error("connect(): %s(%d)", strerror(err), err);
+		hal_log_error("connect(): %s(%d)", strerror(err), err);
 		close(sock);
 		return -err;
 	}
 
-	log_info("nRF Proxy address: %s", inet_ntoa(h_addr));
+	hal_log_info("nRF Proxy address: %s", inet_ntoa(h_addr));
 
 	io = g_io_channel_unix_new(sock);
 	g_io_channel_set_close_on_unref(io, TRUE);
@@ -1026,7 +1026,7 @@ static char *load_config(const char *file)
 	FILE *fl = fopen(file, "r");
 
 	if (fl == NULL) {
-		log_error("No such file available: %s", file);
+		hal_log_error("No such file available: %s", file);
 		return NULL;
 	}
 
@@ -1169,7 +1169,7 @@ static int parse_nodes(const char *nodes_file)
 
 	array_len = json_object_array_length(obj_keys);
 	if (array_len > MAX_PEERS) {
-		log_error("Invalid numbers of nodes in input archive");
+		hal_log_error("Invalid numbers of nodes in input archive");
 		goto failure;
 	}
 	for (i = 0; i < array_len; i++) {
@@ -1206,7 +1206,7 @@ static gboolean check_timeout(gpointer key, gpointer value, gpointer user_data)
 	/* If it returns true the key/value is removed */
 	if (hal_timeout(hal_time_ms(), peer->last_beacon,
 							BCAST_TIMEOUT) > 0) {
-		log_info("Peer %s timedout.", (char *) key);
+		hal_log_info("Peer %s timedout.", (char *) key);
 		return TRUE;
 	}
 
@@ -1252,7 +1252,7 @@ int manager_start(const char *file, const char *host, int port,
 	adapter.powered = TRUE;
 
 	if (err < 0) {
-		log_error("Invalid configuration file: %s", file);
+		hal_log_error("Invalid configuration file: %s", file);
 		return err;
 	}
 	/* Start server dbus */

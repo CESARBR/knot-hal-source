@@ -17,7 +17,7 @@
 #include <glib.h>
 #include <sys/inotify.h>
 
-#include "log.h"
+#include "include/linux_log.h"
 #include "manager.h"
 
 #define BUF_LEN (sizeof(struct inotify_event))
@@ -130,30 +130,30 @@ int main(int argc, char *argv[])
 
 	main_loop = g_main_loop_new(NULL, FALSE);
 
-	log_init("nrfd", opt_detach);
-	log_info("KNOT HAL nrfd");
+	hal_log_init("nrfd", opt_detach);
+	hal_log_info("KNOT HAL nrfd");
 
 	if (opt_host)
-		log_error("Development mode: %s:%u", opt_host, opt_port);
+		hal_log_error("Development mode: %s:%u", opt_host, opt_port);
 	else
-		log_error("Native SPI mode");
+		hal_log_error("Native SPI mode");
 
 	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
 							opt_dbm, opt_nodes);
 	if (err < 0) {
-		log_error("manager_start(): %s(%d)", strerror(-err), -err);
+		hal_log_error("manager_start(): %s(%d)", strerror(-err), -err);
 		g_main_loop_unref(main_loop);
-		log_close();
+		hal_log_close();
 		return EXIT_FAILURE;
 	}
 
 	/* Set user id to nobody */
 	if (setuid(65534) != 0) {
 		err = errno;
-		log_error("Set uid to nobody failed. %s(%d). Exiting...",
+		hal_log_error("Set uid to nobody failed. %s(%d). Exiting...",
 							strerror(err), err);
 		manager_stop();
-		log_close();
+		hal_log_close();
 		return EXIT_FAILURE;
 	}
 
@@ -161,10 +161,10 @@ int main(int argc, char *argv[])
 	inotifyFD = inotify_init();
 	wd = inotify_add_watch(inotifyFD, opt_cfg, IN_MODIFY);
 	if (wd == -1) {
-		log_error("Error adding watch on: %s", opt_cfg);
+		hal_log_error("Error adding watch on: %s", opt_cfg);
 		close(inotifyFD);
 		manager_stop();
-		log_close();
+		hal_log_close();
 		return EXIT_FAILURE;
 	}
 
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 
 	if (opt_detach) {
 		if (daemon(0, 0)) {
-			log_error("Can't start daemon!");
+			hal_log_error("Can't start daemon!");
 			retval = EXIT_FAILURE;
 			goto done;
 		}
@@ -193,8 +193,8 @@ done:
 
 	manager_stop();
 
-	log_error("exiting ...");
-	log_close();
+	hal_log_error("exiting ...");
+	hal_log_close();
 
 	g_main_loop_unref(main_loop);
 
