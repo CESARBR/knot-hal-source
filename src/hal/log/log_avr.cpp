@@ -72,12 +72,16 @@ int hal_log_open(const char *pathname)
 	return 0;
 }
 
-void logger(const char *category, const char *format, ...)
+void logger(PGM_P category, const char *format, ...)
 {
 	char buf[LOG_BUFFER_LEN] = {0};
 	va_list args;
+	char cat[8];
 
-	_serial->print(category);
+	strcpy_P(cat, category);
+
+	_serial->print(cat);
+	_serial->print(" ");
 
 	va_start(args, format);
 	vsnprintf(buf, LOG_BUFFER_LEN, format, args);

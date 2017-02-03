@@ -16,16 +16,20 @@ extern "C" {
 
 int hal_log_open(const char *pathname);
 
-void logger(const char *category, const char *format, ...);
+void logger(PGM_P category, const char *format, ...);
+
+const char PROGMEM libInfoString[] = { "[info]" };
+const char PROGMEM libWarnString[] = { "[warn]" };
+const char PROGMEM libErrorString[] = { "[error]" };
 
 #define hal_log_info(format, ...)					\
-	logger("[info] ", format, __VA_ARGS__)
+	logger(libInfoString, format, __VA_ARGS__)
 
 #define hal_log_warn(format, ...)					\
-	logger("[warn] ", format, __VA_ARGS__)
+	logger(libWarnString, format, __VA_ARGS__)
 
 #define hal_log_error(format, ...)					\
-	logger("[error] ", format, __VA_ARGS__)
+	logger(libErrorString, format, __VA_ARGS__)
 
 void hal_log_close(void);
 
