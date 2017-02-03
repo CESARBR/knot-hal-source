@@ -72,19 +72,12 @@ int hal_log_open(const char *pathname)
 	return 0;
 }
 
-void logger(const char *file, const char *function, long line,
-		const char *category, const char *format, ...)
+void logger(const char *category, const char *format, ...)
 {
 	char buf[LOG_BUFFER_LEN] = {0};
 	va_list args;
 
 	_serial->print(category);
-	_serial->print(file);
-	_serial->print("::");
-	_serial->print(function);
-	_serial->print("(");
-	_serial->print(line);
-	_serial->print("): ");
 
 	va_start(args, format);
 	vsnprintf(buf, LOG_BUFFER_LEN, format, args);
