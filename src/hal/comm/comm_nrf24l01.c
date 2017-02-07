@@ -289,17 +289,23 @@ static int read_mgmt(int spi_fd)
 		/* Event presence structure */
 		struct mgmt_evt_nrf24_bcast_presence *evt_presence =
 			(struct mgmt_evt_nrf24_bcast_presence *)evt->payload;
-		/* Mac address structure */
-		struct nrf24_mac *mac = (struct nrf24_mac *)ipdu->payload;
+		/* Presence structure */
+		struct nrf24_ll_presence *presence =
+				(struct nrf24_ll_presence *)ipdu->payload;
 
 		/* Header type is a broadcast presence */
 		evt->opcode = MGMT_EVT_NRF24_BCAST_PRESENCE;
 		evt->index = 0;
 		/* Copy source address */
-		evt_presence->mac.address.uint64 = mac->address.uint64;
+		evt_presence->mac.address.uint64 = presence->mac.address.uint64;
+		/* Copy slave name */
+		memcpy(evt_presence->name, presence->name,
+				ilen - sizeof(struct nrf24_ll_presence) -
+					sizeof(struct nrf24_ll_mgmt_pdu));
 
-		mgmt.len_rx = sizeof(struct nrf24_mac) +
-				sizeof(struct mgmt_nrf24_header);
+		mgmt.len_rx = ilen - sizeof(struct nrf24_ll_mgmt_pdu) +
+					sizeof(struct mgmt_nrf24_header);
+
 	}
 		break;
 	/* If is a connect request type */
