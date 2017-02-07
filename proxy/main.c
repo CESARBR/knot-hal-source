@@ -67,7 +67,7 @@ static gboolean data_watch(GIOChannel *io, GIOCondition cond,
 	if (rbytes == 0)
 		return FALSE;
 
-	printf("read(): %lu bytes\n", rbytes);
+	printf("read(): %zu bytes\n", rbytes);
 
 	return TRUE;
 }

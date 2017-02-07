@@ -395,7 +395,7 @@ static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
 	 * Decode based on nRF PIPE information and forward
 	 * the data through a unix socket to knotd.
 	 */
-	log_info("read(): %lu bytes", rbytes);
+	log_info("read(): %zu bytes", rbytes);
 
 	return TRUE;
 }

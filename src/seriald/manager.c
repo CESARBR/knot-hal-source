@@ -84,7 +84,7 @@ static gboolean unix_io_watch(GIOChannel *io, GIOCondition cond,
 		printf("read_unix() error\n\r");
 		return FALSE;
 	}
-	printf("RX_KNOTD: '%ld'\n\r", readbytes_unix);
+	printf("RX_KNOTD: '%zd'\n\r", readbytes_unix);
 
 	if (hal_comm_write(serial_sock, buffer, readbytes_unix) < 0) {
 		printf("send_serial() error\n\r");
