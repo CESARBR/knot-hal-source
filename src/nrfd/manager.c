@@ -37,6 +37,7 @@ static int mgmtfd;
 static guint mgmtwatch;
 
 struct peer {
+	char name[10];
 	uint64_t mac;
 	int8_t socket_fd;
 	int8_t knotd_fd;
@@ -167,7 +168,8 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	 * things trying to connect to the gw.
 	 */
 	nrf24_mac2str(&evt_pre->mac, mac_str);
-	log_info("Thing sending presence. MAC = %s", mac_str);
+	log_info("Thing sending presence. MAC = %s Name =%s",
+			mac_str, evt_pre->name);
 
 	/* Check if peer is allowed to connect */
 	if (check_permission(evt_pre->mac) < 0)
@@ -203,6 +205,9 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 		peers[position].mac =
 				evt_pre->mac.address.uint64;
 
+		/* Copy the slave name */
+		memcpy(peers[position].name, evt_pre->name,
+					sizeof(peers[position].name));
 		/* Watch knotd socket */
 		peers[position].knotd_io =
 			g_io_channel_unix_new(peers[position].knotd_fd);
