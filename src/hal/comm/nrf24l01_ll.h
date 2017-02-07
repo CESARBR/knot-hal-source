@@ -42,6 +42,17 @@ struct nrf24_ll_mgmt_pdu {
 
 /*
  * Used at ll_mgmt_channel_pdu.payload
+ * by slave to announce his presence.
+ * The packet contains the name and its mac address.
+ */
+struct nrf24_ll_presence {
+	struct nrf24_mac mac;	/* Source address */
+	uint8_t name[0];		/* Slave name */
+} __attribute__ ((packed));
+
+
+/*
+ * Used at ll_mgmt_channel_pdu.payload
  * Master assigns the channel and access address of the slaves.
  * TODO: event should be added to notify disconnection to upper layer
  */
