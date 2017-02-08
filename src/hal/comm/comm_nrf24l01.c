@@ -298,11 +298,22 @@ static int read_mgmt(int spi_fd)
 		evt->index = 0;
 		/* Copy source address */
 		evt_presence->mac.address.uint64 = presence->mac.address.uint64;
-		/* Copy slave name */
+		/*
+		 * The packet structure contains the
+		 * mgmt_pdu header, the MAC address
+		 * and the slave name. The name length
+		 * is equal to input length (ilen) minus
+		 * header length and minus MAC address length.
+		 */
 		memcpy(evt_presence->name, presence->name,
 				ilen - sizeof(struct nrf24_ll_presence) -
 					sizeof(struct nrf24_ll_mgmt_pdu));
 
+		/*
+		 * The rx buffer length is equal to the
+		 * event header length + presence packet length.
+		 * Presence packet len = (input len - mgmt_pdu header len)
+		 */
 		mgmt.len_rx = ilen - sizeof(struct nrf24_ll_mgmt_pdu) +
 					sizeof(struct mgmt_nrf24_header);
 
