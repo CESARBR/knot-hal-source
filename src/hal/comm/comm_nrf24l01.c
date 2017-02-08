@@ -582,7 +582,7 @@ static void presence_connect(int spi_fd)
 	struct nrf24_ll_mgmt_pdu *opdu = (void *)p.payload;
 	struct nrf24_ll_presence *presence =
 				(struct nrf24_ll_presence *) opdu->payload;
-	size_t len;
+	size_t len, nameLen;
 	static unsigned long start;
 	/* Start timeout */
 	static uint8_t state = PRESENCE;
@@ -597,10 +597,22 @@ static void presence_connect(int spi_fd)
 		opdu->type = NRF24_PDU_TYPE_PRESENCE;
 		/* Send the mac address and thing name */
 		presence->mac.address.uint64 = addr_slave.address.uint64;
-		memcpy(presence->name, THING_NAME, sizeof(THING_NAME));
+
 		len = sizeof(struct nrf24_ll_mgmt_pdu) +
-					sizeof(struct nrf24_ll_presence) +
-						sizeof(THING_NAME);
+					sizeof(struct nrf24_ll_presence);
+
+		/*
+		 * Checks if need to truncate the name
+		 * If header length + MAC length + name length is
+		 * greater than MGMT_SIZE, then only sends the remaining.
+		 * If not, sends the total name length.
+		 */
+		nameLen = (len + sizeof(THING_NAME) > MGMT_SIZE ?
+				MGMT_SIZE - len : sizeof(THING_NAME));
+
+		memcpy(presence->name, THING_NAME, nameLen);
+		/* Increments name length */
+		len += nameLen;
 
 		phy_write(spi_fd, &p, len);
 		/* Init time */
