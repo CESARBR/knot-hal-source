@@ -1,0 +1,92 @@
+nRF D-Bus API description
+**************************
+
+Service 	org.cesar.nrf
+
+Adapter hierarchy
+=================
+Interface 	org.cesar.nrf.Adapter1
+Object path 	[variable prefix]/{nrf0, nrf1, ...}
+
+Methods 	void RemoveDevice(object device)
+
+		Removes a remote nRF device including its local stored
+		data such as keys, and properties.
+
+		Returns: org.cesar.nrf.Error.InvalidArguments
+
+
+		void StartScanning(dict filter)
+
+		This method starts the device scanning session. Device
+		objects representing discovered devices are automatically
+		created. Caller must use StopScanning() to release the
+		session acquired.
+
+		Returns: org.cesar.nrf.Error.NotReady
+
+
+		void StopScanning(void)
+
+		This method releases the device scanning session.
+
+		Returns: org.cesar.nrf.Error.NotReady
+			org.cesar.nrf.Error.NotAutorized
+
+
+Properties 	string Address [readonly]
+
+		Persistent property. 64-bit nRF address.
+		eg: 88:77:66:55:44:33:22:11 (MSB on left)
+
+
+		boolean Powered [readwrite]
+
+		Not persistent property. Switch Switch nRF adapter on/off
+
+
+
+Device hierarchy
+================
+Interface 	org.cesar.nrf.Device1
+Object path 	[variable prefix]/{nrf0, nrf1, ...}/dev_xx_xx_xx_xx_xx_xx_xx_xx
+
+
+Methods 	void Bind(dict properties)
+
+		This method allows to create persistent association. Allowed
+		properties: "PublicKey", "PrivateKey". Keys are optional,
+		binding without keys results on open physical channel.
+
+		Returns: org.cesar.nrf.Error.AlreadyExists
+			org.cesar.nrf.Error.InvalidArguments
+
+
+Properties 	string Address [readonly]
+
+		64-bit nRF address.
+		eg: 88:77:66:55:44:33:22:11 (MSB on left)
+
+
+		string Name [readonly, optional]
+
+		nRF remote name. PropertiesChanged is be emitted if this
+		value changes.
+
+
+		string PublicKey [writeonly]
+
+		Remote's public key that can be set to enable a secure
+		channel between peers.
+
+
+		boolean Connected [readonly]
+
+		Indicates if the remote is currently connected.
+		PropertiesChanged signal is emitted when this value
+		changes.
+
+
+		object Adapter [readonly]
+
+		Object path of the nRF adapter associated with this device.
