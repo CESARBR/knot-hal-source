@@ -33,6 +33,7 @@
 
 #define KNOTD_UNIX_ADDRESS		"knot"
 #define MAC_ADDRESS_SIZE		24
+#define BCAST_TIMEOUT			10000
 
 #ifndef MIN
 #define MIN(a,b) 			(((a) < (b)) ? (a) : (b))
@@ -395,6 +396,7 @@ static void handle_method_call(GDBusConnection *connection,
 				g_variant_new("(b)", response));
 	} else if (g_strcmp0("GetBroadcastingDevices", method_name) == 0) {
 		/* FIXME: Temporary solution it will be replaced by signals */
+		/* Get list of devices that sent presence recently */
 		peers_bcast = json_object_new_array();
 		peers_to_json(peers_bcast);
 		g_dbus_method_invocation_return_value(invocation,
@@ -1197,6 +1199,27 @@ failure:
 	return err;
 }
 
+static gboolean check_timeout(gpointer key, gpointer value, gpointer user_data)
+{
+	struct bcast_presence *peer = value;
+
+	/* If it returns true the key/value is removed */
+	if (hal_timeout(hal_time_ms(), peer->last_beacon,
+							BCAST_TIMEOUT) > 0) {
+		log_info("Peer %s timedout.", (char *) key);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+static gboolean timeout_iterator(gpointer user_data)
+{
+	g_hash_table_foreach_remove(peer_bcast_table, check_timeout, NULL);
+
+	return TRUE;
+}
+
 int manager_start(const char *file, const char *host, int port,
 					const char *spi, int channel, int dbm,
 					const char *nodes_file)
@@ -1248,6 +1271,7 @@ int manager_start(const char *file, const char *host, int port,
 
 	peer_bcast_table = g_hash_table_new_full(g_str_hash, g_str_equal,
 								g_free, g_free);
+	g_timeout_add_seconds(5, timeout_iterator, NULL);
 
 	if (host == NULL)
 		return radio_init(spi, channel, dbm_int2rfpwr(dbm),
