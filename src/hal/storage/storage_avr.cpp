@@ -18,6 +18,7 @@
 #define SCHEMA_FLAG_SIZE	1
 #define PRIVATE_KEY_SIZE	32
 #define PUBLIC_KEY_SIZE	64
+#define FOREIGN_KEY_SIZE	64
 
 #define CONFIG_SIZE 		sizeof(uint16_t)
 
