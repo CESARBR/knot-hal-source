@@ -889,14 +889,19 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr,
 	int err;
 
 	err = hal_comm_init("NRF0", mac);
-	if (err < 0)
+	if (err < 0) {
+		hal_log_error("Cannot init NRF0 radio. (%d)", err);
 		return err;
+	}
 
 	mgmtfd = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_MGMT);
-	if (mgmtfd < 0)
+	if (mgmtfd < 0) {
+		hal_log_error("Cannot create socket for radio (%d)", mgmtfd);
 		goto done;
+	}
 
 	mgmtwatch = g_idle_add(read_idle, NULL);
+	hal_log_info("Radio initialized");
 
 	return 0;
 done:
@@ -1169,7 +1174,7 @@ static int parse_nodes(const char *nodes_file)
 
 	array_len = json_object_array_length(obj_keys);
 	if (array_len > MAX_PEERS) {
-		hal_log_error("Invalid numbers of nodes in input archive");
+		hal_log_error("Invalid numbers of nodes at %s", nodes_file);
 		goto failure;
 	}
 	for (i = 0; i < array_len; i++) {
@@ -1231,17 +1236,23 @@ int manager_start(const char *file, const char *host, int port,
 
 	/* Command line arguments have higher priority */
 	json_str = load_config(file);
-	if (json_str == NULL)
+	if (json_str == NULL) {
+		hal_log_error("load_config()");
 		return err;
+	}
 	err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
-	if (err < 0)
+	if (err < 0) {
+		hal_log_error("parse_config(): %d", err);
 		return err;
+	}
 
 	memset(&adapter, 0, sizeof(struct adapter));
 	/* Parse nodes info from nodes_file and writes it to known_peers */
 	err = parse_nodes(nodes_file);
-	if (err < 0)
+	if (err < 0) {
+		hal_log_error("parse_nodes(): %d", err);
 		return err;
+	}
 
 	if (mac.address.uint64 == 0)
 		err = gen_save_mac(json_str, file, &mac);
@@ -1252,7 +1263,7 @@ int manager_start(const char *file, const char *host, int port,
 	adapter.powered = TRUE;
 
 	if (err < 0) {
-		hal_log_error("Invalid configuration file: %s", file);
+		hal_log_error("Invalid configuration file(%d): %s", err, file);
 		return err;
 	}
 	/* Start server dbus */
@@ -1273,9 +1284,11 @@ int manager_start(const char *file, const char *host, int port,
 								g_free, g_free);
 	g_timeout_add_seconds(5, timeout_iterator, NULL);
 
-	if (host == NULL)
+	if (host == NULL) {
+		hal_log_info("host is NULL");
 		return radio_init(spi, channel, dbm_int2rfpwr(dbm),
 						(const struct nrf24_mac*) &mac);
+	}
 	/*
 	 * TCP development mode: Linux connected to RPi(phynrfd radio
 	 * proxy). Connect to phynrfd routing all traffic over TCP.
