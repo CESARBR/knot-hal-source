@@ -33,6 +33,7 @@ int hal_log_open(const char *pathname)
 #ifdef HAVE_HWSERIAL0
 		case '0':
 			_serial = &Serial;
+			if (Serial) status_enabled = true;
 			break;
 #endif
 
