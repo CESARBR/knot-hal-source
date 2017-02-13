@@ -34,6 +34,10 @@
 #define KNOTD_UNIX_ADDRESS		"knot"
 #define MAC_ADDRESS_SIZE		24
 
+#ifndef MIN
+#define MIN(a,b) 			(((a) < (b)) ? (a) : (b))
+#endif
+
 static int mgmtfd;
 static guint mgmtwatch;
 static guint dbus_id;
@@ -681,8 +685,10 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 				evt_pre->mac.address.uint64;
 
 		/* Copy the slave name */
-		memcpy(peers[position].name, evt_pre->name,
-					sizeof(peers[position].name));
+		strncpy(peers[position].name, (char *) evt_pre->name,
+					MIN(sizeof(peers[position].name),
+						strlen((char *)evt_pre->name)));
+
 		/* Watch knotd socket */
 		peers[position].knotd_io =
 			g_io_channel_unix_new(peers[position].knotd_fd);
