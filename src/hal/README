@@ -16,7 +16,5 @@ responsible to interact with hardware, such as:
  - Storage module
  - Log module
  - Time module
- - LED module
- - Button module
+ - GPIO module
  - Security module
-
