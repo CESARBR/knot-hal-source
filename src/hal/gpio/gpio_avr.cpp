@@ -11,6 +11,16 @@
 
 #include "include/gpio.h"
 
+int hal_gpio_setup(void)
+{
+	return 0;
+}
+
+void hal_gpio_unmap()
+{
+
+}
+
 void hal_gpio_pin_mode(uint8_t pin, uint8_t mode)
 {
 	return pinMode(pin, mode);
