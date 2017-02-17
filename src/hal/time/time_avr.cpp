@@ -49,7 +49,7 @@ int hal_timeout(uint32_t current,  uint32_t start,  uint32_t timeout)
 
 int hal_getrandom(void *buf, size_t buflen)
 {
-	uint32_t value = (analogRead(A0)+1) * ~hal_time_us();
+	uint32_t value = (analogRead(A7)+1) * ~hal_time_us();
 	unsigned int rd, i;
 	uint8_t *buf_cpy = (uint8_t *) buf;
 
