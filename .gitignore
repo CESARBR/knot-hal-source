@@ -1,3 +1,5 @@
+*.a
+*.patch
 *.o
 .deps
 .dirstamp
@@ -23,9 +25,13 @@ autom4te.cache
 
 proxy/spiproxyd
 src/nrfd/nrfd
+src/seriald/seriald
+src/lorad/lorad
 tools/rpiecho
 tools/sniffer
 
 cscope.in.out
 cscope.out
 cscope.po.out
+
+include/arduino
