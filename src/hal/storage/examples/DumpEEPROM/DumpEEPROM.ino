@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, CESAR.
+ * Copyright (c) 2017, CESAR.
  * All rights reserved.
  *
  * This software may be modified and distributed under the terms
@@ -8,7 +8,6 @@
  */
 
 #include "KNoTThing.h"
-#include "include/printf_serial.h"
 #include <EEPROM.h>
 
 char str[50], *pstr;
@@ -17,8 +16,11 @@ byte value;
 
 void setup()
 {
-	printf_serial_init();
-	printf("EEPROM(%d) Dumping...\n", EEPROM.length());
+	Serial.begin(9600);
+
+	Serial.print("EEPROM(");
+	Serial.print(EEPROM.length());
+	Serial.println(") Dumping...");
 }
 
 void loop()
@@ -27,22 +29,43 @@ void loop()
 
 	if ((address % 32) == 0) {
 		if (address != 0) {
-			printf(" - ");
-			for(pstr=str; index != 0; --index, ++pstr)
-				printf("%c", *pstr < ' ' || *pstr > 0x7f ? '.' : *pstr);
-			printf("\n");
+			Serial.print(" - ");
+			for(pstr=str; index != 0; --index, ++pstr) {
+				if(*pstr < ' ' || *pstr > 0x7f) {
+					Serial.print('.');
+				} else {
+					Serial.print(*pstr);
+				}
+			}
+
+			Serial.println();
 		}
 
 		if (address == EEPROM.length()) {
-			printf("[END]\n");
+			Serial.println("[END]\n");
 			while(true);
 		}
 
-		printf("[%04d]:", address);
+		Serial.print('[');
+		if (address < 9) {
+			Serial.print("000");
+		} else if (address < 99) {
+			Serial.print("00");
+		} else if (address < 999) {
+			Serial.print("0");
+		}
+		Serial.print(address);
+		Serial.print("]:");
 		index = 0;
 	}
 
-	printf(" %02X", value);
+	Serial.print(" ");
+
+	if (value < 16) {
+		Serial.print("0");
+	}
+
+	Serial.print(value, HEX);
 	str[index++] = value;
 
 	address++;
