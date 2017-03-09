@@ -86,13 +86,15 @@ typedef struct {
 static data_config_store conf[2];
 static data_config_store conf_out[2];
 
-static char str[50], *pstr;
-
-static uint16_t address = 0, index = 0;
-static byte value;
-
 void DumpEEPROM(void)
 {
+	char str[50], *pstr;
+	uint16_t address, index;
+	byte value;
+
+	address = 0;
+	index = 0;
+
 	while (true)
 	{
 		value = EEPROM.read(address);
