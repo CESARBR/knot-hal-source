@@ -20,6 +20,7 @@
 #define PRIVATE_KEY_SIZE	32
 #define PUBLIC_KEY_SIZE	64
 #define FOREIGN_KEY_SIZE	64
+
 #define TYPE_PRIVATE_KEY	0
 #define TYPE_PRIVATE_KEY_OUT	1
 #define TYPE_PUBLIC_KEY	2
@@ -95,60 +96,59 @@ static void DumpEEPROM(void)
 	address = 0;
 	index = 0;
 
-	while (true)
-	{
+	while (true) {
 		value = EEPROM.read(address);
 
-	if ((address % 32) == 0) {
-		if (address != 0) {
-			Serial.print(" - ");
-			for(pstr=str; index != 0; --index, ++pstr) {
-				if(*pstr < ' ' || *pstr > 0x7f) {
-					Serial.print('.');
-				} else {
-					Serial.print(*pstr);
+		if ((address % 32) == 0) {
+			if (address != 0) {
+				Serial.print(" - ");
+				for(pstr=str; index != 0; --index, ++pstr) {
+					if(*pstr < ' ' || *pstr > 0x7f) {
+						Serial.print('.');
+					} else {
+						Serial.print(*pstr);
+					}
 				}
+
+				Serial.println();
 			}
 
-			Serial.println();
+			if (address == EEPROM.length()) {
+				Serial.println("[END]\n");
+				address = 0;
+				return;
+			}
+
+			Serial.print('[');
+			if (address < 9) {
+				Serial.print("000");
+			} else if (address < 99) {
+				Serial.print("00");
+			} else if (address < 999) {
+				Serial.print("0");
+			}
+			Serial.print(address);
+			Serial.print("]:");
+			index = 0;
 		}
 
-		if (address == EEPROM.length()) {
-			Serial.println("[END]\n");
-			address = 0;
-			return;
-		}
+		Serial.print(" ");
 
-		Serial.print('[');
-		if (address < 9) {
-			Serial.print("000");
-		} else if (address < 99) {
-			Serial.print("00");
-		} else if (address < 999) {
+		if (value < 16) {
 			Serial.print("0");
 		}
-		Serial.print(address);
-		Serial.print("]:");
-		index = 0;
-	}
 
-	Serial.print(" ");
+		Serial.print(value, HEX);
+		str[index++] = value;
 
-	if (value < 16) {
-		Serial.print("0");
-	}
-
-	Serial.print(value, HEX);
-	str[index++] = value;
-
-	address++;
-
+		address++;
 	}
 }
 
 static void testComparisons(void)
 {
 	/* Comparisons */
+
 	/* UUID */
 	if((memcmp(value_UUID, value_UUID_out, sizeof(value_UUID))) == 0)
 		Serial.println("UUID: \t\tOk");
@@ -201,14 +201,15 @@ static void testComparisons(void)
  	DumpEEPROM();
 }
 
-
 static void testWrite_function(void)
 {
 	Serial.println("Unit Test Write EEPROM Functions");
 
 	/* Write Functions */
-	hal_storage_write_end(HAL_STORAGE_ID_UUID, (void *) value_UUID, sizeof(value_UUID));
-	hal_storage_write_end(HAL_STORAGE_ID_TOKEN, (void *) value_TOKEN, sizeof(value_TOKEN));
+	hal_storage_write_end(HAL_STORAGE_ID_UUID, (void *) value_UUID,
+							sizeof(value_UUID));
+	hal_storage_write_end(HAL_STORAGE_ID_TOKEN, (void *) value_TOKEN,
+							sizeof(value_TOKEN));
 	hal_storage_write_end(HAL_STORAGE_ID_MAC, &mac, sizeof(mac));
 	hal_storage_write_end(HAL_STORAGE_ID_PRIVATE_KEY,
 		 (void *) value_PRIVATE_KEY, sizeof(value_PRIVATE_KEY));
@@ -216,13 +217,16 @@ static void testWrite_function(void)
 		 (void *) value_PUBLIC_KEY, sizeof(value_PUBLIC_KEY));
 	hal_storage_write_end(HAL_STORAGE_ID_FOREIGN_KEY,
 		 (void *) value_FOREIGN_KEY, sizeof(value_FOREIGN_KEY));
-	hal_storage_write_end(HAL_STORAGE_ID_CONFIG, (void *) conf, sizeof(conf));
+	hal_storage_write_end(HAL_STORAGE_ID_CONFIG, (void *) conf,
+							sizeof(conf));
 
 	/* Read Functions (natives) */
-	eeprom_read_block(&value_UUID_out, (const void *) ADDR_UUID, sizeof(value_UUID_out));
+	eeprom_read_block(&value_UUID_out, (const void *) ADDR_UUID,
+						sizeof(value_UUID_out));
 	value_UUID_out[sizeof(value_UUID)] = '\0';
 
-	eeprom_read_block(&value_TOKEN_out, (const void *) ADDR_TOKEN, sizeof(value_TOKEN_out));
+	eeprom_read_block(&value_TOKEN_out, (const void *) ADDR_TOKEN,
+						sizeof(value_TOKEN_out));
 	value_TOKEN_out[sizeof(value_TOKEN)] = '\0';
 
 	eeprom_read_block(&mac_out, (const void *) ADDR_MAC, sizeof(mac_out));
@@ -236,11 +240,12 @@ static void testWrite_function(void)
 	eeprom_read_block(&value_FOREIGN_KEY_out,
 		 (const void *) ADDR_FOREIGN_KEY, sizeof(value_FOREIGN_KEY_out));
 
-	eeprom_read_block(&conf_out, (const void *) (ADDR_OFFSET_CONFIG - sizeof(conf)), sizeof(conf));
+	eeprom_read_block(&conf_out,
+			(const void *) (ADDR_OFFSET_CONFIG - sizeof(conf)),
+			sizeof(conf));
 
 	testComparisons();
 }
-
 
 static void testRead_function()
 {
@@ -254,22 +259,25 @@ static void testRead_function()
 	eeprom_write_block(&mac, (void *) ADDR_MAC, sizeof(mac));
 
 	eeprom_write_block(&value_PRIVATE_KEY, (void *) ADDR_PRIVATE_KEY,
-	 sizeof(value_PRIVATE_KEY));
+						sizeof(value_PRIVATE_KEY));
 
 	eeprom_write_block(&value_PUBLIC_KEY, (void *) ADDR_PUBLIC_KEY,
-	 sizeof(value_PUBLIC_KEY));
+						sizeof(value_PUBLIC_KEY));
 
 	eeprom_write_block(&value_FOREIGN_KEY, (void *) ADDR_FOREIGN_KEY,
-	 sizeof(value_FOREIGN_KEY));
+						sizeof(value_FOREIGN_KEY));
 
 	eeprom_write_word((uint16_t *) ADDR_OFFSET_CONFIG, sizeof(conf));
-	eeprom_write_block(&conf, (void *) (ADDR_OFFSET_CONFIG - sizeof(conf)), sizeof(conf));
+	eeprom_write_block(&conf, (void *) (ADDR_OFFSET_CONFIG - sizeof(conf)),
+								sizeof(conf));
 
 	/* Read Functions */
-	hal_storage_read_end(HAL_STORAGE_ID_UUID, &value_UUID_out, sizeof(value_UUID));
+	hal_storage_read_end(HAL_STORAGE_ID_UUID, &value_UUID_out,
+						sizeof(value_UUID));
 	value_UUID_out[sizeof(value_UUID)] = '\0';
 
-	hal_storage_read_end(HAL_STORAGE_ID_TOKEN, &value_TOKEN_out, sizeof(value_TOKEN));
+	hal_storage_read_end(HAL_STORAGE_ID_TOKEN, &value_TOKEN_out,
+						sizeof(value_TOKEN));
 	value_TOKEN_out[sizeof(value_TOKEN)] = '\0';
 
 	hal_storage_read_end(HAL_STORAGE_ID_MAC, &mac_out, sizeof(mac));
@@ -283,14 +291,15 @@ static void testRead_function()
 	hal_storage_read_end(HAL_STORAGE_ID_FOREIGN_KEY,
 		 (void *) value_FOREIGN_KEY_out, sizeof(value_FOREIGN_KEY_out));
 
-	hal_storage_read_end(HAL_STORAGE_ID_CONFIG, (void *) conf_out, sizeof(conf_out));
+	hal_storage_read_end(HAL_STORAGE_ID_CONFIG, (void *) conf_out,
+							sizeof(conf_out));
 
 	testComparisons();
 }
 
 void setup()
 {
-  Serial.begin(9600);
+	Serial.begin(9600);
 
 	conf[0].sensor_id = 30;
 	conf[0].values.event_flags = KNOT_EVT_FLAG_CHANGE;
@@ -306,7 +315,6 @@ void setup()
 
 	testRead_function();
 	testWrite_function();
-
 }
 
 void loop()
