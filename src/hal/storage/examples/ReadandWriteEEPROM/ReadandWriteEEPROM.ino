@@ -40,9 +40,9 @@
 #define ADDR_OFFSET_CONFIG	(ADDR_FOREIGN_KEY - CONFIG_SIZE)
 
 /* Sample values */
-static char value_UUID[UUID_SIZE] = "361ff48d-c534-4ac6-a7b7-70e648a80000";
+static char value_UUID[] = "361ff48d-c534-4ac6-a7b7-70e648a80000";
 static char value_UUID_out[UUID_SIZE+1];
-static char value_TOKEN[TOKEN_SIZE] = "ad798840028f9055e061256f3d59a150ddee045d";
+static char value_TOKEN[] = "ad798840028f9055e061256f3d59a150ddee045d";
 static char value_TOKEN_out[TOKEN_SIZE+1];
 static uint64_t mac = 0x1122334455667788;
 static uint8_t value_PRIVATE_KEY[PRIVATE_KEY_SIZE] = {
