@@ -86,7 +86,7 @@ typedef struct {
 static data_config_store conf[2];
 static data_config_store conf_out[2];
 
-void DumpEEPROM(void)
+static void DumpEEPROM(void)
 {
 	char str[50], *pstr;
 	uint16_t address, index;
@@ -146,7 +146,7 @@ void DumpEEPROM(void)
 	}
 }
 
-void testComparisons(void)
+static void testComparisons(void)
 {
 	/* Comparisons */
 	/* UUID */
@@ -202,7 +202,7 @@ void testComparisons(void)
 }
 
 
-void testWrite_function()
+static void testWrite_function(void)
 {
 	Serial.println("Unit Test Write EEPROM Functions");
 
@@ -242,7 +242,7 @@ void testWrite_function()
 }
 
 
-void testRead_function()
+static void testRead_function()
 {
 	Serial.println("Unit Test Read EEPROM Functions");
 
