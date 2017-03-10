@@ -18,9 +18,9 @@ int hal_log_open(const char *pathname);
 
 void logger(PGM_P category, const char *format, ...);
 
-const char PROGMEM libInfoString[] = { "[info]" };
-const char PROGMEM libWarnString[] = { "[warn]" };
-const char PROGMEM libErrorString[] = { "[error]" };
+extern const char PROGMEM libInfoString[];
+extern const char PROGMEM libWarnString[];
+extern const char PROGMEM libErrorString[];
 
 #define hal_log_info(format, ...)					\
 	logger(libInfoString, format, __VA_ARGS__)

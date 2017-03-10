@@ -23,6 +23,10 @@ static Serial_* _serial = &Serial;
 static HardwareSerial* _serial = &Serial;
 #endif
 
+const char PROGMEM libInfoString[] = { "[info]" };
+const char PROGMEM libWarnString[] = { "[warn]" };
+const char PROGMEM libErrorString[] = { "[error]" };
+
 int hal_log_open(const char *pathname)
 {
 	if (strncmp("serial", pathname, 6) != 0)
