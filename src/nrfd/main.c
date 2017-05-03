@@ -17,7 +17,7 @@
 #include <glib.h>
 #include <sys/inotify.h>
 
-#include "include/linux_log.h"
+#include "hal/linux_log.h"
 #include "manager.h"
 
 #define BUF_LEN (sizeof(struct inotify_event))

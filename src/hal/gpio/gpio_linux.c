@@ -7,7 +7,7 @@
  *
  */
 
-#include "include/gpio.h"
+#include "hal/gpio.h"
 
  static volatile unsigned	*gpio;
 

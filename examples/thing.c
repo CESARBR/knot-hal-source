@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "include/nrf24.h"
-#include "include/comm.h"
-#include "include/time.h"
+#include "hal/nrf24.h"
+#include "hal/comm.h"
+#include "hal/time.h"
 
 /* application packet size maximum */
 #define PACKET_SIZE_MAX	128

@@ -17,8 +17,8 @@
 
 #include <glib.h>
 
-#include "include/nrf24.h"
-#include "include/comm.h"
+#include "hal/nrf24.h"
+#include "hal/comm.h"
 #include "manager.h"
 
 /* Application packet size maximum, same as knotd */

@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 #ifdef ARDUINO
-#include "include/avr_unistd.h"
+#include "hal/avr_unistd.h"
 #endif
 
 // Identifier of data type to be stored

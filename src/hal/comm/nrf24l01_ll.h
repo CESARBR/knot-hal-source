@@ -7,7 +7,7 @@
  *
  */
 
-#include "include/nrf24.h"
+#include "hal/nrf24.h"
 
 #define NRF24_MTU					32
 

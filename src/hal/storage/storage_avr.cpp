@@ -7,9 +7,9 @@
  *
  */
 #include <avr/eeprom.h>
-#include "include/avr_errno.h"
+#include "hal/avr_errno.h"
 #include <string.h>
-#include "include/storage.h"
+#include "hal/storage.h"
 #include "knot_thing_config.h"
 
 #define UUID_SIZE		36

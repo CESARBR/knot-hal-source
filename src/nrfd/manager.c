@@ -23,12 +23,12 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "include/nrf24.h"
-#include "include/comm.h"
-#include "include/time.h"
+#include "hal/nrf24.h"
+#include "hal/comm.h"
+#include "hal/time.h"
 
 #include "nrf24l01_io.h"
-#include "include/linux_log.h"
+#include "hal/linux_log.h"
 #include "manager.h"
 
 #define KNOTD_UNIX_ADDRESS		"knot"

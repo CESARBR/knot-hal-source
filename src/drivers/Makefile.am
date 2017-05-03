@@ -9,7 +9,7 @@ libphy_driver_a_CPPFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/src/hal/comm \
 
 all-local:
 	$(MKDIR_P) $(top_srcdir)/libs && cp $(lib_LIBRARIES) $(top_srcdir)/libs
-	$(MKDIR_P) $(top_srcdir)/include/arduino && cp $(lib_ARDUINO) $(top_srcdir)/include/arduino
+	$(MKDIR_P) $(top_srcdir)/hal/arduino && cp $(lib_ARDUINO) $(top_srcdir)/hal/arduino
 clean-local:
 	$(RM) -r libphy_driver.a
 	$(RM) -r $(top_srcdir)/libs

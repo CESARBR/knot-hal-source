@@ -8,7 +8,7 @@
  */
 
 #include "KNoTThing.h"
-#include "include/storage.h"
+#include "hal/storage.h"
 
 #include <string.h>
 #include <EEPROM.h>

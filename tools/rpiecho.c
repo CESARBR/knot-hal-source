@@ -18,7 +18,7 @@
 #include "spi.h"
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
-#include "include/time.h"
+#include "hal/time.h"
 
 #define MAXRETRIES 20
 #define PIPE0		0

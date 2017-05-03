@@ -21,9 +21,9 @@
 #include <fcntl.h>
 
 /* FIXME: Remove this header */
-#include "include/nrf24.h"
+#include "hal/nrf24.h"
 
-#include "include/comm.h"
+#include "hal/comm.h"
 
 int hal_comm_init(const char *pathname, const struct nrf24_mac *mac)
 {

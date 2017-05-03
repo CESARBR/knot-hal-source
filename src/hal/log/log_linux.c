@@ -14,7 +14,7 @@
 #include <syslog.h>
 #include <stdarg.h>
 
-#include "include/linux_log.h"
+#include "hal/linux_log.h"
 
 void hal_log_error(const char *format, ...)
 {

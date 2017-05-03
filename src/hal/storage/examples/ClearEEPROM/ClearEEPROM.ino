@@ -8,7 +8,7 @@
  */
 
 #include "KNoTThing.h"
-#include "include/avr_log.h"
+#include "hal/avr_log.h"
 #include <EEPROM.h>
 
 void setup()

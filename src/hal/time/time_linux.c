@@ -14,7 +14,7 @@
 
 #include <linux/random.h>
 #include <sys/syscall.h>
-#include "include/time.h"
+#include "hal/time.h"
 
 #define MS 1
 #define US 0

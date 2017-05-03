@@ -13,8 +13,8 @@
 #include <stdio.h>
 
 #ifdef ARDUINO
-#include "include/avr_errno.h"
-#include "include/avr_unistd.h"
+#include "hal/avr_errno.h"
+#include "hal/avr_unistd.h"
 #else
 #include <errno.h>
 #include <unistd.h>

@@ -9,7 +9,7 @@
 
 #include <Arduino.h>
 
-#include "include/gpio.h"
+#include "hal/gpio.h"
 
 int hal_gpio_setup(void)
 {
