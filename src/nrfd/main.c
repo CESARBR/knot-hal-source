@@ -185,11 +185,8 @@ int main(int argc, char *argv[])
 
 done:
 	g_source_remove(watch_id);
-	g_io_channel_unref(inotify_io);
-	/* Removing from the watch list.*/
 	inotify_rm_watch(inotifyFD, wd);
-	/* Closing the INOTIFY instance */
-	close(inotifyFD);
+	g_io_channel_unref(inotify_io);
 
 	manager_stop();
 
