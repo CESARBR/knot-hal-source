@@ -643,7 +643,7 @@ static int connect_unix(void)
 
 static void knotd_io_destroy(gpointer user_data)
 {
-	struct peer *p = (struct peer *)user_data;
+	struct peer *p = (struct peer *) user_data;
 	hal_comm_close(p->socket_fd);
 	close(p->knotd_fd);
 	p->socket_fd = -1;
@@ -654,24 +654,26 @@ static void knotd_io_destroy(gpointer user_data)
 static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 							gpointer user_data)
 {
-
+	struct peer *p = (struct peer *) user_data;
 	char buffer[128];
-	ssize_t readbytes_knotd;
-	struct peer *p = (struct peer *)user_data;
+	ssize_t count;
+	int err;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
 		return FALSE;
 
 	/* Read data from Knotd */
-	readbytes_knotd = read(p->knotd_fd, buffer, sizeof(buffer));
-	if (readbytes_knotd < 0) {
-		hal_log_error("read_knotd() error");
+	count = read(p->knotd_fd, buffer, sizeof(buffer));
+	if (count < 0) {
+		err = errno;
+		hal_log_error("knotd read(%d): %s(%d)", p->knotd_fd,
+							strerror(err), err);
 		return FALSE;
 	}
 
 	/* Send data to thing */
 	/* TODO: put data in list for transmission */
-	hal_comm_write(p->socket_fd, buffer, readbytes_knotd);
+	hal_comm_write(p->socket_fd, buffer, count);
 
 	return TRUE;
 }
