@@ -61,7 +61,6 @@ struct peer {
 	uint64_t mac;
 	int8_t socket_fd;
 	int8_t knotd_fd;
-	GIOChannel *knotd_io;
 	guint knotd_id;
 };
 
@@ -649,7 +648,6 @@ static void knotd_io_destroy(gpointer user_data)
 	close(p->knotd_fd);
 	p->socket_fd = -1;
 	p->knotd_id = 0;
-	p->knotd_io = NULL;
 	count_clients--;
 }
 
@@ -681,6 +679,7 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 {
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
+	GIOChannel *io;
 	int8_t position;
 	uint8_t i;
 	int usk, nsk;
@@ -760,21 +759,17 @@ done:
 						strlen((char *)evt_pre->name)));
 
 		/* Watch knotd socket */
-		peers[position].knotd_io =
-			g_io_channel_unix_new(peers[position].knotd_fd);
-		g_io_channel_set_flags(peers[position].knotd_io,
-			G_IO_FLAG_NONBLOCK, NULL);
-		g_io_channel_set_close_on_unref(peers[position].knotd_io,
-			FALSE);
+		io = g_io_channel_unix_new(peers[position].knotd_fd);
+		g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, NULL);
+		g_io_channel_set_close_on_unref(io, FALSE);
 
-		peers[position].knotd_id =
-			g_io_add_watch_full(peers[position].knotd_io,
-						G_PRIORITY_DEFAULT,
-						cond,
-						knotd_io_watch,
-						&peers[position],
-						knotd_io_destroy);
-		g_io_channel_unref(peers[position].knotd_io);
+		peers[position].knotd_id = g_io_add_watch_full(io,
+							G_PRIORITY_DEFAULT,
+							cond,
+							knotd_io_watch,
+							&peers[position],
+							knotd_io_destroy);
+		g_io_channel_unref(io);
 
 		count_clients++;
 
