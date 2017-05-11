@@ -683,7 +683,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	int8_t position;
 	uint8_t i;
-	int err;
+	int usk, nsk;
 	char mac_str[MAC_ADDRESS_SIZE];
 	struct bcast_presence *peer;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
@@ -731,19 +731,24 @@ done:
 		if (position < 0)
 			return position;
 
-		/* Create Socket */
-		err = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
-		if (err < 0)
-			return err;
-
-		peers[position].socket_fd = err;
-
-		peers[position].knotd_fd = connect_unix();
-		if (peers[position].knotd_fd < 0) {
-			hal_comm_close(peers[position].socket_fd);
-			peers[position].socket_fd = -1;
-			return peers[position].knotd_fd;
+		/* Radio socket: nRF24 */
+		nsk = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
+		if (nsk < 0) {
+			hal_log_error("hal_comm_socket(nRF24): %s(%d)",
+							strerror(nsk), nsk);
+			return nsk;
 		}
+
+		/* Upper layer socket: knotd */
+		usk = connect_unix();
+		if (usk < 0) {
+			hal_log_error("connect(): %s(%d)", strerror(usk), usk);
+			hal_comm_close(nsk);
+			return usk;
+		}
+
+		peers[position].knotd_fd = usk;
+		peers[position].socket_fd = nsk;
 
 		/* Set mac value for this position */
 		peers[position].mac =
