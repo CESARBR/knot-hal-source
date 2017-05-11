@@ -18,8 +18,6 @@
 #include <glib.h>
 #include <gio/gio.h>
 #include <json-c/json.h>
-#include <netdb.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -36,7 +34,7 @@
 #define BCAST_TIMEOUT			10000
 
 #ifndef MIN
-#define MIN(a,b) 			(((a) < (b)) ? (a) : (b))
+#define MIN(a,b)			(((a) < (b)) ? (a) : (b))
 #endif
 
 static int mgmtfd;
@@ -45,7 +43,7 @@ static guint dbus_id;
 
 static struct adapter {
 	struct nrf24_mac mac;
-	/* file with struct keys */
+	/* File with struct keys */
 	gchar *file_name;
 	gboolean powered;
 	/* Struct with the known peers */
@@ -598,7 +596,7 @@ static int8_t check_permission(struct nrf24_mac mac)
 	return -EPERM;
 }
 
-/* Get peer position in vector of peers*/
+/* Get peer position in vector of peers */
 static int8_t get_peer(struct nrf24_mac mac)
 {
 	int8_t i;
@@ -611,7 +609,7 @@ static int8_t get_peer(struct nrf24_mac mac)
 	return -EINVAL;
 }
 
-/* Get free position in vector for peers*/
+/* Get free position in vector for peers */
 static int8_t get_peer_index(void)
 {
 	int8_t i;
@@ -722,9 +720,9 @@ done:
 		return -EPERM;
 
 	if (count_clients >= MAX_PEERS)
-		return -EUSERS; /*MAX PEERS*/
+		return -EUSERS; /* MAX PEERS */
 
-	/*Check if this peer is already allocated */
+	/* Check if this peer is already allocated */
 	position = get_peer(evt_pre->mac);
 	/* If this is a new peer */
 	if (position < 0) {
@@ -733,7 +731,7 @@ done:
 		if (position < 0)
 			return position;
 
-		/*Create Socket */
+		/* Create Socket */
 		err = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
 		if (err < 0)
 			return err;
@@ -786,7 +784,7 @@ done:
 		g_hash_table_remove(peer_bcast_table, mac_str);
 	}
 
-	/*Send Connect */
+	/* Send Connect */
 	hal_comm_connect(peers[position].socket_fd,
 			&evt_pre->mac.address.uint64);
 	return 0;
@@ -818,7 +816,7 @@ static int8_t clients_read()
 	uint8_t buffer[256];
 	int ret;
 
-	/*No client */
+	/* No client */
 	if (count_clients == 0)
 		return 0;
 
@@ -833,6 +831,7 @@ static int8_t clients_read()
 				hal_log_error("write_knotd() error");
 		}
 	}
+
 	return 0;
 }
 
@@ -1085,7 +1084,7 @@ static int gen_save_mac(const char *config, const char *file,
 	if (!json_object_object_get_ex(jobj, "radio", &obj_radio))
 		goto done;
 
-	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp)){
+	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp)) {
 
 			char mac_string[24];
 			uint8_t mac_mask = 4;
@@ -1140,7 +1139,7 @@ static int parse_config(const char *config, int *channel, int *dbm,
 		*dbm = json_object_get_int(obj_tmp);
 
 	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp))
-		if (json_object_get_string(obj_tmp) != NULL){
+		if (json_object_get_string(obj_tmp) != NULL) {
 			err =
 			nrf24_str2mac(json_object_get_string(obj_tmp), mac);
 			if (err == -1)
@@ -1177,6 +1176,7 @@ static int parse_nodes(const char *nodes_file)
 		hal_log_error("Invalid numbers of nodes at %s", nodes_file);
 		goto failure;
 	}
+
 	for (i = 0; i < array_len; i++) {
 		obj_nodes = json_object_array_get_idx(obj_keys, i);
 		if (!json_object_object_get_ex(obj_nodes, "mac", &obj_tmp))
