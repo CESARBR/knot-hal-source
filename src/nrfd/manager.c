@@ -684,7 +684,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	GIOChannel *io;
 	int8_t position;
 	uint8_t i;
-	int usk, nsk;
+	int usk, nsk, ret;
 	char mac_str[MAC_ADDRESS_SIZE];
 	struct bcast_presence *peer;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
@@ -787,8 +787,11 @@ done:
 	}
 
 	/* Send Connect */
-	hal_comm_connect(peers[position].socket_fd,
+	ret = hal_comm_connect(peers[position].socket_fd,
 			&evt_pre->mac.address.uint64);
+
+	hal_log_info("hal_comm_connect(%s): %d", mac_str, ret);
+
 	return 0;
 }
 
