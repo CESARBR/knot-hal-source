@@ -105,6 +105,7 @@ static void listen_raw(void)
 static void listen_mgmt(void)
 {
 	struct nrf24_io_pack p;
+	struct nrf24_ll_presence *ll;
 	struct nrf24_ll_mgmt_pdu *ipdu =
 				(struct nrf24_ll_mgmt_pdu *)p.payload;
 	char buffer[256];
@@ -120,15 +121,11 @@ static void listen_mgmt(void)
 		switch (ipdu->type) {
 		/* If is a presente type */
 		case NRF24_PDU_TYPE_PRESENCE:
-		{
-			/* Mac address structure */
-			struct nrf24_mac *mac =
-				(struct nrf24_mac *)ipdu->payload;
+			ll = (struct nrf24_ll_presence*) ipdu->payload;
 
-			nrf24_mac2str(mac, buffer);
+			nrf24_mac2str(&ll->mac, buffer);
 			printf("nRF24: Beacon(p) plen:%zd\n", ilen);
-			printf("\t%s\n", buffer);
-		}
+			printf("\t%s %s\n", buffer, ll->name);
 			break;
 		/* If is a connect request type */
 		case NRF24_PDU_TYPE_CONNECT_REQ:
@@ -153,7 +150,6 @@ static void listen_mgmt(void)
 		default:
 			printf("CODE INVALID %d\n", ipdu->type);
 		}
-		printf("\n\n");
 	}
 }
 
