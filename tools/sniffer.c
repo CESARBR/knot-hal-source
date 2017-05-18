@@ -25,7 +25,7 @@ static char *opt_mode = "mgmt";
 int cli_fd;
 int quit;
 
-static int channel_mgmt = 20;
+static int channel_mgmt = 76;
 static int channel_raw = 10;
 
 /* Access Address for each pipe */
