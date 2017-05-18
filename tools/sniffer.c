@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <glib.h>
+#include "hal/nrf24.h"
 
 #include "phy_driver.h"
 #include "nrf24l01.h"
@@ -104,9 +105,10 @@ static void listen_raw(void)
 static void listen_mgmt(void)
 {
 	struct nrf24_io_pack p;
-	ssize_t ilen;
 	struct nrf24_ll_mgmt_pdu *ipdu =
 				(struct nrf24_ll_mgmt_pdu *)p.payload;
+	char buffer[256];
+	ssize_t ilen;
 	int i;
 	/* Read from management pipe */
 	p.pipe = 0;
@@ -122,10 +124,10 @@ static void listen_mgmt(void)
 			/* Mac address structure */
 			struct nrf24_mac *mac =
 				(struct nrf24_mac *)ipdu->payload;
-			printf("NRF24_PDU_TYPE_PRESENCE\n");
-			printf("mac: %llX", (long long int)
-				mac->address.uint64);
-			printf("\n");
+
+			nrf24_mac2str(mac, buffer);
+			printf("nRF24: Beacon(p) plen:%zd\n", ilen);
+			printf("\t%s\n", buffer);
 		}
 			break;
 		/* If is a connect request type */

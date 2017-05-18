@@ -44,7 +44,10 @@ src_lorad_lorad_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 tools_sniffer_SOURCES = tools/sniffer.c
 tools_sniffer_LDADD = libs/libphy_driver.a \
-				 libs/libnrf24l01.a libs/libspi.a \
+				libs/libhalcommnrf24.a \
+				libs/libhaltime.a \
+				libs/libnrf24l01.a \
+				libs/libspi.a \
 				@GLIB_LIBS@
 tools_sniffer_LDFLAGS = $(AM_LDFLAGS)
 tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
