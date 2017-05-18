@@ -107,13 +107,13 @@ static void listen_mgmt(void)
 {
 	struct nrf24_io_pack p;
 	struct nrf24_ll_presence *ll;
+	struct nrf24_ll_mgmt_connect *llcn;
 	struct nrf24_ll_mgmt_pdu *ipdu =
 				(struct nrf24_ll_mgmt_pdu *)p.payload;
-	char buffer[256];
+	char src[32], dst[32];
 	unsigned long int sec, usec;
 	struct timeval tm, reftm;
 	ssize_t ilen;
-	int i;
 	/* Read from management pipe */
 	p.pipe = 0;
 
@@ -139,33 +139,33 @@ static void listen_mgmt(void)
 		case NRF24_PDU_TYPE_PRESENCE:
 			ll = (struct nrf24_ll_presence*) ipdu->payload;
 
-			nrf24_mac2str(&ll->mac, buffer);
-			printf("%05ld.%06ld nRF24: Beacon(p) plen:%zd\n",
-							sec, usec, ilen);
-			printf("\t%s %s\n", buffer, ll->name);
+			nrf24_mac2str(&ll->mac, src);
+			printf("%05ld.%06ld nRF24: Beacon(0x%02x|P) plen:%zd\n",
+						sec, usec, ipdu->type, ilen);
+			printf("  %s %s\n", src, ll->name);
 			break;
 		/* If is a connect request type */
 		case NRF24_PDU_TYPE_CONNECT_REQ:
-		{
 			/* Link layer connect structure */
-			struct nrf24_ll_mgmt_connect *connect =
-				(struct nrf24_ll_mgmt_connect *) ipdu->payload;
+			llcn = (struct nrf24_ll_mgmt_connect *) ipdu->payload;
 
 			/* Header type is a connect request type */
-			printf("NRF24_PDU_TYPE_CONNECT_REQ\n");
-			printf("src_addr = %llX\n",
-			(long long int) connect->src_addr.address.uint64);
-			printf("dst_addr = %llX\n",
-			(long long int) connect->dst_addr.address.uint64);
-			printf("channel = %d\n", connect->channel);
-			printf("Access Address: ");
-			for (i = 0; i < 5; i++)
-				printf("%llX", (long long int) connect->aa[i]);
-			printf("\n");
-		}
+			printf("%05ld.%06ld nRF24: Connect Req(0x%02x) plen:%zd\n",
+						sec, usec, ipdu->type, ilen);
+
+			nrf24_mac2str(&llcn->src_addr, src);
+			nrf24_mac2str(&llcn->dst_addr, dst);
+			printf("  %s > %s\n", src, dst);
+			printf("  CH: %d AA: %02x%02x%02x%02x%02x\n",
+							llcn->channel,
+							llcn->aa[0],
+							llcn->aa[1],
+							llcn->aa[2],
+							llcn->aa[3],
+							llcn->aa[4]);
 			break;
 		default:
-			printf("CODE INVALID %d\n", ipdu->type);
+			break;
 		}
 	}
 }
