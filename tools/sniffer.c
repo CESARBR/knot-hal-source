@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <glib.h>
+#include <sys/time.h>
 #include "hal/nrf24.h"
 
 #include "phy_driver.h"
@@ -109,14 +110,29 @@ static void listen_mgmt(void)
 	struct nrf24_ll_mgmt_pdu *ipdu =
 				(struct nrf24_ll_mgmt_pdu *)p.payload;
 	char buffer[256];
+	unsigned long int sec, usec;
+	struct timeval tm, reftm;
 	ssize_t ilen;
 	int i;
 	/* Read from management pipe */
 	p.pipe = 0;
+
+	/* Reference time */
+	gettimeofday(&reftm, NULL);
+
 	while (!quit) {
 		ilen = phy_read(cli_fd, &p, NRF24_MTU);
 		if (ilen < 0)
 			continue;
+
+		gettimeofday(&tm, NULL);
+		if (tm.tv_usec < reftm.tv_usec) {
+			sec = tm.tv_sec - reftm.tv_sec - 1;
+			usec = tm.tv_usec + 1000000 - reftm.tv_usec;
+		} else {
+			sec = tm.tv_sec - reftm.tv_sec;
+			usec = tm.tv_usec - reftm.tv_usec;
+		}
 
 		switch (ipdu->type) {
 		/* If is a presente type */
@@ -124,7 +140,8 @@ static void listen_mgmt(void)
 			ll = (struct nrf24_ll_presence*) ipdu->payload;
 
 			nrf24_mac2str(&ll->mac, buffer);
-			printf("nRF24: Beacon(p) plen:%zd\n", ilen);
+			printf("%05ld.%06ld nRF24: Beacon(p) plen:%zd\n",
+							sec, usec, ilen);
 			printf("\t%s %s\n", buffer, ll->name);
 			break;
 		/* If is a connect request type */
