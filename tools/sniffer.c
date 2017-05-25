@@ -110,10 +110,13 @@ static void listen_mgmt(void)
 	struct nrf24_ll_mgmt_connect *llcn;
 	struct nrf24_ll_mgmt_pdu *ipdu =
 				(struct nrf24_ll_mgmt_pdu *)p.payload;
+	const char *raw = (const char *) ipdu->payload;
 	char src[32], dst[32];
 	unsigned long int sec, usec;
 	struct timeval tm, reftm;
 	ssize_t ilen;
+	int i;
+
 	/* Read from management pipe */
 	p.pipe = 0;
 
@@ -121,6 +124,7 @@ static void listen_mgmt(void)
 	gettimeofday(&reftm, NULL);
 
 	while (!quit) {
+		memset(&p, 0, sizeof(p));
 		ilen = phy_read(cli_fd, &p, NRF24_MTU);
 		if (ilen < 0)
 			continue;
@@ -165,6 +169,12 @@ static void listen_mgmt(void)
 							llcn->aa[4]);
 			break;
 		default:
+			printf("%05ld.%06ld nRF24: Unknown (0x%02x) plen:%zd\n",
+						sec, usec, ipdu->type, ilen);
+			printf("  ");
+			for (i = 0; i < ilen; i++)
+				printf("%02x", raw[i]);
+			printf("\n");
 			break;
 		}
 	}
