@@ -126,7 +126,7 @@ static void listen_mgmt(void)
 	while (!quit) {
 		memset(&p, 0, sizeof(p));
 		ilen = phy_read(cli_fd, &p, NRF24_MTU);
-		if (ilen < 0)
+		if (ilen <= 0)
 			continue;
 
 		gettimeofday(&tm, NULL);
