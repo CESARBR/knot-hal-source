@@ -107,6 +107,7 @@ static void set_address_pipe(int8_t spi_fd, uint8_t reg, uint8_t *pipe_addr)
 		break;
 	default:
 		len = DATA_SIZE;
+		break;
 	}
 
 	outr_data(spi_fd, reg, &addr, len);
@@ -130,11 +131,14 @@ static uint8_t *get_address_pipe(int8_t spi_fd, uint8_t pipe)
 	default:
 		inr_data(spi_fd, NRF24_RX_ADDR_P1, pipe_addr, len);
 		len = DATA_SIZE;
+		break;
 	}
+
 	inr_data(spi_fd, pipe_reg[pipe].rx_addr, pipe_addr, len);
 
 	return pipe_addr;
 }
+
 static int8_t set_standby1(void)
 {
 	disable();
@@ -243,11 +247,12 @@ int8_t nrf24l01_deinit(int8_t spi_fd)
 
 	disable();
 	/* Power down the radio */
-	outr(spi_fd, NRF24_CONFIG, inr(spi_fd, NRF24_CONFIG)
-			& ~NRF24_CFG_PWR_UP);
+	outr(spi_fd, NRF24_CONFIG, inr(spi_fd, NRF24_CONFIG) &
+							~NRF24_CFG_PWR_UP);
 
 	/* Deinit SPI and GPIO */
 	io_reset(spi_fd);
+
 	return 0;
 }
 
@@ -264,7 +269,7 @@ int8_t nrf24l01_set_channel(int8_t spi_fd, uint8_t ch)
 	uint8_t max;
 
 	max = NRF24_RF_DR(inr(spi_fd, NRF24_RF_SETUP)) == NRF24_DR_2MBPS ?
-			NRF24_CH_MAX_2MBPS : NRF24_CH_MAX_1MBPS;
+					NRF24_CH_MAX_2MBPS : NRF24_CH_MAX_1MBPS;
 
 	if (ch != _CONSTRAIN(ch, NRF24_CH_MIN, max))
 		return -1;
@@ -279,6 +284,7 @@ int8_t nrf24l01_set_channel(int8_t spi_fd, uint8_t ch)
 		outr(spi_fd, NRF24_RF_CH,
 			NRF24_CH(_CONSTRAIN(ch, NRF24_CH_MIN, max)));
 	}
+
 	return 0;
 }
 
@@ -292,7 +298,7 @@ int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr,
 {
 	pipe_reg_t rpipe;
 
-	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
+	memcpy(&rpipe, &pipe_reg[pipe], sizeof(rpipe));
 
 	/* Enable pipe */
 	if (!(inr(spi_fd, NRF24_EN_RXADDR) & rpipe.en_rxaddr)) {
@@ -307,6 +313,7 @@ int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr,
 			outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
 					| pipe_reg[pipe].enaa);
 	}
+
 	return 0;
 }
 
@@ -322,7 +329,7 @@ int8_t nrf24l01_close_pipe(int8_t spi_fd, int8_t pipe)
 	if (pipe < NRF24_PIPE_MIN || pipe > NRF24_PIPE_MAX)
 		return -1;
 
-	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
+	memcpy(&rpipe, &pipe_reg[pipe], sizeof(rpipe));
 
 	if (inr(spi_fd, NRF24_EN_RXADDR) & rpipe.en_rxaddr) {
 		/*
@@ -335,6 +342,7 @@ int8_t nrf24l01_close_pipe(int8_t spi_fd, int8_t pipe)
 		outr(spi_fd, NRF24_EN_AA, inr(spi_fd, NRF24_EN_AA)
 				& ~rpipe.enaa);
 	}
+
 	return 0;
 }
 
@@ -422,6 +430,7 @@ int8_t nrf24l01_ptx_wait_datasent(int8_t spi_fd)
 			return -1;
 		}
 	}
+
 	return 0;
 }
 
@@ -464,6 +473,7 @@ int8_t nrf24l01_prx_pipe_available(int8_t spi_fd)
 		if (pipe > NRF24_PIPE_MAX)
 			pipe = NRF24_NO_PIPE;
 	}
+
 	return (int8_t)pipe;
 }
 
@@ -473,7 +483,7 @@ int8_t nrf24l01_prx_pipe_available(int8_t spi_fd)
 */
 int8_t nrf24l01_prx_data(int8_t spi_fd, void *pdata, uint16_t len)
 {
-	uint16_t		rxlen = 0;
+	uint16_t rxlen = 0;
 
 	outr(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR);
 
@@ -488,5 +498,6 @@ int8_t nrf24l01_prx_data(int8_t spi_fd, void *pdata, uint16_t len)
 		rxlen = _MIN(len, rxlen);
 		command_data(spi_fd, NRF24_R_RX_PAYLOAD, pdata, rxlen);
 	}
+
 	return (int8_t)rxlen;
 }
