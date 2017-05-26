@@ -20,14 +20,14 @@
 
 #include "spi.h"
 
-#define LOW			0
 #define HIGH			1
 
 /* delay for CSN */
 #define DELAY_US		5
 
-#define SPI_SPEED		1000000
 #define BITS_PER_WORD		8
+
+static uint32_t speed = 1000000; /* 1 MHz */
 
 int8_t spi_init(const char *dev)
 {
@@ -37,6 +37,12 @@ int8_t spi_init(const char *dev)
 
 	if (spi_fd < 1)
 		return -errno;
+
+	ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
+	if (ioctl(spi_fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) < 0) {
+		close(spi_fd);
+		return -errno;
+	}
 
 	return spi_fd;
 }
@@ -53,9 +59,7 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		int lrx)
 {
 	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
-	uint8_t  mode;
-	uint8_t bits = 8;
-	uint32_t speed = 1000000;
+	uint8_t mode = SPI_MODE_0;
 	uint16_t delay = 5;
 	uint8_t *pdummy = NULL;
 	int ntransfer = 0;
@@ -81,9 +85,8 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->len = ltx;
 		pdata_ioc->delay_usecs =
 			(rx != NULL && lrx != 0) ? 0 : DELAY_US;
-		pdata_ioc->cs_change = (rx != NULL && lrx != 0) ? LOW : HIGH;
 		pdata_ioc->speed_hz = speed;
-		pdata_ioc->bits_per_word = bits;
+		pdata_ioc->bits_per_word = BITS_PER_WORD;
 		++ntransfer;
 		++pdata_ioc;
 
@@ -99,17 +102,11 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->delay_usecs = delay;
 		pdata_ioc->cs_change = HIGH;
 		pdata_ioc->speed_hz = speed;
-		pdata_ioc->bits_per_word = bits;
+		pdata_ioc->bits_per_word = BITS_PER_WORD;
 		++ntransfer;
 	}
 
-	mode = SPI_MODE_0;
-
 	ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
-
-	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
-
-	ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 
 	ret = ioctl(spi_fd, SPI_IOC_MESSAGE(ntransfer), data_ioc);
 
