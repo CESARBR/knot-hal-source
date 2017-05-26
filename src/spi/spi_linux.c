@@ -27,7 +27,7 @@
 
 #define BITS_PER_WORD		8
 
-static uint32_t speed = 1000000; /* 1 MHz */
+static uint32_t speed = 10000000; /* 10 MHz */
 
 int8_t spi_init(const char *dev)
 {
