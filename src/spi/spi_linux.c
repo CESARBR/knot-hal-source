@@ -106,13 +106,10 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 	mode = SPI_MODE_0;
 
 	ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
-	ioctl(spi_fd, SPI_IOC_RD_MODE, &mode);
 
 	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
-	ioctl(spi_fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
 
 	ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
-	ioctl(spi_fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
 
 	ret = ioctl(spi_fd, SPI_IOC_MESSAGE(ntransfer), data_ioc);
 
