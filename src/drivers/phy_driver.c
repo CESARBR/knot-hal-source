@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #ifdef ARDUINO
 #include "hal/avr_errno.h"
