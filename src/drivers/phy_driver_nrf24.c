@@ -62,6 +62,7 @@ static ssize_t nrf24l01_read(int spi_fd, void *buffer, size_t len)
 {
 	ssize_t length = -1;
 	struct nrf24_io_pack *p = (struct nrf24_io_pack *) buffer;
+
 	/* If the pipe available */
 	if (nrf24l01_prx_pipe_available(spi_fd) == p->pipe)
 		/* Copy data to buffer */
@@ -76,7 +77,6 @@ static ssize_t nrf24l01_read(int spi_fd, void *buffer, size_t len)
 
 static int nrf24l01_open(const char *pathname)
 {
-	int err;
 	/*
 	 * Considering 16-bits to address adapter and logical
 	 * channels. The most significant 4-bits will be used to
@@ -86,13 +86,8 @@ static int nrf24l01_open(const char *pathname)
 	 * TODO: Implement addressing
 	 */
 
-	/* Init the radio with tx power 0dbm */
-	err = nrf24l01_init(pathname, NRF24_PWR_0DBM);
-	if (err < 0)
-		return err;
-
-	/* Returns spi fd */
-	return err;
+	/* Init the radio with tx power 0dbm. Returns SPI fd */
+	return nrf24l01_init(pathname, NRF24_PWR_0DBM);
 }
 
 static void nrf24l01_close(int spi_fd)
@@ -102,37 +97,32 @@ static void nrf24l01_close(int spi_fd)
 
 static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 {
-	int err = 0;
+	struct addr_pipe *addrpipe;
+	int err;
 
 	/* Set standby to set registers */
 	nrf24l01_set_standby(spi_fd);
 
 	switch (cmd) {
-
 	/* Command to set address pipe */
 	case NRF24_CMD_SET_PIPE:
-		{
-			struct addr_pipe *addrpipe = (struct addr_pipe *) arg;
+		addrpipe = (struct addr_pipe *) arg;
 
-			err = nrf24l01_open_pipe(spi_fd, addrpipe->pipe,
+		err = nrf24l01_open_pipe(spi_fd, addrpipe->pipe,
 					addrpipe->aa, addrpipe->ack);
-		}
 		break;
-
 	case NRF24_CMD_RESET_PIPE:
 		err = nrf24l01_close_pipe(spi_fd, *((int *) arg));
 		break;
-
 	/* Command to set channel pipe */
 	case NRF24_CMD_SET_CHANNEL:
 		err = nrf24l01_set_channel(spi_fd, *((int *) arg));
 		break;
-
 	case NRF24_CMD_SET_STANDBY:
 		break;
-
 	default:
 		err = -1;
+		break;
 	}
 
 	if (cmd != NRF24_CMD_SET_STANDBY)
