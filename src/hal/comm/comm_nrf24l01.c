@@ -182,10 +182,9 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	/* Assemble keep alive packet */
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu =
-		(struct nrf24_ll_data_pdu *)p.payload;
+		(struct nrf24_ll_data_pdu *) p.payload;
 	struct nrf24_ll_crtl_pdu *llctrl =
-		(struct nrf24_ll_crtl_pdu *)opdu->payload;
-
+		(struct nrf24_ll_crtl_pdu *) opdu->payload;
 	struct nrf24_ll_keepalive *llkeepalive =
 		(struct nrf24_ll_keepalive *) llctrl->payload;
 
@@ -197,11 +196,8 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	llkeepalive->dst_addr.address.uint64 = dst.address.uint64;
 	llkeepalive->src_addr.address.uint64 = src.address.uint64;
 	/* Sends keep alive packet */
-	err = phy_write(spi_fd, &p,
-					sizeof(struct nrf24_ll_data_pdu) +
-					sizeof(struct nrf24_ll_crtl_pdu) +
-					sizeof(struct nrf24_ll_keepalive));
-
+	err = phy_write(spi_fd, &p, sizeof(*opdu) + sizeof(*llctrl) +
+							sizeof(*llkeepalive));
 	if (err < 0)
 		return err;
 
@@ -215,7 +211,7 @@ static int check_keepalive(int spi_fd, int sockfd)
 
 	/* Check if timeout occurred */
 	if (hal_timeout(hal_time_ms(), peers[sockfd-1].keepalive_wait,
-		NRF24_KEEPALIVE_TIMEOUT_MS) > 0)
+						NRF24_KEEPALIVE_TIMEOUT_MS) > 0)
 		return -ETIMEDOUT;
 
 	/* If keepalive is disable */
@@ -308,16 +304,14 @@ static int read_mgmt(int spi_fd)
 		 * header length and minus MAC address length.
 		 */
 		memcpy(mgmtev_bcast->name, llp->name,
-				ilen - sizeof(struct nrf24_ll_presence) -
-					sizeof(struct nrf24_ll_mgmt_pdu));
+				ilen - sizeof(*llp) - sizeof(*ipdu));
 
 		/*
 		 * The rx buffer length is equal to the
 		 * event header length + presence packet length.
 		 * Presence packet len = (input len - mgmt_pdu header len)
 		 */
-		mgmt.len_rx = ilen - sizeof(struct nrf24_ll_mgmt_pdu) +
-					sizeof(struct mgmt_nrf24_header);
+		mgmt.len_rx = ilen - sizeof(*ipdu) + sizeof(*mgmtev_hdr);
 
 		break;
 	/* If is a connect request type */
@@ -338,8 +332,7 @@ static int read_mgmt(int spi_fd)
 		/* Copy access address */
 		memcpy(mgmtev_cn->aa, llc->aa, sizeof(mgmtev_cn->aa));
 
-		mgmt.len_rx = sizeof(struct mgmt_nrf24_header) +
-				sizeof(struct mgmt_evt_nrf24_connected);
+		mgmt.len_rx = sizeof(*mgmtev_hdr) + sizeof(*mgmtev_cn);
 
 		break;
 	default:
@@ -495,9 +488,8 @@ static int read_raw(int spi_fd, int sockfd)
 				mgmtev_hdr->opcode = MGMT_EVT_NRF24_DISCONNECTED;
 				mgmtev_dc->mac.address.uint64 =
 					lldc->src_addr.address.uint64;
-				mgmt.len_rx =
-					sizeof(struct mgmt_nrf24_header) +
-				sizeof(struct mgmt_evt_nrf24_disconnected);
+				mgmt.len_rx = sizeof(*mgmtev_hdr) +
+							sizeof(*mgmtev_dc);
 			}
 
 			break;
@@ -596,8 +588,7 @@ static void presence_connect(int spi_fd)
 		/* Send the mac address and thing name */
 		llp->mac.address.uint64 = addr_slave.address.uint64;
 
-		len = sizeof(struct nrf24_ll_mgmt_pdu) +
-					sizeof(struct nrf24_ll_presence);
+		len = sizeof(*opdu) + sizeof(*llp);
 
 		/*
 		 * Checks if need to truncate the name
@@ -704,9 +695,8 @@ static void running(void)
 
 				mgmtev_dc->mac.address.uint64 =
 					peers[sockIndex-1].mac.address.uint64;
-				mgmt.len_rx =
-					sizeof(struct mgmt_nrf24_header) +
-					sizeof(struct mgmt_evt_nrf24_disconnected);
+				mgmt.len_rx = sizeof(*mgmtev_hdr) +
+								sizeof(*mgmtev_dc);
 
 				peers[sockIndex-1].keepalive_wait
 					= hal_time_ms();
