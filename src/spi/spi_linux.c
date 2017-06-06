@@ -32,6 +32,7 @@ static uint32_t speed = 10000000; /* 10 MHz */
 int8_t spi_init(const char *dev)
 {
 	int spi_fd;
+	uint8_t bits = BITS_PER_WORD;
 
 	spi_fd = open(dev, O_RDWR);
 
@@ -43,6 +44,8 @@ int8_t spi_init(const char *dev)
 		close(spi_fd);
 		return -errno;
 	}
+
+	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
 
 	return spi_fd;
 }
