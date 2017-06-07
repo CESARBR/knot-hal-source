@@ -28,7 +28,7 @@ extern "C" {
 #define HAL_STORAGE_ID_PUBLIC_KEY       6
 #define HAL_STORAGE_ID_FOREIGN_KEY      7
 
-#define CONFIG_SIZE_UNITY		40
+#define CONFIG_SIZE_UNITY		28
 
 ssize_t hal_storage_read(uint16_t addr, uint8_t *value, size_t len);
 ssize_t hal_storage_write(uint16_t addr, const uint8_t *value, size_t len);
