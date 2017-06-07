@@ -25,7 +25,7 @@
 
 #include "hal/comm.h"
 
-int hal_comm_init(const char *pathname, const struct nrf24_mac *mac)
+int hal_comm_init(const char *pathname, const void *params)
 {
 	struct termios toptions;
 	int fd;

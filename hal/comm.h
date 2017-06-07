@@ -17,6 +17,7 @@ extern "C" {
 /* Domain: selects radio technology */
 #define HAL_COMM_PF_NRF24		1
 #define HAL_COMM_PF_SERIAL		2
+#define HAL_COMM_PF_LORA		3
 
 #define HAL_COMM_PROTO_RAW		0 /* Raw data(User): serial/NRF24 */
 #define HAL_COMM_PROTO_MGMT		1 /* Management: Commands and events */
@@ -29,7 +30,7 @@ extern "C" {
  * common to any transport.
  */
 
-int hal_comm_init(const char *pathname, const struct nrf24_mac *mac);
+int hal_comm_init(const char *pathname, const void *params);
 int hal_comm_deinit(void);
 
 int hal_comm_socket(int domain, int protocol);

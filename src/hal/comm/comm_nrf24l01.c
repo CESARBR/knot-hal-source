@@ -724,8 +724,11 @@ static void running(void)
 }
 
 /* Global functions */
-int hal_comm_init(const char *pathname, const struct nrf24_mac *mac)
+int hal_comm_init(const char *pathname, const void *params)
 {
+
+	const struct nrf24_mac *mac = (const struct nrf24_mac *)params;
+
 	/* If driver not opened */
 	if (driverIndex != -1)
 		return -EPERM;
