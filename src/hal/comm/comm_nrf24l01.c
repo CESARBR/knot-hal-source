@@ -37,9 +37,7 @@
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
 
-static struct nrf24_mac addr_master = {.address.uint64 = 0};
-
-static struct nrf24_mac addr_slave = {.address.uint64 = 0 };
+static struct nrf24_mac mac_local = {.address.uint64 = 0 };
 
 /* Structure to save broadcast context */
 struct nrf24_mgmt {
@@ -224,7 +222,7 @@ static int check_keepalive(int spi_fd, int sockfd)
 		/* Sends keepalive packet */
 		err = write_keepalive(spi_fd, sockfd,
 				NRF24_LL_CRTL_OP_KEEPALIVE_REQ,
-				peers[sockfd-1].mac, addr_slave);
+				peers[sockfd-1].mac, mac_local);
 
 		peers[sockfd-1].keepalive += 1;
 	}
@@ -455,7 +453,7 @@ static int read_raw(int spi_fd, int sockfd)
 				llkeepalive->src_addr.address.uint64 ==
 				peers[sockfd-1].mac.address.uint64 &&
 				llkeepalive->dst_addr.address.uint64 ==
-				addr_slave.address.uint64) {
+				mac_local.address.uint64) {
 				peers[sockfd-1].keepalive_wait = hal_time_ms();
 				peers[sockfd-1].keepalive = 1;
 			}
@@ -469,12 +467,12 @@ static int read_raw(int spi_fd, int sockfd)
 				llkeepalive->src_addr.address.uint64 ==
 				peers[sockfd-1].mac.address.uint64 &&
 				llkeepalive->dst_addr.address.uint64 ==
-				addr_master.address.uint64) {
+				mac_local.address.uint64) {
 				peers[sockfd-1].keepalive_wait = hal_time_ms();
 				write_keepalive(spi_fd, sockfd,
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
 					peers[sockfd-1].mac,
-					addr_master);
+					mac_local);
 			}
 
 			/* If packet is disconnect request */
@@ -580,13 +578,13 @@ static void presence_connect(int spi_fd)
 	switch (state) {
 	case PRESENCE:
 		/* Send Presence */
-		if (addr_slave.address.uint64 == 0)
+		if (mac_local.address.uint64 == 0)
 			break;
 
 		p.pipe = 0;
 		opdu->type = NRF24_PDU_TYPE_PRESENCE;
 		/* Send the mac address and thing name */
-		llp->mac.address.uint64 = addr_slave.address.uint64;
+		llp->mac.address.uint64 = mac_local.address.uint64;
 
 		len = sizeof(*opdu) + sizeof(*llp);
 
@@ -727,7 +725,7 @@ int hal_comm_init(const char *pathname, const struct nrf24_mac *mac)
 	if (driverIndex < 0)
 		return driverIndex;
 
-	addr_master.address.uint64 = mac->address.uint64;
+	mac_local.address.uint64 = mac->address.uint64;
 
 	return 0;
 }
@@ -811,7 +809,7 @@ int hal_comm_socket(int domain, int protocol)
 		 * to access address and the last least
 		 * significant byte is the pipe index.
 		 */
-		memcpy(ap.aa, &addr_master.address.b[3], sizeof(ap.aa));
+		memcpy(ap.aa, &mac_local.address.b[3], sizeof(ap.aa));
 		ap.aa[0] = (uint8_t)retval;
 
 		break;
@@ -836,10 +834,10 @@ int hal_comm_close(int sockfd)
 	/* Pipe 0 is not closed because ACK arrives in this pipe */
 	if (sockfd >= 1 && sockfd <= 5 && peers[sockfd-1].pipe != -1) {
 		/* Send disconnect packet */
-		if (addr_slave.address.uint64 != 0)
+		if (mac_local.address.uint64 != 0)
 			/* Slave side */
 			write_disconnect(driverIndex, sockfd,
-					peers[sockfd-1].mac, addr_slave);
+					peers[sockfd-1].mac, mac_local);
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
@@ -940,7 +938,7 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	running();
 
 	/* Save slave address */
-	addr_slave.address.uint64 = *addr;
+	mac_local.address.uint64 = *addr;
 
 	if (mgmt.len_rx == 0)
 		return -EAGAIN;
@@ -998,7 +996,7 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 
 	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
 
-	payload->src_addr = addr_master;
+	payload->src_addr = mac_local;
 	payload->dst_addr.address.uint64 = *addr;
 	payload->channel = channel_raw;
 	/*
@@ -1013,7 +1011,7 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	 * significant byte is the socket index.
 	 */
 
-	memcpy(payload->aa, &addr_master.address.b[3],
+	memcpy(payload->aa, &mac_local.address.b[3],
 		sizeof(payload->aa));
 	payload->aa[0] = (uint8_t)sockfd;
 
