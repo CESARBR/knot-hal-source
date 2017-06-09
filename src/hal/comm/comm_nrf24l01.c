@@ -937,9 +937,6 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	/* Run background procedures */
 	running();
 
-	/* Save slave address */
-	mac_local.address.uint64 = *addr;
-
 	if (mgmt.len_rx == 0)
 		return -EAGAIN;
 
@@ -947,7 +944,7 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	mgmt.len_rx = 0;
 
 	if (mgmtev_hdr->opcode != MGMT_EVT_NRF24_CONNECTED ||
-		mgmtev_cn->dst.address.uint64 != *addr)
+		mgmtev_cn->dst.address.uint64 != mac_local.address.uint64)
 		return -EAGAIN;
 
 	pipe = alloc_pipe();
@@ -972,6 +969,9 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	peers[pipe-1].keepalive = 1;
 	/* Start timeout */
 	peers[pipe-1].keepalive_wait = hal_time_ms();
+
+	/* Copy peer address */
+	*addr = mgmtev_cn->src.address.uint64;
 
 	/* Return pipe */
 	return pipe;
