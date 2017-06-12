@@ -284,6 +284,11 @@ static int read_mgmt(int spi_fd)
 	switch (ipdu->type) {
 	/* If is a presente type */
 	case NRF24_PDU_TYPE_PRESENCE:
+
+		if (ilen < (ssize_t) (sizeof(struct nrf24_ll_mgmt_pdu) +
+					sizeof(struct nrf24_ll_presence)))
+			return -EINVAL;
+
 		/* Event presence structure */
 		mgmtev_bcast = (struct mgmt_evt_nrf24_bcast_presence *)mgmtev_hdr->payload;
 		/* Presence structure */
