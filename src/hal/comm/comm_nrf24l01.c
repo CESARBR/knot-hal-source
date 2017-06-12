@@ -314,6 +314,11 @@ static int read_mgmt(int spi_fd)
 		break;
 	/* If is a connect request type */
 	case NRF24_PDU_TYPE_CONNECT_REQ:
+
+		if (ilen != (sizeof(struct nrf24_ll_mgmt_pdu) +
+			     sizeof(struct nrf24_ll_mgmt_connect)))
+			return -EINVAL;
+
 		/* Event connect structure */
 		mgmtev_cn = (struct mgmt_evt_nrf24_connected *)mgmtev_hdr->payload;
 		/* Link layer connect structure */
