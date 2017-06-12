@@ -81,6 +81,15 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 	if (!m_init)
 		return -1;
 
+	/* SPI mode 0 */
+	SPCR &= ~(1 << CPOL);
+	SPCR &= ~(1 << CPHA);
+
+	/* vel fosc/16 = 1MHz */
+	SPCR &= ~(1 << SPI2X);
+	SPCR &= ~(1 << SPR1);
+	SPCR |= (1 << SPR0);
+
 	PORTB &= ~(1 << CSN);
 	_delay_us(DELAY_US);
 
