@@ -34,8 +34,26 @@
 #define MGMT_TIMEOUT 10
 #define RAW_TIMEOUT 60
 
+#define SET_BIT(val, idx)	((val) |= 1 << (idx))
+#define CLR_BIT(val, idx)	((val) &= ~(1 << (idx)))
+#define CHK_BIT(val, idx)      ((val) & (1 << (idx)))
+
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
+
+/*
+ * Bitmask to track assigned pipes.
+ *
+ * 0000 0001: pipe0
+ * 0000 0010: pipe1
+ * 0000 0100: pipe2
+ * 0000 1000: pipe3
+ * 0001 0000: pipe4
+ * 0010 0000: pipe5
+ */
+#define PIPE_RAW_BITMASK	0b00111110 /* Map of RAW Pipes */
+
+static uint8_t pipe_bitmask = 0b00000001; /* Default: scanning/broadcasting */
 
 static struct nrf24_mac mac_local = {.address.uint64 = 0 };
 
@@ -137,6 +155,7 @@ static inline int alloc_pipe(void)
 			memset(&peers[i], 0, sizeof(peers[i]));
 			/* One peer for pipe*/
 			peers[i].pipe = i+1;
+			SET_BIT(pipe_bitmask, peers[i].pipe);
 			return peers[i].pipe;
 		}
 	}
@@ -643,7 +662,6 @@ static void running(void)
 	static unsigned long start;
 
 	switch (state) {
-
 	case START_MGMT:
 		/* Set channel to management channel */
 		phy_ioctl(driverIndex, NRF24_CMD_SET_CHANNEL, &channel_mgmt);
@@ -651,18 +669,20 @@ static void running(void)
 		start = hal_time_ms();
 		/* Go to next state */
 		state = MGMT;
-		break;
-
 	case MGMT:
-		/* Check if 10ms timeout occurred */
-		if (hal_timeout(hal_time_ms(), start, MGMT_TIMEOUT) > 0)
-			state = START_RAW;
-
-		if (listen)
-			presence_connect(driverIndex);
 
 		read_mgmt(driverIndex);
 		write_mgmt(driverIndex);
+
+		/* Broadcasting/acceptor */
+		if (listen)
+			presence_connect(driverIndex);
+
+		/* Peers connected? */
+		if (pipe_bitmask & PIPE_RAW_BITMASK) {
+			if (hal_timeout(hal_time_ms(), start, MGMT_TIMEOUT) > 0)
+				state = START_RAW;
+		}
 		break;
 
 	case START_RAW:
@@ -673,12 +693,14 @@ static void running(void)
 
 		/* Go to next state */
 		state = RAW;
-		break;
-
 	case RAW:
-		/* Check if 60ms timeout occurred */
-		if (hal_timeout(hal_time_ms(), start, RAW_TIMEOUT) > 0)
-			state = START_MGMT;
+
+		/* Start broadcast or scan? */
+		if (CHK_BIT(pipe_bitmask, 0)) {
+			/* Check if 60ms timeout occurred */
+			if (hal_timeout(hal_time_ms(), start, RAW_TIMEOUT) > 0)
+				state = START_MGMT;
+		}
 
 		/* Check if pipe is allocated */
 		if (peers[sockIndex-1].pipe != -1) {
@@ -710,6 +732,7 @@ static void running(void)
 					= hal_time_ms();
 
 				/* TODO: Send disconnect packet to slave */
+				CLR_BIT(pipe_bitmask, peers[sockIndex - 1].pipe);
 			}
 		}
 
@@ -754,6 +777,8 @@ int hal_comm_deinit(void)
 		if (peers[i].pipe != -1)
 			peers[i].pipe = -1;
 	}
+
+	pipe_bitmask = 0b00000001;
 	/* Close driver */
 	err = phy_close(driverIndex);
 	if (err < 0)
@@ -850,6 +875,7 @@ int hal_comm_close(int sockfd)
 					peers[sockfd-1].mac, mac_local);
 		/* Free pipe */
 		peers[sockfd-1].pipe = -1;
+		CLR_BIT(pipe_bitmask, peers[sockfd - 1].pipe);
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
 		/* Disable to send keep alive request */
 		peers[sockfd-1].keepalive = 0;
@@ -930,6 +956,9 @@ int hal_comm_listen(int sockfd)
 {
 	/* Init listen */
 	listen = 1;
+
+	/* pipe0 used for broadcasting/scanning */
+	SET_BIT(pipe_bitmask, 0);
 
 	return 0;
 }
