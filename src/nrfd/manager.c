@@ -797,11 +797,14 @@ done:
 
 static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
 {
-
+	char mac_str[MAC_ADDRESS_SIZE];
 	int8_t position;
 
 	struct mgmt_evt_nrf24_disconnected *evt_disc =
 			(struct mgmt_evt_nrf24_disconnected *) mhdr->payload;
+
+	nrf24_mac2str(&evt_disc->mac, mac_str);
+	hal_log_info("Peer disconnected(%s)", mac_str);
 
 	if (count_clients == 0)
 		return -EINVAL;
