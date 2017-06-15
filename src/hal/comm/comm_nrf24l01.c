@@ -732,7 +732,13 @@ static void running(void)
 					= hal_time_ms();
 
 				/* TODO: Send disconnect packet to slave */
+
+				/* Free pipe */
 				CLR_BIT(pipe_bitmask, peers[sockIndex - 1].pipe);
+				peers[sockIndex - 1].pipe = -1;
+				peers[sockIndex - 1].keepalive = 0;
+				phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE,
+								&sockIndex);
 			}
 		}
 
