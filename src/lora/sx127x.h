@@ -262,3 +262,10 @@
 #else
 //#error Missing CFG_sx1272_radio/CFG_sx1276_radio
 #endif
+
+
+void radio_init (void);
+
+void radio_irq_handler (uint8_t dio);
+
+void os_radio (uint8_t mode);
