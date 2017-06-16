@@ -263,6 +263,7 @@
 //#error Missing CFG_sx1272_radio/CFG_sx1276_radio
 #endif
 
+#include <stdint.h>
 
 //TYPEDEFS----------------------------------------------------------------------
 typedef int32_t  ostime_t;
@@ -274,6 +275,40 @@ typedef uint8_t sf_t;
 typedef uint8_t bw_t;
 typedef uint8_t dr_t;
 
+
+#ifndef RX_RAMPUP
+#define RX_RAMPUP  (us2osticks(2000))
+#endif
+#ifndef TX_RAMPUP
+#define TX_RAMPUP  (us2osticks(2000))
+#endif
+
+#ifndef OSTICKS_PER_SEC
+#define OSTICKS_PER_SEC 32768
+#elif OSTICKS_PER_SEC < 10000 || OSTICKS_PER_SEC > 64516
+#error Illegal OSTICKS_PER_SEC - must be in range \
+			[10000:64516]. One tick must be 15.5us .. 100us long.
+#endif
+
+#if !HAS_ostick_conv
+#define us2osticks(us)	((ostime_t) \
+				( ((int64_t)(us) * OSTICKS_PER_SEC) / 1000000))
+#define ms2osticks(ms)	((ostime_t) \
+				( ((int64_t)(ms) * OSTICKS_PER_SEC)    / 1000))
+#define sec2osticks(sec) ((ostime_t) \
+				( (int64_t)(sec) * OSTICKS_PER_SEC))
+#define osticks2ms(os)	((int32_t)(((os)*(int64_t)1000    ) / OSTICKS_PER_SEC))
+#define osticks2us(os)	((int32_t)(((os)*(int64_t)1000000 ) / OSTICKS_PER_SEC))
+// Special versions
+#define us2osticksCeil(us) ((ostime_t) \
+			( ((int64_t)(us) * OSTICKS_PER_SEC + 999999) / 1000000))
+#define us2osticksRound(us) ((ostime_t) \
+			( ((int64_t)(us) * OSTICKS_PER_SEC + 500000) / 1000000))
+#define ms2osticksCeil(ms) ((ostime_t) \
+			( ((int64_t)(ms) * OSTICKS_PER_SEC + 999) / 1000))
+#define ms2osticksRound(ms) ((ostime_t) \
+			( ((int64_t)(ms) * OSTICKS_PER_SEC + 500) / 1000))
+#endif
 
 
 enum { ILLEGAL_RPS = 0xFF };
@@ -571,6 +606,9 @@ enum {
 #endif
 };
 
+void hal_init (void);
+
+ostime_t os_getTime (void);
 
 void radio_init (void);
 
