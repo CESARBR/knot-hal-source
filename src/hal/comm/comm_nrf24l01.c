@@ -432,11 +432,6 @@ static int write_raw(int spi_fd, int sockfd)
 		peers[sockfd-1].seqnumber_tx++;
 	}
 
-	/* Restart keepalive timeout */
-	peers[sockfd-1].keepalive_wait = hal_time_ms();
-	if (peers[sockfd-1].keepalive >= 1)
-		peers[sockfd-1].keepalive = 1;
-
 	err = peers[sockfd-1].len_tx;
 
 	/* Resets controls */
