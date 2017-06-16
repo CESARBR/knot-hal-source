@@ -17,6 +17,16 @@
 
 #include "sx127x.h"
 
+struct lmic_t LMIC;
+
+int fd;
+const struct lmic_pinmap pins = {
+	.nss = 6,
+	.rxtx = 5, // Not connected on RFM92/RFM95
+	.rst = 0,  // Needed on RFM92/RFM95
+	.dio = {7,4,5},
+};
+
 // -----------------------------------------------------------------------------
 // I/O
 

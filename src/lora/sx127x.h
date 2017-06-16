@@ -275,6 +275,17 @@ typedef uint8_t sf_t;
 typedef uint8_t bw_t;
 typedef uint8_t dr_t;
 
+#define DEFINE_LMIC  struct lmic_t LMIC
+#define DECLARE_LMIC extern struct lmic_t LMIC
+
+//PINS map
+struct lmic_pinmap {
+	uint8_t nss;
+	uint8_t rxtx;
+	uint8_t rst;
+	uint8_t dio[3];
+};
+
 
 #ifndef RX_RAMPUP
 #define RX_RAMPUP  (us2osticks(2000))
@@ -605,6 +616,34 @@ enum {
 	MCMD_LADR_10dBm		= 10
 #endif
 };
+
+struct lmic_t {
+	// Radio settings TX/RX (also accessed by HAL)
+	ostime_t	txend;
+	ostime_t	rxtime;
+	uint32_t	freq;
+	int8_t		rssi;
+	int8_t		snr;
+	uint8_t		rxsyms;
+	uint8_t		dndr;
+	int8_t		txpow;	// dBm
+
+	uint16_t	opmode;
+
+	uint8_t		ih;
+	uint8_t		sf;
+	uint8_t		bw;
+	uint8_t		cr;
+	uint8_t		noCRC;
+
+	uint8_t		txCnt;
+	uint8_t		txrxFlags;  // transaction flags (TX-RX combo)
+	uint8_t		dataBeg;    // 0 or start of data (dataBeg-1 is port)
+	uint8_t		dataLen;    // 0 no data or zero length data, >0 byte count of data
+	uint8_t		frame[MAX_LEN_FRAME];
+};
+DECLARE_LMIC;
+
 
 void hal_init (void);
 
