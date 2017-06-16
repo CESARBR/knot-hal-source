@@ -78,8 +78,8 @@ struct nrf24_data {
 	uint8_t seqnumber_tx;
 	uint8_t seqnumber_rx;
 	size_t offset_rx;
-	unsigned long keepalive_wait;
-	uint8_t keepalive;
+	unsigned long keepalive_anchor; /* Last packet received */
+	uint8_t keepalive; /* zero: disabled or positive: window attempts */
 	struct nrf24_mac mac;
 };
 
@@ -223,31 +223,26 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 
 static int check_keepalive(int spi_fd, int sockfd)
 {
-
-	int err = 0;
+	uint32_t time_ms = hal_time_ms();
 
 	/* Check if timeout occurred */
-	if (hal_timeout(hal_time_ms(), peers[sockfd-1].keepalive_wait,
+	if (hal_timeout(time_ms, peers[sockfd-1].keepalive_anchor,
 						NRF24_KEEPALIVE_TIMEOUT_MS) > 0)
 		return -ETIMEDOUT;
 
-	/* If keepalive is disable */
 	if (peers[sockfd-1].keepalive == 0)
-		return err;
+		return 0;
 
-	/* Sends keepalive request every NRF24_KEEPALIVE_SEND_MS */
-	if (hal_timeout(hal_time_ms(), peers[sockfd-1].keepalive_wait,
-		peers[sockfd-1].keepalive * NRF24_KEEPALIVE_SEND_MS) > 0) {
-		/* Sends keepalive packet */
-		err = write_keepalive(spi_fd, sockfd,
-				NRF24_LL_CRTL_OP_KEEPALIVE_REQ,
-				peers[sockfd-1].mac, mac_local);
+	if (hal_timeout(time_ms, peers[sockfd-1].keepalive_anchor,
+		peers[sockfd-1].keepalive * NRF24_KEEPALIVE_SEND_MS) <= 0)
+		return 0;
 
-		peers[sockfd-1].keepalive += 1;
-	}
+	peers[sockfd-1].keepalive++;
 
-
-	return err;
+	/* Sends keepalive packet */
+	return write_keepalive(spi_fd, sockfd,
+			      NRF24_LL_CRTL_OP_KEEPALIVE_REQ,
+			      peers[sockfd-1].mac, mac_local);
 }
 
 static int write_mgmt(int spi_fd)
@@ -460,6 +455,10 @@ static int read_raw(int spi_fd, int sockfd)
 	 * on success, the number of bytes read is returned
 	 */
 	while ((ilen = phy_read(spi_fd, &p, NRF24_MTU)) > 0) {
+
+		/* Initiator/acceptor: reset anchor */
+		peers[sockfd-1].keepalive_anchor = hal_time_ms();
+
 		/* Check if is data or Control */
 		switch (ipdu->lid) {
 
@@ -469,34 +468,19 @@ static int read_raw(int spi_fd, int sockfd)
 			llkeepalive = (struct nrf24_ll_keepalive *)
 							llctrl->payload;
 			lldc = (struct nrf24_ll_disconnect *) llctrl->payload;
-			/*
-			 * If is keep alive then resets keepalive_wait
-			 * Slave side
-			 */
-			if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP &&
-				llkeepalive->src_addr.address.uint64 ==
-				peers[sockfd-1].mac.address.uint64 &&
-				llkeepalive->dst_addr.address.uint64 ==
-				mac_local.address.uint64) {
-				peers[sockfd-1].keepalive_wait = hal_time_ms();
-				peers[sockfd-1].keepalive = 1;
-			}
-
-			/*
-			 * If is keep alive then resets keepalive_wait
-			 * NRFD side
-			 */
 
 			if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ &&
 				llkeepalive->src_addr.address.uint64 ==
 				peers[sockfd-1].mac.address.uint64 &&
 				llkeepalive->dst_addr.address.uint64 ==
 				mac_local.address.uint64) {
-				peers[sockfd-1].keepalive_wait = hal_time_ms();
 				write_keepalive(spi_fd, sockfd,
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
 					peers[sockfd-1].mac,
 					mac_local);
+			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
+				/* Resets the counter */
+				peers[sockfd-1].keepalive = 1;
 			}
 
 			/* If packet is disconnect request */
@@ -518,11 +502,6 @@ static int read_raw(int spi_fd, int sockfd)
 		/* If is Data */
 		case NRF24_PDU_LID_DATA_FRAG:
 		case NRF24_PDU_LID_DATA_END:
-			/* Restart keepalive timeout */
-			peers[sockfd-1].keepalive_wait = hal_time_ms();
-			if (peers[sockfd-1].keepalive >= 1)
-				peers[sockfd-1].keepalive = 1;
-
 			if (peers[sockfd-1].len_rx != 0)
 				break; /* Discard packet */
 
@@ -722,9 +701,6 @@ static void running(void)
 					peers[sockIndex-1].mac.address.uint64;
 				mgmt.len_rx = sizeof(*mgmtev_hdr) +
 								sizeof(*mgmtev_dc);
-
-				peers[sockIndex-1].keepalive_wait
-					= hal_time_ms();
 
 				/* TODO: Send disconnect packet to slave */
 
@@ -1005,10 +981,10 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	/* Source address for keepalive message */
 	peers[pipe-1].mac.address.uint64 =
 		mgmtev_cn->src.address.uint64;
-	/* Enable peer to send keep alive request */
-	peers[pipe-1].keepalive = 1;
+	/* Disable keep alive request */
+	peers[pipe-1].keepalive = 0;
 	/* Start timeout */
-	peers[pipe-1].keepalive_wait = hal_time_ms();
+	peers[pipe-1].keepalive_anchor = hal_time_ms();
 
 	/* Copy peer address */
 	*addr = mgmtev_cn->src.address.uint64;
@@ -1062,7 +1038,9 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 	len += sizeof(struct nrf24_ll_mgmt_pdu);
 
 	/* Start timeout */
-	peers[sockfd-1].keepalive_wait = hal_time_ms();
+	peers[sockfd-1].keepalive_anchor = hal_time_ms();
+	/* Enable keep alive: 5 attempts until timeout */
+	peers[sockfd-1].keepalive = 1;
 	mgmt.len_tx = len;
 
 	return 0;
