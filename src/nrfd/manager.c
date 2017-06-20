@@ -40,6 +40,8 @@
 static int mgmtfd;
 static guint mgmtwatch;
 static guint dbus_id;
+static struct in_addr inet_address;
+static int tcp_port;
 
 static struct adapter {
 	struct nrf24_mac mac;
@@ -59,9 +61,9 @@ static struct adapter {
 struct peer {
 	char name[10];
 	uint64_t mac;
-	int8_t socket_fd;
-	int8_t knotd_fd;
-	guint knotd_id;
+	int8_t socket_fd; /* HAL comm socket */
+	int8_t ksock; /* KNoT raw socket: Unix socket or TCP */
+	guint kwatch; /* KNoT raw socket watch */
 };
 
 static struct peer peers[MAX_PEERS] = {
@@ -620,7 +622,7 @@ static int8_t get_peer_index(void)
 	return -EUSERS;
 }
 
-static int connect_unix(void)
+static int unix_connect(void)
 {
 	struct sockaddr_un addr;
 	int sock;
@@ -641,17 +643,54 @@ static int connect_unix(void)
 	return sock;
 }
 
-static void knotd_io_destroy(gpointer user_data)
+static int tcp_init(const char *host)
+{
+	struct hostent *hostent;		/* Host information */
+	int err;
+
+	hostent = gethostbyname(host);
+	if (hostent == NULL) {
+		err = errno;
+		hal_log_error("gethostbyname(): %s(%d)", strerror(err), err);
+		return -err;
+	}
+
+	inet_address.s_addr = *((unsigned long *) hostent-> h_addr_list[0]);
+
+	return 0;
+}
+
+static int tcp_connect(void)
+{
+	struct sockaddr_in server;
+	int err, sock;
+
+	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sock < 0) {
+		err = errno;
+		hal_log_error("socket(): %s(%d)", strerror(err), err);
+		return -err;
+	}
+
+	memset(&server, 0, sizeof(server));
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = inet_address.s_addr;
+	server.sin_port = htons(tcp_port);
+
+	return connect(sock, (struct sockaddr *) &server, sizeof(server));
+}
+
+static void kwatch_io_destroy(gpointer user_data)
 {
 	struct peer *p = (struct peer *) user_data;
 	hal_comm_close(p->socket_fd);
-	close(p->knotd_fd);
+	close(p->ksock);
 	p->socket_fd = -1;
-	p->knotd_id = 0;
+	p->kwatch = 0;
 	count_clients--;
 }
 
-static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
+static gboolean kwatch_io_read(GIOChannel *io, GIOCondition cond,
 							gpointer user_data)
 {
 	struct peer *p = (struct peer *) user_data;
@@ -663,10 +702,10 @@ static gboolean knotd_io_watch(GIOChannel *io, GIOCondition cond,
 		return FALSE;
 
 	/* Read data from Knotd */
-	count = read(p->knotd_fd, buffer, sizeof(buffer));
+	count = read(p->ksock, buffer, sizeof(buffer));
 	if (count < 0) {
 		err = errno;
-		hal_log_error("knotd read(%d): %s(%d)", p->knotd_fd,
+		hal_log_error("knotd read(%d): %s(%d)", p->ksock,
 							strerror(err), err);
 		return FALSE;
 	}
@@ -684,7 +723,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	GIOChannel *io;
 	int8_t position;
 	uint8_t i;
-	int usk, nsk, ret;
+	int sock, nsk, ret;
 	char mac_str[MAC_ADDRESS_SIZE];
 	struct bcast_presence *peer;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
@@ -741,14 +780,18 @@ done:
 		}
 
 		/* Upper layer socket: knotd */
-		usk = connect_unix();
-		if (usk < 0) {
-			hal_log_error("connect(): %s(%d)", strerror(usk), usk);
+		if (inet_address.s_addr)
+			sock = tcp_connect();
+		else
+			sock = unix_connect();
+
+		if (sock < 0) {
+			hal_log_error("connect(): %s(%d)", strerror(sock), sock);
 			hal_comm_close(nsk);
-			return usk;
+			return sock;
 		}
 
-		peers[position].knotd_fd = usk;
+		peers[position].ksock = sock;
 		peers[position].socket_fd = nsk;
 
 		/* Set mac value for this position */
@@ -761,16 +804,16 @@ done:
 						strlen((char *)evt_pre->name)));
 
 		/* Watch knotd socket */
-		io = g_io_channel_unix_new(peers[position].knotd_fd);
+		io = g_io_channel_unix_new(peers[position].ksock);
 		g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, NULL);
-		g_io_channel_set_close_on_unref(io, FALSE);
+		g_io_channel_set_close_on_unref(io, TRUE);
 
-		peers[position].knotd_id = g_io_add_watch_full(io,
+		peers[position].kwatch = g_io_add_watch_full(io,
 							G_PRIORITY_DEFAULT,
 							cond,
-							knotd_io_watch,
+							kwatch_io_read,
 							&peers[position],
-							knotd_io_destroy);
+							kwatch_io_destroy);
 		g_io_channel_unref(io);
 
 		count_clients++;
@@ -813,7 +856,7 @@ static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
 	if (position < 0)
 		return position;
 
-	g_source_remove(peers[position].knotd_id);
+	g_source_remove(peers[position].kwatch);
 	return 0;
 }
 
@@ -835,7 +878,7 @@ static int8_t clients_read()
 		ret = hal_comm_read(peers[i].socket_fd, &buffer,
 			sizeof(buffer));
 		if (ret > 0) {
-			if (write(peers[i].knotd_fd, buffer, ret) < 0)
+			if (write(peers[i].ksock, buffer, ret) < 0)
 				hal_log_error("write_knotd() error");
 		}
 	}
@@ -923,7 +966,7 @@ static void close_clients(void)
 
 	for (i = 0; i < MAX_PEERS; i++) {
 		if (peers[i].socket_fd != -1)
-			g_source_remove(peers[i].knotd_id);
+			g_source_remove(peers[i].kwatch);
 	}
 }
 
@@ -934,101 +977,6 @@ static void radio_stop(void)
 	if (mgmtwatch)
 		g_source_remove(mgmtwatch);
 	hal_comm_deinit();
-}
-
-static gboolean nrf_data_watch(GIOChannel *io, GIOCondition cond,
-						gpointer user_data)
-{
-	char buffer[1024];
-	GIOStatus status;
-	GError *gerr = NULL;
-	gsize rbytes;
-
-	/*
-	 * Manages TCP data from spiproxyd(nRF proxy). All traffic(raw
-	 * data) should be transferred using unix socket to knotd.
-	 */
-
-	if (cond & (G_IO_HUP | G_IO_ERR))
-		return FALSE;
-
-	memset(buffer, 0, sizeof(buffer));
-
-	/* Incoming data through TCP socket */
-	status = g_io_channel_read_chars(io, buffer, sizeof(buffer),
-						 &rbytes, &gerr);
-	if (status == G_IO_STATUS_ERROR) {
-		hal_log_error("read(): %s", gerr->message);
-		g_error_free(gerr);
-		return FALSE;
-	}
-
-	if (rbytes == 0)
-		return FALSE;
-
-	/*
-	 * Decode based on nRF PIPE information and forward
-	 * the data through a unix socket to knotd.
-	 */
-	hal_log_info("read(): %zu bytes", rbytes);
-
-	return TRUE;
-}
-
-static int tcp_init(const char *host, int port)
-{
-	GIOChannel *io;
-	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP;
-	struct hostent *hostent;		/* Host information */
-	struct in_addr h_addr;			/* Internet address */
-	struct sockaddr_in server;		/* nRF proxy: spiproxyd */
-	int err, sock;
-
-	hostent = gethostbyname(host);
-	if (hostent == NULL) {
-		err = errno;
-		hal_log_error("gethostbyname(): %s(%d)", strerror(err), err);
-		return -err;
-	}
-
-	h_addr.s_addr = *((unsigned long *) hostent-> h_addr_list[0]);
-
-	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sock < 0) {
-		err = errno;
-		hal_log_error("socket(): %s(%d)", strerror(err), err);
-		return -err;
-	}
-
-	memset(&server, 0, sizeof(server));
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = h_addr.s_addr;
-	server.sin_port = htons(port);
-
-	err = connect(sock, (struct sockaddr *) &server, sizeof(server));
-	if (err < 0) {
-		err = errno;
-		hal_log_error("connect(): %s(%d)", strerror(err), err);
-		close(sock);
-		return -err;
-	}
-
-	hal_log_info("nRF Proxy address: %s", inet_ntoa(h_addr));
-
-	io = g_io_channel_unix_new(sock);
-	g_io_channel_set_close_on_unref(io, TRUE);
-
-	/* Ending 'NULL' for binary data */
-	g_io_channel_set_encoding(io, NULL, NULL);
-	g_io_channel_set_buffered(io, FALSE);
-
-	/* TCP handler: incoming data from spiproxyd (nRF proxy) */
-	g_io_add_watch(io, cond, nrf_data_watch, NULL);
-
-	/* Keep only one reference: watch */
-	g_io_channel_unref(io);
-
-	return 0;
 }
 
 static char *load_config(const char *file)
@@ -1274,9 +1222,6 @@ int manager_start(const char *file, const char *host, int port,
 		hal_log_error("Invalid configuration file(%d): %s", err, file);
 		return err;
 	}
-	/* Start server dbus */
-	dbus_id = dbus_init(mac);
-
 	 /* Validate and set the channel */
 	if (channel < 0 || channel > 125)
 		channel = cfg_channel;
@@ -1288,20 +1233,29 @@ int manager_start(const char *file, const char *host, int port,
 	if (dbm == -255)
 		dbm = cfg_dbm;
 
+	/* Start server dbus */
+	dbus_id = dbus_init(mac);
+
+	/* TCP development mode: RPi(nrfd) connected to Linux(knotd) */
+	if (host) {
+		memset(&inet_address, 0, sizeof(inet_address));
+		err = tcp_init(host);
+		if (err < 0)
+			return err;
+
+		tcp_port = port;
+	}
+
+	err = radio_init(spi, channel, dbm_int2rfpwr(dbm),
+						(const struct nrf24_mac*) &mac);
+	if (err < 0)
+		return err;
+
 	peer_bcast_table = g_hash_table_new_full(g_str_hash, g_str_equal,
 								g_free, g_free);
 	g_timeout_add_seconds(5, timeout_iterator, NULL);
 
-	if (host == NULL) {
-		hal_log_info("host is NULL");
-		return radio_init(spi, channel, dbm_int2rfpwr(dbm),
-						(const struct nrf24_mac*) &mac);
-	}
-	/*
-	 * TCP development mode: Linux connected to RPi(phynrfd radio
-	 * proxy). Connect to phynrfd routing all traffic over TCP.
-	 */
-	return tcp_init(host, port);
+	return 0;
 }
 
 void manager_stop(void)

@@ -27,7 +27,7 @@ static GMainLoop *main_loop;
 
 static const char *opt_cfg = "/etc/knot/gatewayConfig.json";
 static const char *opt_host = NULL;
-static unsigned int opt_port = 9000;
+static unsigned int opt_port = 8081;
 static const char *opt_spi = "/dev/spidev0.0";
 static int opt_channel = -1;
 static int opt_dbm = -255;
@@ -48,7 +48,7 @@ static GOptionEntry options[] = {
 	{ "config", 'c', 0, G_OPTION_ARG_STRING, &opt_cfg,
 					"configuration file path", NULL },
 	{ "host", 'h', 0, G_OPTION_ARG_STRING, &opt_host,
-					"host", "Host exposing nRF24L01 SPI" },
+					"host", "Host to forward KNoT" },
 	{ "port", 'p', 0, G_OPTION_ARG_INT, &opt_port,
 					"port", "Remote port" },
 	{ "spi", 'i', 0, G_OPTION_ARG_STRING, &opt_spi,
@@ -135,8 +135,6 @@ int main(int argc, char *argv[])
 
 	if (opt_host)
 		hal_log_error("Development mode: %s:%u", opt_host, opt_port);
-	else
-		hal_log_error("Native SPI mode");
 
 	err = manager_start(opt_cfg, opt_host, opt_port, opt_spi, opt_channel,
 							opt_dbm, opt_nodes);
