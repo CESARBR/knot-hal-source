@@ -677,7 +677,11 @@ static int tcp_connect(void)
 	server.sin_addr.s_addr = inet_address.s_addr;
 	server.sin_port = htons(tcp_port);
 
-	return connect(sock, (struct sockaddr *) &server, sizeof(server));
+	err = connect(sock, (struct sockaddr *) &server, sizeof(server));
+	if (err < 0)
+		return -errno;
+
+	return sock;
 }
 
 static void kwatch_io_destroy(gpointer user_data)
