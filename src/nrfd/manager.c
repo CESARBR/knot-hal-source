@@ -698,25 +698,30 @@ static gboolean kwatch_io_read(GIOChannel *io, GIOCondition cond,
 							gpointer user_data)
 {
 	struct peer *p = (struct peer *) user_data;
+	GError *gerr = NULL;
+	GIOStatus status;
 	char buffer[128];
-	ssize_t count;
-	int err;
+	size_t rx;
+	ssize_t tx;
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL))
 		return FALSE;
 
-	/* Read data from Knotd */
-	count = read(p->ksock, buffer, sizeof(buffer));
-	if (count < 0) {
-		err = errno;
-		hal_log_error("knotd read(%d): %s(%d)", p->ksock,
-							strerror(err), err);
+	/* Reading data from knotd */
+	status = g_io_channel_read_chars(io, buffer, sizeof(buffer),
+								&rx, &gerr);
+	if (status != G_IO_STATUS_NORMAL) {
+		hal_log_error("glib read(): %s", gerr->message);
+		g_error_free(gerr);
 		return FALSE;
 	}
 
 	/* Send data to thing */
 	/* TODO: put data in list for transmission */
-	hal_comm_write(p->socket_fd, buffer, count);
+
+	tx = hal_comm_write(p->socket_fd, buffer, rx);
+	if (tx < 0)
+		hal_log_error("hal_comm_write(): %zd", tx);
 
 	return TRUE;
 }
@@ -727,7 +732,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	GIOChannel *io;
 	int8_t position;
 	uint8_t i;
-	int sock, nsk, ret;
+	int sock, nsk;
 	char mac_str[MAC_ADDRESS_SIZE];
 	struct bcast_presence *peer;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
@@ -836,12 +841,8 @@ done:
 	}
 
 	/* Send Connect */
-	ret = hal_comm_connect(peers[position].socket_fd,
+	return hal_comm_connect(peers[position].socket_fd,
 			&evt_pre->mac.address.uint64);
-
-	hal_log_info("hal_comm_connect(%s): %d", mac_str, ret);
-
-	return 0;
 }
 
 static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
@@ -871,21 +872,26 @@ static int8_t clients_read()
 {
 	int8_t i;
 	uint8_t buffer[256];
-	int ret;
+	int rx, err;
 
 	/* No client */
 	if (count_clients == 0)
 		return 0;
 
 	for (i = 0; i < MAX_PEERS; i++) {
-		if (peers[i].socket_fd == -1)
+		struct peer *p = &peers[i];
+		if (p->socket_fd == -1)
 			continue;
 
-		ret = hal_comm_read(peers[i].socket_fd, &buffer,
-			sizeof(buffer));
-		if (ret > 0) {
-			if (write(peers[i].ksock, buffer, ret) < 0)
-				hal_log_error("write_knotd() error");
+		rx = hal_comm_read(p->socket_fd, &buffer, sizeof(buffer));
+		if (rx < 0)
+			continue;
+
+		if (write(p->ksock, buffer, rx) < 0) {
+			err = errno;
+			hal_log_error("write to knotd: %s(%d)",
+							strerror(err), err);
+			continue;
 		}
 	}
 
