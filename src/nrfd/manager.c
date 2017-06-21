@@ -811,6 +811,8 @@ done:
 		io = g_io_channel_unix_new(peers[position].ksock);
 		g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, NULL);
 		g_io_channel_set_close_on_unref(io, TRUE);
+		g_io_channel_set_encoding(io, NULL, NULL);
+		g_io_channel_set_buffered(io, FALSE);
 
 		peers[position].kwatch = g_io_add_watch_full(io,
 							G_PRIORITY_DEFAULT,
