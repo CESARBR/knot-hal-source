@@ -278,14 +278,6 @@ typedef uint8_t dr_t;
 #define DEFINE_LMIC  struct lmic_t LMIC
 #define DECLARE_LMIC extern struct lmic_t LMIC
 
-//PINS map
-struct lmic_pinmap {
-	uint8_t nss;
-	uint8_t rxtx;
-	uint8_t rst;
-	uint8_t dio[3];
-};
-
 
 #ifndef RX_RAMPUP
 #define RX_RAMPUP  (us2osticks(2000))
@@ -644,8 +636,6 @@ struct lmic_t {
 };
 DECLARE_LMIC;
 
-
-void hal_init (void);
 
 ostime_t os_getTime (void);
 
