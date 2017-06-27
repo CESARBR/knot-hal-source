@@ -15,6 +15,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <glib.h>
 #include <gio/gio.h>
 #include <json-c/json.h>
@@ -663,7 +664,7 @@ static int tcp_init(const char *host)
 static int tcp_connect(void)
 {
 	struct sockaddr_in server;
-	int err, sock;
+	int err, sock, enable = 1;
 
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock < 0) {
@@ -676,6 +677,15 @@ static int tcp_connect(void)
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_address.s_addr;
 	server.sin_port = htons(tcp_port);
+
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &enable,
+						sizeof(enable)) == -1) {
+		err = errno;
+		hal_log_error("tcp setsockopt(iTCP_NODELAY): %s(%d)",
+							strerror(err), err);
+		close(sock);
+		return -err;
+	}
 
 	err = connect(sock, (struct sockaddr *) &server, sizeof(server));
 	if (err < 0)
