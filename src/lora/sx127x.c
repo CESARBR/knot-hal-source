@@ -194,7 +194,7 @@ static void configPower (void) {
 #endif /* CFG_sx1272_radio */
 }
 
-static void txfsk () {
+static void txfsk (const uint8_t *buffer, size_t len_buffer) {
 	// select FSK modem (from sleep mode)
 	writeReg(RegOpMode, 0x10); // FSK, BT=0.5
 	//ASSERT(readReg(RegOpMode) == 0x10);
@@ -226,11 +226,11 @@ static void txfsk () {
 
 	// initialize the payload size and address pointers
 	// (insert length byte into payload))
-	writeReg(FSKRegPayloadLength, LMIC.dataLen+1);
+	writeReg(FSKRegPayloadLength, len_buffer+1);
 
 	// download length byte and buffer to the radio FIFO
-	writeReg(RegFifo, LMIC.dataLen);
-	writeBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+	writeReg(RegFifo, len_buffer);
+	writeBuf(RegFifo, buffer, len_buffer);
 
 	// enable antenna switch for TX
 	hal_pin_rxtx(1);
@@ -239,7 +239,7 @@ static void txfsk () {
 	opmode(OPMODE_TX);
 }
 
-static void txlora () {
+static void txlora (const uint8_t *buffer, size_t len_buffer) {
 	// select LoRa modem (from sleep mode)
 	//writeReg(RegOpMode, OPMODE_LORA);
 	opmodeLora();
@@ -269,10 +269,10 @@ static void txlora () {
 	// initialize the payload size and address pointers
 	writeReg(LORARegFifoTxBaseAddr, 0x00);
 	writeReg(LORARegFifoAddrPtr, 0x00);
-	writeReg(LORARegPayloadLength, LMIC.dataLen);
+	writeReg(LORARegPayloadLength, len_buffer);
 
 	// download buffer to the radio FIFO
-	writeBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+	writeBuf(RegFifo, buffer, len_buffer);
 
 	// enable antenna switch for TX
 	hal_pin_rxtx(1);
@@ -282,18 +282,16 @@ static void txlora () {
 }
 
 // start transmitter (buf=LMIC.frame, len=LMIC.dataLen)
-static void starttx () {
+static void starttx (const uint8_t *buffer, size_t len_buffer) {
 	//ASSERT( (readReg(RegOpMode) & OPMODE_MASK) == OPMODE_SLEEP );
 	if(LMIC.sf == FSK) { // FSK modem
-		txfsk();
+		txfsk(buffer, len_buffer);
 	} else { // LoRa modem
-		txlora();
+		txlora(buffer, len_buffer);
 	}
 	// the radio will go back to STANDBY mode as soon as the TX is finished
 	// the corresponding IRQ will inform us about completion.
 	}
-
-enum { RXMODE_SINGLE, RXMODE_SCAN, RXMODE_RSSI };
 
 static const uint8_t rxlorairqmask[] = {
 	[RXMODE_SINGLE]	= IRQ_LORA_RXDONE_MASK|IRQ_LORA_RXTOUT_MASK,
@@ -448,13 +446,7 @@ void radio_init () {
 
 	// some sanity checks, e.g., read version number
 	uint8_t v = readReg(RegVersion);
-#ifdef CFG_sx1276_radio
-	//ASSERT(v == 0x12 );
-#elif CFG_sx1272_radio
-	//ASSERT(v == 0x22);
-#else
-//#error Missing CFG_sx1272_radio/CFG_sx1276_radio
-#endif
+
 	// seed 15-byte randomness via noise rssi
 	rxlora(RXMODE_RSSI);
 	while( (readReg(RegOpMode) & OPMODE_MASK) != OPMODE_RX );
@@ -509,7 +501,7 @@ static const uint16_t LORA_RXDONE_FIXUP[] = {
 
 // called by hal ext IRQ handler
 // (radio goes to stanby mode after tx/rx operations)
-void radio_irq_handler (uint8_t dio) {
+void radio_irq_handler (uint8_t dio, uint8_t *buffer, size_t *len_buffer) {
 #if CFG_TxContinuousMode
 	// clear radio IRQ flags
 	writeReg(LORARegIrqFlags, 0xFF);
@@ -533,7 +525,7 @@ void radio_irq_handler (uint8_t dio) {
 			}
 			LMIC.rxtime = now;
 			// read the PDU and inform the MAC that we received something
-			LMIC.dataLen = (readReg(LORARegModemConfig1) &
+			*len_buffer = (readReg(LORARegModemConfig1) &
 					SX1272_MC1_IMPLICIT_HEADER_MODE_ON) ?
 					readReg(LORARegPayloadLength) :
 					readReg(LORARegRxNbBytes);
@@ -541,7 +533,7 @@ void radio_irq_handler (uint8_t dio) {
 			writeReg(LORARegFifoAddrPtr,
 					readReg(LORARegFifoRxCurrentAddr));
 			// now read the FIFO
-			readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+			readBuf(RegFifo, buffer, *len_buffer);
 			// read rx quality parameters
 			// SNR [dB] * 4
 			LMIC.snr  = readReg(LORARegPktSnrValue);
@@ -549,7 +541,7 @@ void radio_irq_handler (uint8_t dio) {
 			LMIC.rssi = readReg(LORARegPktRssiValue) - 125 + 64;
 		} else if( flags & IRQ_LORA_RXTOUT_MASK ) {
 			// indicate timeout
-			LMIC.dataLen = 0;
+			*len_buffer = 0;
 		}
 		// mask all radio IRQs
 		writeReg(LORARegIrqFlagsMask, 0xFF);
@@ -565,49 +557,41 @@ void radio_irq_handler (uint8_t dio) {
 		// save exact rx time
 		LMIC.rxtime = now;
 		// read the PDU and inform the MAC that we received something
-		LMIC.dataLen = readReg(FSKRegPayloadLength);
+		*len_buffer = readReg(FSKRegPayloadLength);
 		// now read the FIFO
-		readBuf(RegFifo, LMIC.frame, LMIC.dataLen);
+		readBuf(RegFifo, buffer, *len_buffer);
 		// read rx quality parameters
 		LMIC.snr  = 0; // determine snr
 		LMIC.rssi = 0; // determine rssi
 	} else if( flags1 & IRQ_FSK1_TIMEOUT_MASK ) {
 		// indicate timeout
-		LMIC.dataLen = 0;
+		*len_buffer = 0;
 	} else {
 		while(1);
 	}
 	}
 	// go from stanby to sleep
 	opmode(OPMODE_SLEEP);
-	// run os job (use preset func ptr)
-	//os_setCallback(&LMIC.osjob, LMIC.osjob.func);
 #endif /* ! CFG_TxContinuousMode */
 }
 
-void os_radio (uint8_t mode) {
+void radio_tx(const uint8_t *buffer, size_t len_buffer)
+{
 	hal_disableIRQs();
-	switch (mode) {
-	case RADIO_RST:
-		// put radio to sleep
-		opmode(OPMODE_SLEEP);
-		break;
+	starttx(bconst uffer, len_buffer);
+	hal_enableIRQs();
+}
 
-	case RADIO_TX:
-		// transmit frame now
-		starttx(); // buf=LMIC.frame, len=LMIC.dataLen
-		break;
+void radio_rx(uint8_t rxmode)
+{
+	hal_disableIRQs();
+	startrx(rxmode);
+	hal_enableIRQs();
+}
 
-	case RADIO_RX:
-		// receive frame now (exactly at rxtime)
-		// buf=LMIC.frame, time=LMIC.rxtime, timeout=LMIC.rxsyms
-		startrx(RXMODE_SINGLE);
-		break;
-
-	case RADIO_RXON:
-		// start scanning for beacon now
-		startrx(RXMODE_SCAN); // buf=LMIC.frame
-		break;
-	}
+void radio_sleep(void)
+{
+	hal_disableIRQs();
+	opmode(OPMODE_SLEEP);
 	hal_enableIRQs();
 }

@@ -388,6 +388,8 @@ enum { MAX_TXPOW_125kHz = 30 };
 
 enum { RADIO_RST=0, RADIO_TX=1, RADIO_RX=2, RADIO_RXON=3 };
 
+enum { RXMODE_SINGLE, RXMODE_SCAN, RXMODE_RSSI };
+
 enum _dr_us915_t { DR_SF10=0, DR_SF9, DR_SF8, DR_SF7, DR_SF8C, DR_NONE,
 	// Devices behind a router:
 	DR_SF12CR=8, DR_SF11CR, DR_SF10CR, DR_SF9CR, DR_SF8CR, DR_SF7CR };
@@ -627,12 +629,6 @@ struct lmic_t {
 	uint8_t		bw;
 	uint8_t		cr;
 	uint8_t		noCRC;
-
-	uint8_t		txCnt;
-	uint8_t		txrxFlags;  // transaction flags (TX-RX combo)
-	uint8_t		dataBeg;    // 0 or start of data (dataBeg-1 is port)
-	uint8_t		dataLen;    // 0 no data or zero length data, >0 byte count of data
-	uint8_t		frame[MAX_LEN_FRAME];
 };
 DECLARE_LMIC;
 
@@ -641,6 +637,11 @@ ostime_t os_getTime (void);
 
 void radio_init (void);
 
-void radio_irq_handler (uint8_t dio);
+void radio_tx(const uint8_t *buffer, size_t len_buffer);
+void radio_rx(uint8_t rxmode);
+void radio_sleep(void);
+
+//void radio_irq_handler (uint8_t dio);
+void radio_irq_handler (uint8_t dio, uint8_t *buffer, size_t *len_buffer);
 
 void os_radio (uint8_t mode);
