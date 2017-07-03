@@ -1149,10 +1149,13 @@ static int parse_nodes(const char *nodes_file)
 	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
 		goto failure;
 
+	/*
+	 * Gets only up to MAX_PEERS nodes.
+	 */
 	array_len = json_object_array_length(obj_keys);
 	if (array_len > MAX_PEERS) {
-		hal_log_error("Invalid numbers of nodes at %s", nodes_file);
-		goto failure;
+		hal_log_error("Too many nodes at %s", nodes_file);
+		array_len = MAX_PEERS;
 	}
 
 	for (i = 0; i < array_len; i++) {
