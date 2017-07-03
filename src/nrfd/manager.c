@@ -1133,6 +1133,11 @@ done:
 	return err;
 }
 
+/*
+ * Reads the keys.json file to create the list of allowed peers.
+ * If the file does not exist or is in the wrong format, a new one (empty)
+ * is created.
+ */
 static int parse_nodes(const char *nodes_file)
 {
 	int array_len;
