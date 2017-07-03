@@ -1140,14 +1140,33 @@ static int parse_nodes(const char *nodes_file)
 	int err = -EINVAL;
 	json_object *jobj;
 	json_object *obj_keys, *obj_nodes, *obj_tmp;
+	FILE *fp;
 
 	/* Load nodes' info from json file */
 	jobj = json_object_from_file(nodes_file);
-	if (!jobj)
+	if (!jobj) {
+		fp = fopen(nodes_file, "w");
+		if (!fp) {
+			hal_log_error("Could not create file %s", nodes_file);
+			goto failure;
+		}
+		fprintf(fp, "{\"keys\":[]}");
+		fclose(fp);
+		err = 0;
 		goto failure;
+	}
 
-	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
+	if (!json_object_object_get_ex(jobj, "keys", &obj_keys)){
+		fp = fopen(nodes_file, "w");
+		if (!fp){
+			hal_log_error("Could not write file %s", nodes_file);
+			goto failure;
+		}
+		fprintf(fp, "{\"keys\":[]}");
+		fclose(fp);
+		err = 0;
 		goto failure;
+	}
 
 	/*
 	 * Gets only up to MAX_PEERS nodes.
