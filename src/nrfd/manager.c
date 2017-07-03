@@ -1144,7 +1144,7 @@ static int parse_nodes(const char *nodes_file)
 	/* Load nodes' info from json file */
 	jobj = json_object_from_file(nodes_file);
 	if (!jobj)
-		return -EINVAL;
+		goto failure;
 
 	if (!json_object_object_get_ex(jobj, "keys", &obj_keys))
 		goto failure;
