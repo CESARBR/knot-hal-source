@@ -1148,24 +1148,24 @@ static int parse_nodes(const char *nodes_file)
 		fp = fopen(nodes_file, "w");
 		if (!fp) {
 			hal_log_error("Could not create file %s", nodes_file);
-			goto failure;
+			goto done;
 		}
 		fprintf(fp, "{\"keys\":[]}");
 		fclose(fp);
 		err = 0;
-		goto failure;
+		goto done;
 	}
 
 	if (!json_object_object_get_ex(jobj, "keys", &obj_keys)){
 		fp = fopen(nodes_file, "w");
 		if (!fp){
 			hal_log_error("Could not write file %s", nodes_file);
-			goto failure;
+			goto done;
 		}
 		fprintf(fp, "{\"keys\":[]}");
 		fclose(fp);
 		err = 0;
-		goto failure;
+		goto done;
 	}
 
 	/*
@@ -1180,16 +1180,16 @@ static int parse_nodes(const char *nodes_file)
 	for (i = 0; i < array_len; i++) {
 		obj_nodes = json_object_array_get_idx(obj_keys, i);
 		if (!json_object_object_get_ex(obj_nodes, "mac", &obj_tmp))
-			goto failure;
+			goto done;
 
 		/* Parse mac address string into struct nrf24_mac known_peers */
 		if (nrf24_str2mac(json_object_get_string(obj_tmp),
 					&adapter.known_peers[i].addr) < 0)
-			goto failure;
+			goto done;
 		adapter.known_peers_size++;
 
 		if (!json_object_object_get_ex(obj_nodes, "name", &obj_tmp))
-			goto failure;
+			goto done;
 
 		/* Set the name of the peer registered */
 		adapter.known_peers[i].alias =
@@ -1198,7 +1198,7 @@ static int parse_nodes(const char *nodes_file)
 	}
 
 	err = 0;
-failure:
+done:
 	/* Free mem used to parse json */
 	json_object_put(jobj);
 	return err;
