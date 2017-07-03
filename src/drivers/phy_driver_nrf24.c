@@ -98,7 +98,7 @@ static void nrf24l01_close(int spi_fd)
 static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 {
 	struct addr_pipe *addrpipe;
-	int err;
+	int err = -1;
 
 	/* Set standby to set registers */
 	nrf24l01_set_standby(spi_fd);
@@ -121,7 +121,6 @@ static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 	case NRF24_CMD_SET_STANDBY:
 		break;
 	default:
-		err = -1;
 		break;
 	}
 
