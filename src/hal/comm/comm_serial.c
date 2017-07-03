@@ -59,7 +59,7 @@ int hal_comm_listen(int sockfd)
 	return -ENOSYS;
 }
 
-int hal_comm_accept(int sockfd, uint64_t *addr)
+int hal_comm_accept(int sockfd, void *addr)
 {
 	/* It is not applied to serial ports */
 

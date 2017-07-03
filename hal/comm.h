@@ -45,7 +45,7 @@ ssize_t hal_comm_write(int sockfd, const void *buffer, size_t count);
 int hal_comm_listen(int sockfd);
 
 /* Non-blocking operation. Returns -EGAIN if there isn't a new client */
-int hal_comm_accept(int sockfd, uint64_t *addr);
+int hal_comm_accept(int sockfd, void *addr);
 
 /* Blocking operation. Returns -ETIMEOUT */
 int hal_comm_connect(int sockfd, uint64_t *addr);

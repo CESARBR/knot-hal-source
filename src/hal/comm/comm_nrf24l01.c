@@ -940,8 +940,9 @@ int hal_comm_listen(int sockfd)
 	return 0;
 }
 
-int hal_comm_accept(int sockfd, uint64_t *addr)
+int hal_comm_accept(int sockfd, void *addr)
 {
+	struct nrf24_mac *mac = (struct nrf24_mac *) addr;
 
 	/* TODO: Run background procedures */
 	struct mgmt_nrf24_header *mgmtev_hdr =
@@ -987,7 +988,7 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 	peers[pipe-1].keepalive_anchor = hal_time_ms();
 
 	/* Copy peer address */
-	*addr = mgmtev_cn->src.address.uint64;
+	mac->address.uint64 = mgmtev_cn->src.address.uint64;
 
 	/* Return pipe */
 	return pipe;
@@ -996,7 +997,6 @@ int hal_comm_accept(int sockfd, uint64_t *addr)
 
 int hal_comm_connect(int sockfd, uint64_t *addr)
 {
-
 	struct nrf24_ll_mgmt_pdu *opdu =
 		(struct nrf24_ll_mgmt_pdu *)mgmt.buffer_tx;
 	struct nrf24_ll_mgmt_connect *payload =

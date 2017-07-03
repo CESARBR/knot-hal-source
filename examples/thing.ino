@@ -29,8 +29,7 @@ bool	connected = false;
 char	msg[PACKET_SIZE_MAX],
 			buffer[PACKET_SIZE_MAX+1];
 
-uint64_t my_addr= 0xACDCDEAD98765490;
-
+static struct nrf24_mac mac;
 
 void setup() {
 
@@ -60,9 +59,9 @@ void setup() {
 void loop() {
 	if(!connected) {
 		hal_comm_listen(sock_srv);
-			while(sock_raw <= 0){
-				sock_raw = hal_comm_accept(sock_srv, &my_addr);
-			}
+			while(sock_raw <= 0)
+				sock_raw = hal_comm_accept(sock_srv, &mac);
+
 			printf("connected sock_raw=%d\n", sock_raw);
 			count = 1;
 			msg_count = 0;

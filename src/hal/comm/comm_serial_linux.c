@@ -109,7 +109,7 @@ int hal_comm_listen(int sockfd)
 }
 
 /* Non-blocking operation. Returns -EGAIN if there isn't a new client */
-int hal_comm_accept(int sockfd, uint64_t *addr)
+int hal_comm_accept(int sockfd, void *addr)
 {
 	return -ENOSYS;
 }
