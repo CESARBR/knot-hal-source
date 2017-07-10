@@ -14,6 +14,7 @@
 #ifdef ARDUINO
 #include "hal/avr_errno.h"
 #include "hal/avr_unistd.h"
+#include <avr/pgmspace.h>
 #else
 #include <errno.h>
 #include <unistd.h>
@@ -24,8 +25,13 @@
 #include "phy_driver_private.h"
 #include "phy_driver_nrf24.h"
 
-uint8_t broadcast_addr[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
 
+#ifdef ARDUINO
+static const uint8_t PROGMEM broadcast_addr[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
+#else
+const uint8_t broadcast_addr[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
+#endif
+	
 static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 {
 	int err;
@@ -47,9 +53,14 @@ static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 	 * It's a good practice to put the radio in RX mode
 	 * and only switch to TX mode when transmitting data.
 	 */
-
-	nrf24l01_set_prx(spi_fd, broadcast_addr);
-
+	#ifdef ARDUINO
+	/*buffer to hold address from flash*/
+	uint8_t bdc_address[5];
+	memcpy_P(&bdc_address, broadcast_addr, 5);
+	nrf24l01_set_prx(spi_fd, bdc_address);
+	#else
+	nrf24l01_set_prx(spi_fd, (uint8_t*)broadcast_addr);
+	#endif
 	/*
 	 * On success, the number of bytes written is returned
 	 * Otherwise, -1 is returned.
@@ -125,7 +136,16 @@ static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 	}
 
 	if (cmd != NRF24_CMD_SET_STANDBY)
-		nrf24l01_set_prx(spi_fd, broadcast_addr);
+	{
+	#ifdef ARDUINO
+	/*buffer to hold address from flash*/
+	uint8_t bdc_address[5];
+	memcpy_P(&bdc_address, broadcast_addr, 5);
+	nrf24l01_set_prx(spi_fd, bdc_address);
+	#else
+	nrf24l01_set_prx(spi_fd, (uint8_t*)broadcast_addr);
+	#endif
+	}
 
 	return err;
 }
