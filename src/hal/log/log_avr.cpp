@@ -23,10 +23,6 @@ static Serial_* _serial = &Serial;
 static HardwareSerial* _serial = &Serial;
 #endif
 
-const char PROGMEM libInfoString[] = { "[info]" };
-const char PROGMEM libWarnString[] = { "[warn]" };
-const char PROGMEM libErrorString[] = { "[error]" };
-
 int hal_log_open(const char *pathname)
 {
 	if (strncmp("serial", pathname, 6) != 0)
@@ -77,23 +73,31 @@ int hal_log_open(const char *pathname)
 	return 0;
 }
 
-void logger(PGM_P category, const char *format, ...)
+void hal_log_str(const char *str)
 {
-	char buf[LOG_BUFFER_LEN] = {0};
-	va_list args;
-	char cat[8];
-
-	strcpy_P(cat, category);
-
-	_serial->print(cat);
-	_serial->print(" ");
-
-	va_start(args, format);
-	vsnprintf(buf, LOG_BUFFER_LEN, format, args);
-	va_end(args);
-
-	_serial->println(buf);
+	_serial->println(str);
 }
+
+void hal_log_int(int value)
+{
+	_serial->println(value);
+}
+
+void hal_log_long(long value)
+{
+	_serial->println(value);
+}
+
+void hal_log_double(double value)
+{
+	_serial->println(value);
+}
+
+void hal_log_hex(int value)
+{
+	_serial->println(value, HEX);
+}
+
 
 void hal_log_close(void)
 {
