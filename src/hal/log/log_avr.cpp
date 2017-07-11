@@ -68,12 +68,12 @@ int hal_log_open(const char *pathname)
 		_serial->begin(SERIAL_BAUD_RATE);
 
 		status_enabled = true;
-		_serial->print("Serial communication enabled (");
+		_serial->print(F("Serial communication enabled ("));
 	} else {
-		_serial->print("Serial communication already enabled (");
+		_serial->print(F("Serial communication already enabled ("));
 	}
 	_serial->print(SERIAL_BAUD_RATE);
-	_serial->println(")");
+	_serial->println(F(")"));
 	return 0;
 }
 
@@ -98,9 +98,9 @@ void logger(PGM_P category, const char *format, ...)
 void hal_log_close(void)
 {
 	if (status_enabled) {
-		_serial->print("Serial communication disabled (");
+		_serial->print(F("Serial communication disabled ("));
 		_serial->print(SERIAL_BAUD_RATE);
-		_serial->println(")");
+		_serial->println(F(")"));
 		_serial->end();
 		status_enabled = false;
 	}
