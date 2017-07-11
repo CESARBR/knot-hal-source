@@ -575,6 +575,28 @@ void radio_irq_handler (uint8_t dio, uint8_t *buffer, size_t *len_buffer) {
 #endif /* ! CFG_TxContinuousMode */
 }
 
+int radio_irq_flag (uint8_t mask)
+{
+	uint8_t flags = readReg(LORARegIrqFlags);
+
+	if ((flags & mask) == mask)
+		return 0;
+
+	return 1;
+}
+
+void radio_set_config(uint32_t freq, int8_t txpow, uint8_t sf, uint8_t bw,
+					uint8_t cr, uint8_t ih, uint8_t noCRC)
+{
+	LMIC.freq	= freq;
+	LMIC.txpow	= txpow;
+	LMIC.sf		= sf;
+	LMIC.bw		= bw;
+	LMIC.cr		= cr;
+	LMIC.ih		= ih;
+	LMIC.noCRC	= noCRC;
+}
+
 void radio_tx(const uint8_t *buffer, size_t len_buffer)
 {
 	hal_disableIRQs();

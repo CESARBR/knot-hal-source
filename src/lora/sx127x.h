@@ -636,12 +636,14 @@ DECLARE_LMIC;
 ostime_t os_getTime (void);
 
 void radio_init (void);
+void radio_set_config(uint32_t freq, int8_t txpow, uint8_t sf, uint8_t bw,
+					uint8_t cr, uint8_t ih, uint8_t noCRC);
 
 void radio_tx(const uint8_t *buffer, size_t len_buffer);
 void radio_rx(uint8_t rxmode);
 void radio_sleep(void);
 
-//void radio_irq_handler (uint8_t dio);
 void radio_irq_handler (uint8_t dio, uint8_t *buffer, size_t *len_buffer);
+int radio_irq_flag (uint8_t mask);
 
 void os_radio (uint8_t mode);
