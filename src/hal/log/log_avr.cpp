@@ -23,7 +23,7 @@ static Serial_* _serial = &Serial;
 static HardwareSerial* _serial = &Serial;
 #endif
 
-int hal_log_open(const char *pathname)
+extern "C" int _hal_log_open(const char *pathname)
 {
 	if (strncmp("serial", pathname, 6) != 0)
 		return -EINVAL;
@@ -73,33 +73,33 @@ int hal_log_open(const char *pathname)
 	return 0;
 }
 
-void hal_log_str(const char *str)
+extern "C" void _hal_log_str(const char *str)
 {
 	_serial->println(str);
 }
 
-void hal_log_int(int value)
+extern "C" void _hal_log_int(int value)
 {
 	_serial->println(value);
 }
 
-void hal_log_long(long value)
+extern "C" void _hal_log_long(long value)
 {
 	_serial->println(value);
 }
 
-void hal_log_double(double value)
+extern "C" void _hal_log_double(double value)
 {
 	_serial->println(value);
 }
 
-void hal_log_hex(int value)
+extern "C" void _hal_log_hex(int value)
 {
 	_serial->println(value, HEX);
 }
 
 
-void hal_log_close(void)
+extern "C" void _hal_log_close(void)
 {
 	if (status_enabled) {
 		_serial->print(F("Serial communication disabled ("));
