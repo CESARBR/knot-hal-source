@@ -143,7 +143,14 @@ int hal_gpio_setup(void)
 
 void hal_gpio_unmap(void)
 {
+	int i;
 
+	for (i = 0; i < HIGHEST_GPIO; ++i) {
+		if (gpio_map[i] != NOT_INITIALIZED) {
+			gpio_unexport(i);
+			gpio_map[i] = NOT_INITIALIZED;
+		}
+	}
 }
 
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
