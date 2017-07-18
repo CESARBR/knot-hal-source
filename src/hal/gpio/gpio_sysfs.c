@@ -12,6 +12,9 @@
 #define HIGHEST_GPIO 28
 
 #define NOT_INITIALIZED 0
+#define INITIALIZED_INPUT 1
+#define INITIALIZED_OUTPUT 2
+#define INITIALIZED 3
 
 static uint8_t gpio_map[HIGHEST_GPIO];
 
@@ -145,6 +148,25 @@ void hal_gpio_unmap(void)
 
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 {
+	if (gpio > HIGHEST_GPIO) {
+		fprintf(stderr, "Cannot initialize gpio: maximum number exceeded\n");
+		return -1;
+	}
+
+	if (gpio_map[gpio-1] == NOT_INITIALIZED) {
+		if (gpio_export(gpio) != 0)
+			return -1;
+		gpio_map[gpio-1] = INITIALIZED;
+	}
+
+	if (gpio_direction(gpio, mode) != 0)
+		return -1;
+
+	if (mode == HAL_GPIO_INPUT)
+		gpio_map[gpio-1] = INITIALIZED_INPUT;
+	else
+		gpio_map[gpio-1] = INITIALIZED_OUTPUT;
+
 	return 0;
 }
 
