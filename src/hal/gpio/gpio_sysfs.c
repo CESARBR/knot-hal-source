@@ -172,7 +172,16 @@ int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 
 void hal_gpio_digital_write(uint8_t gpio, uint8_t value)
 {
+	if (gpio_map[gpio-1] == INITIALIZED_OUTPUT)
+		gpio_write(gpio, value);
+	else{
+		fprintf(stderr, "Cannot write: gpio %d not initialized as OUTPUT\n",
+			gpio);
 
+		printf("Changing mode and writing\n");
+		hal_gpio_pin_mode(gpio, HAL_GPIO_OUTPUT);
+		hal_gpio_digital_write(gpio, value);
+	}
 }
 
 int hal_gpio_digital_read(uint8_t gpio)
