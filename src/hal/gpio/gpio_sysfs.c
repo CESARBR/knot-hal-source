@@ -186,7 +186,19 @@ void hal_gpio_digital_write(uint8_t gpio, uint8_t value)
 
 int hal_gpio_digital_read(uint8_t gpio)
 {
-	return 0;
+	int ret = 0;
+
+	if (gpio_map[gpio-1] == INITIALIZED_INPUT) {
+		ret = gpio_read(gpio);
+		if (ret < 0)
+			return ret;
+		return (ret == 0 ? HAL_GPIO_LOW : HAL_GPIO_HIGH);
+	}
+	fprintf(stderr, "Cannot read: gpio %d not initialized as INPUT\n", gpio);
+
+	printf("Changing mode and reading\n");
+	hal_gpio_pin_mode(gpio, HAL_GPIO_INPUT);
+	return hal_gpio_digital_read(gpio);
 }
 
 int hal_gpio_analog_read(uint8_t gpio)
