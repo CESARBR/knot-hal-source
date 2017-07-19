@@ -25,13 +25,15 @@
 /* Address width is 5 bytes */
 #define NRF24_ADDR_WIDTHS		5
 
+#ifdef ARDUINO
+#define NRF24_PIPE_MIN		0
+#define NRF24_PIPE_MAX		1
+#define NRF24_PIPE0_ADDR		0
+#define NRF24_PIPE1_ADDR		1
+#define NRF24_PIPE_ADDR_MAX		NRF24_PIPE1_ADDR
+#else
 #define NRF24_PIPE_MIN		0
 #define NRF24_PIPE_MAX		5
-
-/* Invalid pipe */
-#define NRF24_NO_PIPE	NRF24_RX_FIFO_EMPTY
-
-#define NRF24_PAYLOAD_SIZE		32
 #define NRF24_PIPE0_ADDR		0
 #define NRF24_PIPE1_ADDR		1
 #define NRF24_PIPE2_ADDR		2
@@ -39,6 +41,12 @@
 #define NRF24_PIPE4_ADDR		4
 #define NRF24_PIPE5_ADDR		5
 #define NRF24_PIPE_ADDR_MAX		NRF24_PIPE5_ADDR
+#endif
+
+#define NRF24_PAYLOAD_SIZE		32
+
+/* Invalid pipe */
+#define NRF24_NO_PIPE	NRF24_RX_FIFO_EMPTY
 
 #define PIPE_BROADCAST NRF24_PIPE0_ADDR
 
