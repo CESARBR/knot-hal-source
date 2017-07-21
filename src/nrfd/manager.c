@@ -92,6 +92,7 @@ static const gchar introspection_xml[] =
 	"    <method name='AddDevice'>"
 	"      <arg type='s' name='mac' direction='in'/>"
 	"      <arg type='s' name='key' direction='in'/>"
+	"      <arg type='s' name='name' direction='in'/>"
 	"      <arg type='b' name='response' direction='out'/>"
 	"    </method>"
 	"    <method name='RemoveDevice'>"
@@ -258,11 +259,10 @@ static int8_t new_device_object(GDBusConnection *connection, uint32_t free_pos)
 }
 
 static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
-							const gchar *key)
+					const gchar *key, const gchar *name)
 {
 	uint8_t alloc_pos, i;
 	int32_t free_pos;
-	gchar alias[7];
 	gboolean response = FALSE;
 	struct nrf24_mac new_dev;
 
@@ -296,11 +296,10 @@ static gboolean add_known_device(GDBusConnection *connection, const gchar *mac,
 
 		adapter.known_peers[free_pos].addr.address.uint64 =
 							new_dev.address.uint64;
-		snprintf(alias, 7, "Thing%d", free_pos);
-		adapter.known_peers[free_pos].alias = g_strdup(alias);
+		adapter.known_peers[free_pos].alias = g_strdup(name);
 		adapter.known_peers[free_pos].status = FALSE;
 		/* TODO: Set key for this mac */
-		if (write_file(mac, key, alias) < 0)
+		if (write_file(mac, key, name) < 0)
 			hal_log_error("Error writing to file");
 		adapter.known_peers_size++;
 		response = TRUE;
@@ -379,13 +378,14 @@ static void handle_method_call(GDBusConnection *connection,
 {
 	const gchar *mac;
 	const gchar *key;
+	const gchar *name;
 	gboolean response;
 	struct json_object *peers_bcast;
 
 	if (g_strcmp0(method_name, "AddDevice") == 0) {
-		g_variant_get(parameters, "(&s&s)", &mac, &key);
+		g_variant_get(parameters, "(&s&s&s)", &mac, &key,&name);
 		/* Add or Update mac address */
-		response = add_known_device(connection, mac, key);
+		response = add_known_device(connection, mac, key, name);
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(b)", response));
 	} else if (g_strcmp0(method_name, "RemoveDevice") == 0) {
