@@ -29,6 +29,26 @@ static int gpio_export(int pin)
 	return 0;
 }
 
+static int gpio_unexport(int pin)
+{
+	char buffer[3];
+	ssize_t bytes_written;
+	int fd;
+
+	fd = open("/sys/class/gpio/unexport", O_WRONLY);
+	if (fd == -1) {
+		fprintf(stderr, "Failed to open unexport for writing!\n");
+		return -EAGAIN;
+	}
+
+	bytes_written = snprintf(buffer, 3, "%2d", pin);
+
+	write(fd, buffer, bytes_written);
+	close(fd);
+
+	return 0;
+}
+
 int hal_gpio_setup(void)
 {
 	return 0;
