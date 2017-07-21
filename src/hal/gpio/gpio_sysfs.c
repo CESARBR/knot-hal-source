@@ -103,6 +103,27 @@ static int gpio_read(int pin)
 	return -EAGAIN;
 }
 
+static int gpio_write(int pin, int value)
+{
+	char path[30];
+	int fd, ret = 0;
+
+	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
+	fd = open(path, O_WRONLY);
+	if (fd == -1) {
+		fprintf(stderr, "Failed to open gpio value for writing!\n");
+		return -EAGAIN;
+	}
+
+	if (write(fd, value == HAL_GPIO_LOW ? "0" : "1", 1) != 1) {
+		fprintf(stderr, "Failed to write value!\n");
+		ret = -EAGAIN;
+	}
+
+	close(fd);
+	return ret;
+}
+
 int hal_gpio_setup(void)
 {
 	return 0;
