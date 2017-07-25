@@ -9,6 +9,15 @@
 
 #include "hal/gpio_sysfs.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+
 #define HIGHEST_GPIO 28
 
 /* Bit Operation */
