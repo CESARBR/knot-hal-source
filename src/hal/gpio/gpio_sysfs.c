@@ -9,6 +9,12 @@
 
 #include "hal/gpio_sysfs.h"
 
+#define HIGHEST_GPIO 28
+
+#define NOT_INITIALIZED 0
+
+static uint8_t gpio_map[HIGHEST_GPIO];
+
 static int gpio_export(int pin)
 {
 	char buffer[3];
@@ -126,7 +132,10 @@ static int gpio_write(int pin, int value)
 
 int hal_gpio_setup(void)
 {
-	return 0;
+	char *ret;
+
+	ret = memset(gpio_map, NOT_INITIALIZED, sizeof(gpio_map));
+	return (ret == NULL) ? -EAGAIN : 0;
 }
 
 void hal_gpio_unmap(void)

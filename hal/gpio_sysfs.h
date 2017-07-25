@@ -23,6 +23,7 @@ extern "C" {
 #include <unistd.h>
 #include <stdint.h>
 #include <errno.h>
+#include <string.h>
 
 #define HAL_GPIO_INPUT 0
 #define HAL_GPIO_OUTPUT 1
