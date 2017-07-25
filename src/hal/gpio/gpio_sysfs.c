@@ -25,10 +25,9 @@ static int gpio_export(int pin)
 	int fd;
 
 	fd = open("/sys/class/gpio/export", O_WRONLY);
-	if (fd == -1) {
-		fprintf(stderr, "Failed to open export for writing!\n");
+	if (fd == -1)
+		/* Failed to open export for writing! */
 		return -EAGAIN;
-	}
 
 	bytes_written = snprintf(buffer, 3, "%2d", pin);
 
@@ -45,10 +44,9 @@ static int gpio_unexport(int pin)
 	int fd;
 
 	fd = open("/sys/class/gpio/unexport", O_WRONLY);
-	if (fd == -1) {
-		fprintf(stderr, "Failed to open unexport for writing!\n");
+	if (fd == -1)
+		/* Failed to open unexport for writing! */
 		return -EAGAIN;
-	}
 
 	bytes_written = snprintf(buffer, 3, "%2d", pin);
 
@@ -65,16 +63,14 @@ static int gpio_direction(int pin, int dir)
 
 	snprintf(path, 35, "/sys/class/gpio/gpio%2d/direction", pin);
 	fd = open(path, O_WRONLY);
-	if (fd == -1) {
-		fprintf(stderr, "Failed to open gpio direction for writing!\n");
+	if (fd == -1)
+		/* Failed to open gpio direction for writing! */
 		return -EAGAIN;
-	}
 
 	if (write(fd, dir == HAL_GPIO_INPUT ? "in" : "out",
-		dir == HAL_GPIO_INPUT ? 2 : 3) == -1) {
-		fprintf(stderr, "Failed to set direction!\n");
+		dir == HAL_GPIO_INPUT ? 2 : 3) == -1)
+		/* Failed to set direction! */
 		ret = -EAGAIN;
-	}
 
 	close(fd);
 	return ret;
@@ -88,10 +84,9 @@ static int gpio_read(int pin)
 
 	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
 	fd = open(path, O_RDONLY);
-	if (fd == -1) {
-		fprintf(stderr, "Failed to open gpio value for reading!\n");
+	if (fd == -1)
+		/* Failed to open gpio value for reading! */
 		return -EAGAIN;
-	}
 
 	/*
 	 * This reading operation returns
@@ -100,7 +95,7 @@ static int gpio_read(int pin)
 	 * '1', '\n' and '\0'
 	 */
 	if (read(fd, value_str, 3) == -1) {
-		fprintf(stderr, "Failed to read value!\n");
+		/* Failed to read value! */
 		close(fd);
 		return -EAGAIN;
 	}
@@ -119,15 +114,13 @@ static int gpio_write(int pin, int value)
 
 	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
 	fd = open(path, O_WRONLY);
-	if (fd == -1) {
-		fprintf(stderr, "Failed to open gpio value for writing!\n");
+	if (fd == -1)
+		/* Failed to open gpio value for writing! */
 		return -EAGAIN;
-	}
 
-	if (write(fd, value == HAL_GPIO_LOW ? "0" : "1", 1) != 1) {
-		fprintf(stderr, "Failed to write value!\n");
+	if (write(fd, value == HAL_GPIO_LOW ? "0" : "1", 1) != 1)
+		/* Failed to write value! */
 		ret = -EAGAIN;
-	}
 
 	close(fd);
 	return ret;
@@ -155,10 +148,9 @@ void hal_gpio_unmap(void)
 
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 {
-	if (gpio > HIGHEST_GPIO) {
-		fprintf(stderr, "Cannot initialize gpio: maximum number exceeded\n");
+	if (gpio > HIGHEST_GPIO)
+		/* Cannot initialize gpio: maximum gpio exceeded */
 		return -1;
-	}
 
 	if (gpio_map[gpio-1] == NOT_INITIALIZED) {
 		if (gpio_export(gpio) != 0)
@@ -182,10 +174,7 @@ void hal_gpio_digital_write(uint8_t gpio, uint8_t value)
 	if (gpio_map[gpio-1] == INITIALIZED_OUTPUT)
 		gpio_write(gpio, value);
 	else{
-		fprintf(stderr, "Cannot write: gpio %d not initialized as OUTPUT\n",
-			gpio);
-
-		printf("Changing mode and writing\n");
+		/* Changing mode and writing */
 		hal_gpio_pin_mode(gpio, HAL_GPIO_OUTPUT);
 		hal_gpio_digital_write(gpio, value);
 	}
@@ -201,9 +190,8 @@ int hal_gpio_digital_read(uint8_t gpio)
 			return ret;
 		return (ret == 0 ? HAL_GPIO_LOW : HAL_GPIO_HIGH);
 	}
-	fprintf(stderr, "Cannot read: gpio %d not initialized as INPUT\n", gpio);
 
-	printf("Changing mode and reading\n");
+	/* Changing mode and reading */
 	hal_gpio_pin_mode(gpio, HAL_GPIO_INPUT);
 	return hal_gpio_digital_read(gpio);
 }
