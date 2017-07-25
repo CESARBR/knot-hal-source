@@ -11,10 +11,16 @@
 
 #define HIGHEST_GPIO 28
 
-#define NOT_INITIALIZED 0
-#define INITIALIZED_INPUT 1
-#define INITIALIZED_OUTPUT 2
-#define INITIALIZED 3
+/* Bit Operation */
+#define SET_BIT(data, idx)		((data) |= 1 << (idx))
+#define CLR_BIT(data, idx)		((data) &= ~(1 << (idx)))
+#define CHK_BIT(data, idx)		((data) & (1 << (idx)))
+
+/* 0 = not initialized, 1 = initialized */
+#define BIT_INITIALIZED	0
+/* 0 = input, 1 = output */
+#define BIT_DIRECTION	1
+
 
 static uint8_t gpio_map[HIGHEST_GPIO];
 
@@ -130,7 +136,7 @@ int hal_gpio_setup(void)
 {
 	char *ret;
 
-	ret = memset(gpio_map, NOT_INITIALIZED, sizeof(gpio_map));
+	ret = memset(gpio_map, 0, sizeof(gpio_map));
 	return (ret == NULL) ? -EAGAIN : 0;
 }
 
@@ -138,12 +144,11 @@ void hal_gpio_unmap(void)
 {
 	int i;
 
-	for (i = 0; i < HIGHEST_GPIO; ++i) {
-		if (gpio_map[i] != NOT_INITIALIZED) {
+	for (i = 0; i < HIGHEST_GPIO; ++i)
+		if (CHK_BIT(gpio_map[i], BIT_INITIALIZED))
 			gpio_unexport(i);
-			gpio_map[i] = NOT_INITIALIZED;
-		}
-	}
+
+	memset(gpio_map, 0, sizeof(gpio_map));
 }
 
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
@@ -152,26 +157,27 @@ int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 		/* Cannot initialize gpio: maximum gpio exceeded */
 		return -1;
 
-	if (gpio_map[gpio-1] == NOT_INITIALIZED) {
+	if (!CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED)) {
 		if (gpio_export(gpio) != 0)
 			return -1;
-		gpio_map[gpio-1] = INITIALIZED;
+		SET_BIT(gpio_map[gpio-1], BIT_INITIALIZED);
 	}
 
 	if (gpio_direction(gpio, mode) != 0)
 		return -1;
 
 	if (mode == HAL_GPIO_INPUT)
-		gpio_map[gpio-1] = INITIALIZED_INPUT;
+		CLR_BIT(gpio_map[gpio-1], BIT_DIRECTION);
 	else
-		gpio_map[gpio-1] = INITIALIZED_OUTPUT;
+		SET_BIT(gpio_map[gpio-1], BIT_DIRECTION);
 
 	return 0;
 }
 
 void hal_gpio_digital_write(uint8_t gpio, uint8_t value)
 {
-	if (gpio_map[gpio-1] == INITIALIZED_OUTPUT)
+	if (CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION)
+		&& CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED))
 		gpio_write(gpio, value);
 	else{
 		/* Changing mode and writing */
@@ -184,7 +190,8 @@ int hal_gpio_digital_read(uint8_t gpio)
 {
 	int ret = 0;
 
-	if (gpio_map[gpio-1] == INITIALIZED_INPUT) {
+	if (!CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION)
+		&& CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED)) {
 		ret = gpio_read(gpio);
 		if (ret < 0)
 			return ret;
