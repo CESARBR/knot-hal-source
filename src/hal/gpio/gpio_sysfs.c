@@ -9,6 +9,26 @@
 
 #include "hal/gpio_sysfs.h"
 
+static int gpio_export(int pin)
+{
+	char buffer[3];
+	ssize_t bytes_written;
+	int fd;
+
+	fd = open("/sys/class/gpio/export", O_WRONLY);
+	if (fd == -1) {
+		fprintf(stderr, "Failed to open export for writing!\n");
+		return -EAGAIN;
+	}
+
+	bytes_written = snprintf(buffer, 3, "%2d", pin);
+
+	write(fd, buffer, bytes_written);
+	close(fd);
+
+	return 0;
+}
+
 int hal_gpio_setup(void)
 {
 	return 0;
