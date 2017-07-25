@@ -49,6 +49,28 @@ static int gpio_unexport(int pin)
 	return 0;
 }
 
+static int gpio_direction(int pin, int dir)
+{
+	char path[35];
+	int fd, ret = 0;
+
+	snprintf(path, 35, "/sys/class/gpio/gpio%2d/direction", pin);
+	fd = open(path, O_WRONLY);
+	if (fd == -1) {
+		fprintf(stderr, "Failed to open gpio direction for writing!\n");
+		return -EAGAIN;
+	}
+
+	if (write(fd, dir == HAL_GPIO_INPUT ? "in" : "out",
+		dir == HAL_GPIO_INPUT ? 2 : 3) == -1) {
+		fprintf(stderr, "Failed to set direction!\n");
+		ret = -EAGAIN;
+	}
+
+	close(fd);
+	return ret;
+}
+
 int hal_gpio_setup(void)
 {
 	return 0;
