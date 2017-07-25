@@ -71,6 +71,38 @@ static int gpio_direction(int pin, int dir)
 	return ret;
 }
 
+static int gpio_read(int pin)
+{
+	char path[30];
+	char value_str[3];
+	int fd;
+
+	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
+	fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		fprintf(stderr, "Failed to open gpio value for reading!\n");
+		return -EAGAIN;
+	}
+
+	/*
+	 * This reading operation returns
+	 * 3 characters wich can be:
+	 * '0', '\n' and '\0' or
+	 * '1', '\n' and '\0'
+	 */
+	if (read(fd, value_str, 3) == -1) {
+		fprintf(stderr, "Failed to read value!\n");
+		close(fd);
+		return -EAGAIN;
+	}
+
+	close(fd);
+
+	if (value_str[0] == '0' || value_str[0] == '1')
+		return value_str[0] - '0';
+	return -EAGAIN;
+}
+
 int hal_gpio_setup(void)
 {
 	return 0;
