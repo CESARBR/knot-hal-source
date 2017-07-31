@@ -267,15 +267,15 @@
 
 //TYPEDEFS----------------------------------------------------------------------
 typedef int32_t  ostime_t;
-enum _cr_t { CR_4_5=0, CR_4_6, CR_4_7, CR_4_8 };
-enum _sf_t { FSK=0, SF7, SF8, SF9, SF10, SF11, SF12, SFrfu };
-enum _bw_t { BW125=0, BW250, BW500, BWrfu };
+enum _cr_t { CR_4_5 = 0, CR_4_6, CR_4_7, CR_4_8 };
+enum _sf_t { FSK = 0, SF7, SF8, SF9, SF10, SF11, SF12, SFrfu };
+enum _bw_t { BW125 = 0, BW250, BW500, BWrfu };
 typedef uint8_t cr_t;
 typedef uint8_t sf_t;
 typedef uint8_t bw_t;
 typedef uint8_t dr_t;
 
-#define DEFINE_LMIC  struct lmic_t LMIC
+#define DEFINE_LMIC struct lmic_t LMIC
 #define DECLARE_LMIC extern struct lmic_t LMIC
 
 
@@ -295,22 +295,22 @@ typedef uint8_t dr_t;
 
 #if !HAS_ostick_conv
 #define us2osticks(us)	((ostime_t) \
-				( ((int64_t)(us) * OSTICKS_PER_SEC) / 1000000))
+				(((int64_t)(us) * OSTICKS_PER_SEC) / 1000000))
 #define ms2osticks(ms)	((ostime_t) \
-				( ((int64_t)(ms) * OSTICKS_PER_SEC)    / 1000))
+				(((int64_t)(ms) * OSTICKS_PER_SEC)    / 1000))
 #define sec2osticks(sec) ((ostime_t) \
-				( (int64_t)(sec) * OSTICKS_PER_SEC))
-#define osticks2ms(os)	((int32_t)(((os)*(int64_t)1000    ) / OSTICKS_PER_SEC))
-#define osticks2us(os)	((int32_t)(((os)*(int64_t)1000000 ) / OSTICKS_PER_SEC))
+				((int64_t)(sec) * OSTICKS_PER_SEC))
+#define osticks2ms(os)	((int32_t)(((os)*(int64_t)1000) / OSTICKS_PER_SEC))
+#define osticks2us(os)	((int32_t)(((os)*(int64_t)1000000) / OSTICKS_PER_SEC))
 // Special versions
 #define us2osticksCeil(us) ((ostime_t) \
-			( ((int64_t)(us) * OSTICKS_PER_SEC + 999999) / 1000000))
+			(((int64_t)(us) * OSTICKS_PER_SEC + 999999) / 1000000))
 #define us2osticksRound(us) ((ostime_t) \
-			( ((int64_t)(us) * OSTICKS_PER_SEC + 500000) / 1000000))
+			(((int64_t)(us) * OSTICKS_PER_SEC + 500000) / 1000000))
 #define ms2osticksCeil(ms) ((ostime_t) \
-			( ((int64_t)(ms) * OSTICKS_PER_SEC + 999) / 1000))
+			(((int64_t)(ms) * OSTICKS_PER_SEC + 999) / 1000))
 #define ms2osticksRound(ms) ((ostime_t) \
-			( ((int64_t)(ms) * OSTICKS_PER_SEC + 500) / 1000))
+			(((int64_t)(ms) * OSTICKS_PER_SEC + 500) / 1000))
 #endif
 
 
@@ -327,12 +327,12 @@ enum { LEN_NETID	=  3 };
 enum { DELAY_JACC1	=  5 }; // in secs
 enum { DELAY_DNW1	=  1 }; // in secs down window #1
 enum { DELAY_EXTDNW2	=  1 }; // in secs
-enum { DELAY_JACC2	=  DELAY_JACC1+(int)DELAY_EXTDNW2 }; // in secs
-enum { DELAY_DNW2	=  DELAY_DNW1 +(int)DELAY_EXTDNW2 }; // in secs
+enum { DELAY_JACC2	=  DELAY_JACC1 + (int)DELAY_EXTDNW2 }; // in secs
+enum { DELAY_DNW2	=  DELAY_DNW1 + (int)DELAY_EXTDNW2 }; // in secs
 enum { BCN_INTV_exp	= 7 };
-enum { BCN_INTV_sec	= 1<<BCN_INTV_exp };
-enum { BCN_INTV_ms	= BCN_INTV_sec*1000L };
-enum { BCN_INTV_us	= BCN_INTV_ms*1000L };
+enum { BCN_INTV_sec	= 1 << BCN_INTV_exp };
+enum { BCN_INTV_ms	= BCN_INTV_sec * 1000L };
+enum { BCN_INTV_us	= BCN_INTV_ms * 1000L };
 // space reserved for beacon and NWK management
 enum { BCN_RESERVE_ms	= 2120 };
 // end of beacon period to prevent interference with beacon
@@ -346,8 +346,8 @@ enum { BCN_SLOT_SPAN_us	=   30000 };
 
 #if defined(CFG_eu868) // ==============================================
 
-enum _dr_eu868_t { DR_SF12=0, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF7B,
-							DR_FSK, DR_NONE };
+enum _dr_eu868_t { DR_SF12 = 0, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7,
+						DR_SF7B, DR_FSK, DR_NONE };
 enum { DR_DFLTMIN = DR_SF7 };
 enum { DR_PAGE = DR_PAGE_EU868 };
 
@@ -367,8 +367,7 @@ enum { EU868_F1 = 868100000,      // g1   SF7-12
 	EU868_J5 = 864300000,      // g2   SF7-12   ditto
 	EU868_J6 = 864500000,      // g2   SF7-12   ditto
 };
-enum { EU868_FREQ_MIN = 863000000,
-       EU868_FREQ_MAX = 870000000 };
+enum { EU868_FREQ_MIN = 863000000, EU868_FREQ_MAX = 870000000 };
 
 enum { CHNL_PING	= 5 };
 enum { FREQ_PING	= EU868_F6 };  // default ping freq
@@ -386,13 +385,13 @@ enum { AIRTIME_BCN	= 144384 };  // micros
 enum { MAX_XCHANNELS = 2 };// extra channels in RAM, channels 0-71 are immutable
 enum { MAX_TXPOW_125kHz = 30 };
 
-enum { RADIO_RST=0, RADIO_TX=1, RADIO_RX=2, RADIO_RXON=3 };
+enum { RADIO_RST = 0, RADIO_TX = 1, RADIO_RX = 2, RADIO_RXON = 3 };
 
 enum { RXMODE_SINGLE, RXMODE_SCAN, RXMODE_RSSI };
 
-enum _dr_us915_t { DR_SF10=0, DR_SF9, DR_SF8, DR_SF7, DR_SF8C, DR_NONE,
+enum _dr_us915_t { DR_SF10 = 0, DR_SF9, DR_SF8, DR_SF7, DR_SF8C, DR_NONE,
 	// Devices behind a router:
-	DR_SF12CR=8, DR_SF11CR, DR_SF10CR, DR_SF9CR, DR_SF8CR, DR_SF7CR };
+	DR_SF12CR = 8, DR_SF11CR, DR_SF10CR, DR_SF9CR, DR_SF8CR, DR_SF7CR };
 enum { DR_DFLTMIN = DR_SF8C };
 enum { DR_PAGE = DR_PAGE_US915 };
 
@@ -549,7 +548,7 @@ enum {
 	MCMD_DEVS_EXT_POWER	= 0x00, // external power supply
 	MCMD_DEVS_BATT_MIN	= 0x01, // min battery value
 	MCMD_DEVS_BATT_MAX	= 0xFE, // max battery value
-	MCMD_DEVS_BATT_NOINFO 	= 0xFF, // unknown battery level
+	MCMD_DEVS_BATT_NOINFO	= 0xFF, // unknown battery level
 };
 
 // Bit fields byte#3 of MCMD_LADR_REQ payload
@@ -569,14 +568,14 @@ enum {
 	MCMD_LADR_DR_SHIFT	= 4,
 	MCMD_LADR_POW_SHIFT	= 0,
 #if defined(CFG_eu868)
-	MCMD_LADR_SF12		= DR_SF12<<4,
-	MCMD_LADR_SF11		= DR_SF11<<4,
-	MCMD_LADR_SF10		= DR_SF10<<4,
-	MCMD_LADR_SF9		= DR_SF9 <<4,
-	MCMD_LADR_SF8		= DR_SF8 <<4,
-	MCMD_LADR_SF7		= DR_SF7 <<4,
-	MCMD_LADR_SF7B		= DR_SF7B<<4,
-	MCMD_LADR_FSK		= DR_FSK <<4,
+	MCMD_LADR_SF12		= DR_SF12 << 4,
+	MCMD_LADR_SF11		= DR_SF11 << 4,
+	MCMD_LADR_SF10		= DR_SF10 << 4,
+	MCMD_LADR_SF9		= DR_SF9 << 4,
+	MCMD_LADR_SF8		= DR_SF8 << 4,
+	MCMD_LADR_SF7		= DR_SF7 << 4,
+	MCMD_LADR_SF7B		= DR_SF7B << 4,
+	MCMD_LADR_FSK		= DR_FSK  << 4,
 
 	MCMD_LADR_20dBm		= 0,
 	MCMD_LADR_14dBm		= 1,
@@ -585,17 +584,17 @@ enum {
 	MCMD_LADR_5dBm		= 4,
 	MCMD_LADR_2dBm		= 5,
 #elif defined(CFG_us915)
-	MCMD_LADR_SF10		= DR_SF10<<4,
-	MCMD_LADR_SF9		= DR_SF9 <<4,
-	MCMD_LADR_SF8		= DR_SF8 <<4,
-	MCMD_LADR_SF7		= DR_SF7 <<4,
-	MCMD_LADR_SF8C		= DR_SF8C<<4,
-	MCMD_LADR_SF12CR	= DR_SF12CR<<4,
-	MCMD_LADR_SF11CR	= DR_SF11CR<<4,
-	MCMD_LADR_SF10CR	= DR_SF10CR<<4,
-	MCMD_LADR_SF9CR		= DR_SF9CR<<4,
-	MCMD_LADR_SF8CR		= DR_SF8CR<<4,
-	MCMD_LADR_SF7CR		= DR_SF7CR<<4,
+	MCMD_LADR_SF10		= DR_SF10 << 4,
+	MCMD_LADR_SF9		= DR_SF9 << 4,
+	MCMD_LADR_SF8		= DR_SF8 << 4,
+	MCMD_LADR_SF7		= DR_SF7 << 4,
+	MCMD_LADR_SF8C		= DR_SF8C << 4,
+	MCMD_LADR_SF12CR	= DR_SF12CR << 4,
+	MCMD_LADR_SF11CR	= DR_SF11CR << 4,
+	MCMD_LADR_SF10CR	= DR_SF10CR << 4,
+	MCMD_LADR_SF9CR		= DR_SF9CR << 4,
+	MCMD_LADR_SF8CR		= DR_SF8CR << 4,
+	MCMD_LADR_SF7CR		= DR_SF7CR << 4,
 
 	MCMD_LADR_30dBm		= 0,
 	MCMD_LADR_28dBm		= 1,
@@ -633,9 +632,9 @@ struct lmic_t {
 DECLARE_LMIC;
 
 
-ostime_t os_getTime (void);
+ostime_t os_getTime(void);
 
-void radio_init (void);
+void radio_init(void);
 void radio_set_config(uint32_t freq, int8_t txpow, uint8_t sf, uint8_t bw,
 					uint8_t cr, uint8_t ih, uint8_t noCRC);
 
@@ -643,7 +642,5 @@ void radio_tx(const uint8_t *buffer, size_t len_buffer);
 void radio_rx(uint8_t rxmode);
 void radio_sleep(void);
 
-void radio_irq_handler (uint8_t dio, uint8_t *buffer, size_t *len_buffer);
-int radio_irq_flag (uint8_t mask);
-
-void os_radio (uint8_t mode);
+void radio_irq_handler(uint8_t dio, uint8_t *buffer, size_t *len_buffer);
+int radio_irq_flag(uint8_t mask);
