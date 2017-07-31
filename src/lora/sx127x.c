@@ -41,7 +41,7 @@ static uint8_t readReg (uint8_t addr) {
 	return val;
 }
 
-static void writeBuf (uint8_t addr, uint8_t* buf, uint8_t len) {
+static void writeBuf (uint8_t addr, const uint8_t* buf, uint8_t len) {
 	hal_pin_nss(0);
 	hal_spi(addr | 0x80);
 	for (uint8_t i=0; i<len; i++) {
@@ -445,7 +445,7 @@ void radio_init () {
 	opmode(OPMODE_SLEEP);
 
 	// some sanity checks, e.g., read version number
-	uint8_t v = readReg(RegVersion);
+	//uint8_t v = readReg(RegVersion);
 
 	// seed 15-byte randomness via noise rssi
 	rxlora(RXMODE_RSSI);
@@ -600,7 +600,7 @@ void radio_set_config(uint32_t freq, int8_t txpow, uint8_t sf, uint8_t bw,
 void radio_tx(const uint8_t *buffer, size_t len_buffer)
 {
 	hal_disableIRQs();
-	starttx(bconst uffer, len_buffer);
+	starttx(buffer, len_buffer);
 	hal_enableIRQs();
 }
 
