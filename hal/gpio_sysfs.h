@@ -23,6 +23,11 @@ extern "C" {
 #define HAL_GPIO_LOW 0
 #define HAL_GPIO_HIGH 1
 
+#define HAL_GPIO_NONE 0
+#define HAL_GPIO_RISING 1
+#define HAL_GPIO_FALLING 2
+#define HAL_GPIO_BOTH 3
+
 int hal_gpio_setup(void);
 void hal_gpio_unmap(void);
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode);

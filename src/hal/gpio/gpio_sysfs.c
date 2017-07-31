@@ -141,6 +141,41 @@ static int gpio_write(int pin, int value)
 	return ret;
 }
 
+static int gpio_edge(int pin, int edge)
+{
+	char path[30];
+	int fd, wret;
+
+	snprintf(path, 30, "/sys/class/gpio/gpio%2d/edge", pin);
+	fd = open(path, O_WRONLY);
+
+	if (fd == -1)
+		/* Failed to open gpio value for writing! */
+		return -EAGAIN;
+
+	switch (edge) {
+
+	case HAL_GPIO_NONE:
+		wret = write(fd, "none", 4);
+		break;
+
+	case HAL_GPIO_RISING:
+		wret = write(fd, "rising", 6);
+		break;
+
+	case HAL_GPIO_FALLING:
+		wret = write(fd, "falling", 7);
+		break;
+
+	case HAL_GPIO_BOTH:
+		wret = write(fd, "both", 4);
+		break;
+	}
+
+	close(fd);
+	return (wret == -1) ? -EAGAIN : 0;
+}
+
 int hal_gpio_setup(void)
 {
 	char *ret;
