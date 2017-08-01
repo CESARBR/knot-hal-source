@@ -36,6 +36,7 @@ int hal_gpio_digital_read(uint8_t gpio);
 int hal_gpio_analog_read(uint8_t gpio);
 void hal_gpio_analog_reference(uint8_t mode);
 void hal_gpio_analog_write(uint8_t gpio, int value);
+int hal_gpio_get_fd(uint8_t gpio, int edge);
 
 #ifdef __cplusplus
 }

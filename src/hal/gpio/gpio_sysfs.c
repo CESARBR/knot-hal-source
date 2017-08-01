@@ -11,6 +11,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -176,6 +177,32 @@ static int gpio_edge(int pin, int edge)
 	return (wret == -1) ? -EAGAIN : 0;
 }
 
+static int get_gpio_fd(int gpio)
+{
+	char path[30], dummy_buffer[1024];
+	int fd;
+	unsigned int n;
+
+	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", gpio);
+	fd = open(path, O_RDONLY);
+
+	if (fd == -1)
+		/* Failed to open gpio value for reading! */
+		return -EAGAIN;
+
+	/* Clear the file before watching */
+	ioctl(fd, FIONREAD, &n);
+	while (n > 0) {
+		if (n >= sizeof(dummy_buffer))
+			read(fd, dummy_buffer, sizeof(dummy_buffer));
+		else
+			read(fd, dummy_buffer, n);
+		n -= sizeof(dummy_buffer);
+	}
+
+	return fd;
+}
+
 int hal_gpio_setup(void)
 {
 	char *ret;
@@ -260,4 +287,10 @@ void hal_gpio_analog_reference(uint8_t mode)
 void hal_gpio_analog_write(uint8_t gpio, int value)
 {
 
+}
+
+int hal_gpio_get_fd(uint8_t gpio, int edge)
+{
+	gpio_edge(gpio, edge);
+	return get_gpio_fd(gpio);
 }
