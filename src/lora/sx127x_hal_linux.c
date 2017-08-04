@@ -7,7 +7,12 @@
  *
  */
 
+#include <stdlib.h>
+#include <inttypes.h>
+
 #include "sx127x_hal.h"
+#include "hal/gpio_sysfs.h"
+#include "spi.h"
 
 /*
  * Pinmap for Raspberry PI 3
@@ -30,7 +35,7 @@ void hal_init(void)
 
 void hal_pin_nss(uint8_t val)
 {
-
+	hal_gpio_digital_write(pins.nss, val);
 }
 
 void hal_pin_rxtx(uint8_t val)
@@ -43,10 +48,26 @@ void hal_pin_rst(uint8_t val)
 
 }
 
+// SPI--------------------------------------------------------------------------
+static int fd_spi;
+
+static void init_spi(void)
+{
+	fd_spi = spi_init("/dev/spidev0.0");
+}
+
 uint8_t hal_spi(uint8_t outval)
 {
-	return 0;
+	int err;
+
+	err =  spi_transfer(fd_spi, NULL, 0, &outval, 1);
+	if (err < 0)
+		return err;
+	else
+		return outval;
+
 }
+
 
 void hal_disableIRQs(void)
 {
