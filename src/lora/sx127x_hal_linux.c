@@ -9,6 +9,19 @@
 
 #include "sx127x_hal.h"
 
+/*
+ * Pinmap for Raspberry PI 3
+ * nss  -> slave select pin
+ * rxtx -> rx-tx pin to control the antenna switch
+ * rst  -> reset pin
+ * dio  -> digital i/o for interruption
+ */
+const struct lmic_pinmap pins = {
+	.nss = 25,
+	.rxtx = 24,
+	.rst = 17,
+	.dio = {21, 4, 24},
+};
 
 void hal_init(void)
 {
