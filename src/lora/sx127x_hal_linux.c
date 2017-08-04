@@ -33,6 +33,25 @@ void hal_init(void)
 
 }
 
+//GPIO--------------------------------------------------------------------------
+//Function to setup and inicialize all pins used by transciver sx127x;
+static void init_gpio(void)
+{
+	/* This function sets uo the enviorment for accessing the gpio */
+	hal_gpio_setup();
+
+	/*
+	 * This following set of functions sets up the direction of each gpio
+	 * pin whether it is input or output
+	 */
+	hal_gpio_pin_mode(pins.nss, HAL_GPIO_OUTPUT);
+	hal_gpio_pin_mode(pins.rxtx, HAL_GPIO_OUTPUT);
+	hal_gpio_pin_mode(pins.rst, HAL_GPIO_OUTPUT);
+	hal_gpio_pin_mode(pins.dio[0], HAL_GPIO_INPUT);
+	hal_gpio_pin_mode(pins.dio[1], HAL_GPIO_INPUT);
+	hal_gpio_pin_mode(pins.dio[2], HAL_GPIO_INPUT);
+}
+
 void hal_pin_nss(uint8_t val)
 {
 	hal_gpio_digital_write(pins.nss, val);
@@ -40,12 +59,17 @@ void hal_pin_nss(uint8_t val)
 
 void hal_pin_rxtx(uint8_t val)
 {
-
+	hal_gpio_digital_write(pins.rxtx, val);
 }
 
 void hal_pin_rst(uint8_t val)
 {
-
+	if (val == 0 || val == 1) {	//RST pin to LOW or HIGH
+		hal_gpio_pin_mode(pins.rst, HAL_GPIO_OUTPUT);
+		hal_gpio_digital_write(pins.rst, val);
+	} else {			//Configure rst pin floating
+		hal_gpio_pin_mode(pins.rst, HAL_GPIO_INPUT);
+	}
 }
 
 // SPI--------------------------------------------------------------------------
