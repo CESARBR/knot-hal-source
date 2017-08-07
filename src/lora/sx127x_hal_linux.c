@@ -12,6 +12,7 @@
 
 #include "sx127x_hal.h"
 #include "hal/gpio_sysfs.h"
+#include "hal/time.h"
 #include "spi.h"
 
 /*
@@ -108,18 +109,26 @@ void hal_sleep(void)
 
 }
 
+
+//TIME--------------------------------------------------------------------------
 uint32_t hal_ticks(void)
 {
-	return 0;
+	return hal_time_us();
 }
 
 void hal_waitUntil(uint32_t time)
 {
+	uint32_t time_us = hal_ticks();
 
+	if (time >= time_us)
+		return;
+
+		hal_delay_us(time_us - time);
 }
 
 uint8_t hal_checkTimer(uint32_t targettime)
 {
+	//not implemented
 	return 0;
 }
 
