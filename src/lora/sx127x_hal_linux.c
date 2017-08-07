@@ -29,11 +29,6 @@ const struct lmic_pinmap pins = {
 	.dio = {21, 4, 24},
 };
 
-void hal_init(void)
-{
-
-}
-
 //GPIO--------------------------------------------------------------------------
 //Function to setup and inicialize all pins used by transciver sx127x;
 static void init_gpio(void)
@@ -106,7 +101,7 @@ void hal_enableIRQs(void)
 
 void hal_sleep(void)
 {
-
+	//not implemented
 }
 
 
@@ -134,5 +129,11 @@ uint8_t hal_checkTimer(uint32_t targettime)
 
 void hal_failed(void)
 {
+	//not implemented
+}
 
+void hal_init(void)
+{
+	init_gpio();
+	init_spi();
 }
