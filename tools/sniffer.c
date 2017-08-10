@@ -48,6 +48,8 @@ static void listen_raw(void)
 	struct nrf24_io_pack p;
 	ssize_t ilen;
 	const struct nrf24_ll_data_pdu *ipdu = (void *)p.payload;
+	const struct nrf24_ll_crtl_pdu *ctrl;
+	const struct nrf24_ll_keepalive *kpalive;
 
 	p.pipe = 1;
 	while (!quit) {
@@ -59,12 +61,8 @@ static void listen_raw(void)
 
 		/* If is Control */
 		case NRF24_PDU_LID_CONTROL:
-		{
-			struct nrf24_ll_crtl_pdu *ctrl =
-				(struct nrf24_ll_crtl_pdu *) ipdu->payload;
-
-			struct nrf24_ll_keepalive *kpalive =
-				(struct nrf24_ll_keepalive *) ctrl->payload;
+			ctrl = (struct nrf24_ll_crtl_pdu *) ipdu->payload;
+			kpalive = (struct nrf24_ll_keepalive *) ctrl->payload;
 
 			printf("NRF24_PDU_LID_CONTROL\n");
 			if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP)
@@ -78,23 +76,18 @@ static void listen_raw(void)
 			printf("dst_addr : %llX\n",
 			(long long int)kpalive->dst_addr.address.uint64);
 
-		}
 			break;
 
 		/* If is Data */
 		case NRF24_PDU_LID_DATA_FRAG:
-		{
 			printf("NRF24_PDU_LID_DATA_FRAG\n");
 			printf("nseq : %d\n", ipdu->nseq);
 			printf("payload: %s\n", ipdu->payload);
-		}
 			break;
 		case NRF24_PDU_LID_DATA_END:
-		{
 			printf("NRF24_PDU_LID_DATA_END\n");
 			printf("nseq : %d\n", ipdu->nseq);
 			printf("payload: %s\n", ipdu->payload);
-		}
 			break;
 		default:
 			printf("CODE INVALID %d\n", ipdu->lid);
@@ -231,8 +224,8 @@ int main(int argc, char *argv[])
 		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
 		listen_mgmt();
 
-	} else{
-		/*Sniffer in data channel*/
+	} else {
+		/* Sniffer in data channel */
 		printf("listen raw\n");
 		/* Set Channel */
 		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel_raw);
