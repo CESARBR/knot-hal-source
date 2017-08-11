@@ -45,44 +45,47 @@ static void decode_raw(unsigned long sec, unsigned long usec,
 	const struct nrf24_ll_data_pdu *ipdu = (const struct nrf24_ll_data_pdu *) payload;
 	const struct nrf24_ll_crtl_pdu *ctrl;
 	const struct nrf24_ll_keepalive *kpalive;
+	char src[32], dst[32];
+	int i;
 
 	switch (ipdu->lid) {
-
-		/* If is Control */
 	case NRF24_PDU_LID_CONTROL:
 		ctrl = (struct nrf24_ll_crtl_pdu *) ipdu->payload;
 		kpalive = (struct nrf24_ll_keepalive *) ctrl->payload;
 
-		printf("NRF24_PDU_LID_CONTROL\n");
-		if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP)
-			printf("NRF24_LL_CRTL_OP_KEEPALIVE_RSP\n");
-
 		if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ)
-			printf("NRF24_LL_CRTL_OP_KEEPALIVE_REQ\n");
+			printf("%05ld.%06ld nRF24: CRTL | Keep Alive Req " \
+						"(0x%02x) plen:%zd\n", sec,
+						usec, ctrl->opcode, plen);
+		else
+			printf("%05ld.%06ld nRF24: CRTL | Keep Alive Rsp " \
+						"(0x%02x) plen:%zd\n", sec,
+						usec, ctrl->opcode, plen);
 
-		printf("src_addr : %llX\n",
-		       (long long int) kpalive->src_addr.address.uint64);
-		printf("dst_addr : %llX\n",
-		       (long long int)kpalive->dst_addr.address.uint64);
-
+		nrf24_mac2str(&kpalive->src_addr, src);
+		nrf24_mac2str(&kpalive->dst_addr, dst);
+		printf("%s > %s\n", src, dst);
 		break;
-
-		/* If is Data */
 	case NRF24_PDU_LID_DATA_FRAG:
-		printf("NRF24_PDU_LID_DATA_FRAG\n");
-		printf("nseq : %d\n", ipdu->nseq);
-		printf("payload: %s\n", ipdu->payload);
-		break;
 	case NRF24_PDU_LID_DATA_END:
-		printf("NRF24_PDU_LID_DATA_END\n");
-		printf("nseq : %d\n", ipdu->nseq);
-		printf("payload: %s\n", ipdu->payload);
+		printf("%05ld.%06ld  nRF24: Data | SEQ:0x%02x plen:%zd\n",
+					sec, usec, ipdu->nseq, plen);
+		printf("  ");
+		for (i = 0; i < plen; i++)
+			printf("%02x", payload[i]);
+
+		printf("\n");
 		break;
 	default:
-		printf("CODE INVALID %d\n", ipdu->lid);
-	}
+		printf("%05ld.%06ld nRF24: Unknown (0x%02x) plen:%zd\n",
+						sec, usec, ipdu->lid, plen);
+		printf("  ");
+		for (i = 0; i < plen; i++)
+			printf("%02x", payload[i]);
 
-	printf("\n\n");
+		printf("\n");
+		break;
+	}
 }
 
 static void decode_mgmt(unsigned long sec, unsigned long usec,
