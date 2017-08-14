@@ -36,13 +36,13 @@ static uint8_t mgmt_aa[] = { 0x8D, 0xD9, 0xBE, 0x96, 0xDE};
 static void sig_term(int sig)
 {
 	quit = 1;
-	phy_close(cli_fd);
 }
 
 static void decode_raw(unsigned long sec, unsigned long usec,
 					const uint8_t *payload, ssize_t plen)
 {
-	const struct nrf24_ll_data_pdu *ipdu = (const struct nrf24_ll_data_pdu *) payload;
+	const struct nrf24_ll_data_pdu *ipdu =
+				(const struct nrf24_ll_data_pdu *) payload;
 	const struct nrf24_ll_crtl_pdu *ctrl;
 	const struct nrf24_ll_keepalive *kpalive;
 	char src[32], dst[32];
@@ -64,7 +64,7 @@ static void decode_raw(unsigned long sec, unsigned long usec,
 
 		nrf24_mac2str(&kpalive->src_addr, src);
 		nrf24_mac2str(&kpalive->dst_addr, dst);
-		printf("%s > %s\n", src, dst);
+		printf("  %s > %s\n", src, dst);
 		break;
 	case NRF24_PDU_LID_DATA_FRAG:
 	case NRF24_PDU_LID_DATA_END:
@@ -121,7 +121,7 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 
 		/* Header type is a connect request type */
 		printf("%05ld.%06ld nRF24: Connect Req(0x%02x) plen:%zd\n",
-		       sec, usec, ipdu->type, plen);
+					       sec, usec, ipdu->type, plen);
 
 		nrf24_mac2str(&llcn->src_addr, src);
 		nrf24_mac2str(&llcn->dst_addr, dst);
@@ -136,7 +136,7 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 		break;
 	default:
 		printf("%05ld.%06ld nRF24: Unknown (0x%02x) plen:%zd\n",
-		       sec, usec, ipdu->type, plen);
+						sec, usec, ipdu->type, plen);
 		printf("  ");
 		for (i = 0; i < plen; i++)
 			printf("%02x", payload[i]);
@@ -168,7 +168,6 @@ static int sniffer_run(void)
 	gettimeofday(&reftm, NULL);
 
 	while (!quit) {
-		memset(&p, 0, sizeof(p));
 
 		if (channel == CHANNEL_MGMT)
 			p.pipe = 0;
@@ -195,6 +194,12 @@ static int sniffer_run(void)
 	}
 
 	return 0;
+}
+
+static void sniffer_stop(void)
+{
+	if (cli_fd >= 0)
+		phy_close(cli_fd);
 }
 
 static GOptionEntry options[] = {
