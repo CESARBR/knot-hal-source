@@ -29,6 +29,7 @@ static int CHANNEL_MGMT = 76;			/* Beacon/Broadcast channel */
 static int CHANNEL_RAW = 10;			/* Connection/Device channel */
 static int channel;
 static struct addr_pipe adrrp;
+static char *option_mac = NULL;
 
 /* Access Address for each pipe */
 static uint8_t mgmt_aa[] = { 0x8D, 0xD9, 0xBE, 0x96, 0xDE};
@@ -103,6 +104,10 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 		ll = (struct nrf24_ll_presence*) ipdu->payload;
 
 		nrf24_mac2str(&ll->mac, src);
+
+		if (option_mac && strcmp(option_mac, src) != 0)
+			break;
+
 		printf("%05ld.%06ld nRF24: Beacon(0x%02x|P) plen:%zd\n",
 		       sec, usec, ipdu->type, plen);
 		printf("  %s %s\n", src, ll->name);
@@ -111,6 +116,12 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 	case NRF24_PDU_TYPE_CONNECT_REQ:
 		/* Link layer connect structure */
 		llcn = (struct nrf24_ll_mgmt_connect *) ipdu->payload;
+
+		nrf24_mac2str(&llcn->src_addr, src);
+		nrf24_mac2str(&llcn->dst_addr, dst);
+
+		if (option_mac && strcmp(option_mac, src) != 0)
+			break;
 
 		/* Now track connected device ONLY */
 		channel = llcn->channel;
@@ -123,8 +134,6 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 		printf("%05ld.%06ld nRF24: Connect Req(0x%02x) plen:%zd\n",
 					       sec, usec, ipdu->type, plen);
 
-		nrf24_mac2str(&llcn->src_addr, src);
-		nrf24_mac2str(&llcn->dst_addr, dst);
 		printf("  %s > %s\n", src, dst);
 		printf("  CH: %d AA: %02x%02x%02x%02x%02x\n",
 		       llcn->channel,
@@ -203,6 +212,8 @@ static void sniffer_stop(void)
 }
 
 static GOptionEntry options[] = {
+	{ "mac", 'm', 0, G_OPTION_ARG_STRING, &option_mac,
+                               "Specify MAC to filter", NULL},
 	{ NULL },
 };
 
