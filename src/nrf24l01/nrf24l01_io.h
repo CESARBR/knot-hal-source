@@ -109,7 +109,7 @@
 #define NRF24_RETR_ARD_MASK		0b11110000
 /* write Auto Retransmit delay: 0 <= v <= 15 valid values*/
 #define NRF24_RETR_ARD(v)	((v << 4) & NRF24_RETR_ARD_MASK)
-/* for delays respectively: 250us, 500us, 750us ... 4000us */
+/* for delays respectively: 250us, 500us, 750us ... 1750us */
 #define NRF24_RETR_ARD_RD(v)		((v & NRF24_RETR_ARD_MASK) >> 4)
 #define NRF24_ARD_FACTOR_US		250
 #define NRF24_ARD_250US					0b0000
@@ -118,7 +118,7 @@
 #define NRF24_ARD_1000US				0b0011
 #define NRF24_ARD_1250US				0b0100
 #define NRF24_ARD_1500US				0b0101
-#define NRF24_ARD_40000US				0b1111
+#define NRF24_ARD_1750US				0b0110
 #define NRF24_RETR_ARC_MASK		0b00001111
 /* Auto Retransmit count: 0 <= v <= 15 valid values */
 #define NRF24_RETR_ARC(v)	(v & NRF24_RETR_ARC_MASK)

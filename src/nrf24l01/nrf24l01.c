@@ -391,10 +391,18 @@ int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 		/*
 		* Set ARC and ARD by pipe index to different
 		* retry periods to reduce data collisions
-		* compute ARD range: 1500us <= ARD[pipe] <= 4000us
+		* compute ARD range: 500us <= ARD[pipe] <= 1750us
+		* Each pipe is increased by 250us
+		* Values for each pipe:
+		* pipe 0 - 500us
+		* pipe 1 - 750us
+		* pipe 2 - 1000us
+		* pipe 3 - 1250us
+		* pipe 4 - 1500us
+		* pipe 5 - 1750us
 		*/
 		outr(spi_fd, NRF24_SETUP_RETR,
-			NRF24_RETR_ARD(((pipe * 2) + 5))
+			NRF24_RETR_ARD((pipe + 1))
 			| NRF24_RETR_ARC(NRF24_ARC));
 	#endif
 	outr(spi_fd, NRF24_STATUS, NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
