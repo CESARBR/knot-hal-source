@@ -36,60 +36,81 @@ static uint8_t gpio_map[HIGHEST_GPIO];
 
 static int gpio_export(int pin)
 {
-	char buffer[3];
+	char buffer[3], path[35];
 	ssize_t bytes_written;
-	int fd;
+	int fd, err = 0;
+
+	/* GPIO already exported */
+	snprintf(path, 35, "/sys/class/gpio/gpio%2d", pin);
+	if (access(path, F_OK) == 0)
+		return 0;
 
 	fd = open("/sys/class/gpio/export", O_WRONLY);
 	if (fd == -1)
 		/* Failed to open export for writing! */
-		return -EAGAIN;
+		return -errno;
 
 	bytes_written = snprintf(buffer, 3, "%2d", pin);
 
-	write(fd, buffer, bytes_written);
+	if (write(fd, buffer, bytes_written) == -1)
+		err = errno;
+
 	close(fd);
 
-	return 0;
+	return -err;
 }
 
 static int gpio_unexport(int pin)
 {
 	char buffer[3];
 	ssize_t bytes_written;
-	int fd;
+	int fd, err = 0;
 
 	fd = open("/sys/class/gpio/unexport", O_WRONLY);
 	if (fd == -1)
 		/* Failed to open unexport for writing! */
-		return -EAGAIN;
+		return -errno;
 
 	bytes_written = snprintf(buffer, 3, "%2d", pin);
 
-	write(fd, buffer, bytes_written);
+	if (write(fd, buffer, bytes_written) == -1)
+		err = errno;
+
 	close(fd);
 
-	return 0;
+	return -err;
 }
 
 static int gpio_direction(int pin, int dir)
 {
 	char path[35];
-	int fd, ret = 0;
+	int fd, err = 0, delay_ms;
+
+	/*
+	 * Rigth after the GPIO is exported the system have a small
+	 * latency before it grants permission to write.
+	 */
+	snprintf(path, 35, "/sys/class/gpio/gpio%2d/direction", pin);
+	for (delay_ms = 0; delay_ms < 200; delay_ms += 10) {
+		if (access(path, W_OK) == 0)
+			break;
+		usleep(delay_ms * 1000);
+	}
 
 	snprintf(path, 35, "/sys/class/gpio/gpio%2d/direction", pin);
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		/* Failed to open gpio direction for writing! */
-		return -EAGAIN;
+		return -errno;
 
 	if (write(fd, dir == HAL_GPIO_INPUT ? "in" : "out",
 		dir == HAL_GPIO_INPUT ? 2 : 3) == -1)
 		/* Failed to set direction! */
-		ret = -EAGAIN;
+		err = errno;
 
 	close(fd);
-	return ret;
+
+	return -err;
 }
 
 static int gpio_read(int pin)
@@ -102,7 +123,7 @@ static int gpio_read(int pin)
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
 		/* Failed to open gpio value for reading! */
-		return -EAGAIN;
+		return -errno;
 
 	/*
 	 * This reading operation returns
@@ -113,7 +134,7 @@ static int gpio_read(int pin)
 	if (read(fd, value_str, 3) == -1) {
 		/* Failed to read value! */
 		close(fd);
-		return -EAGAIN;
+		return -errno;
 	}
 
 	close(fd);
@@ -126,55 +147,60 @@ static int gpio_read(int pin)
 static int gpio_write(int pin, int value)
 {
 	char path[30];
-	int fd, ret = 0;
+	int fd, err = 0;
 
 	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		/* Failed to open gpio value for writing! */
-		return -EAGAIN;
+		return -errno;
 
 	if (write(fd, value == HAL_GPIO_LOW ? "0" : "1", 1) != 1)
 		/* Failed to write value! */
-		ret = -EAGAIN;
+		err = errno;
 
 	close(fd);
-	return ret;
+
+	return -err;
 }
 
 static int gpio_edge(int pin, int edge)
 {
 	char path[30];
-	int fd, wret;
+	int fd, err = 0, werr = 0;
 
 	snprintf(path, 30, "/sys/class/gpio/gpio%2d/edge", pin);
 	fd = open(path, O_WRONLY);
 
 	if (fd == -1)
 		/* Failed to open gpio value for writing! */
-		return -EAGAIN;
+		return -errno;
 
 	switch (edge) {
 
 	case HAL_GPIO_NONE:
-		wret = write(fd, "none", 4);
+		werr = write(fd, "none", 4);
 		break;
 
 	case HAL_GPIO_RISING:
-		wret = write(fd, "rising", 6);
+		werr = write(fd, "rising", 6);
 		break;
 
 	case HAL_GPIO_FALLING:
-		wret = write(fd, "falling", 7);
+		werr = write(fd, "falling", 7);
 		break;
 
 	case HAL_GPIO_BOTH:
-		wret = write(fd, "both", 4);
+		werr = write(fd, "both", 4);
 		break;
 	}
 
+	if (werr == -1)
+		err = errno;
+
 	close(fd);
-	return (wret == -1) ? -EAGAIN : 0;
+
+	return -err;
 }
 
 static int get_gpio_fd(int gpio)
@@ -188,7 +214,7 @@ static int get_gpio_fd(int gpio)
 
 	if (fd == -1)
 		/* Failed to open gpio value for reading! */
-		return -EAGAIN;
+		return -errno;
 
 	/* Clear the file before watching */
 	ioctl(fd, FIONREAD, &n);
@@ -224,18 +250,24 @@ void hal_gpio_unmap(void)
 
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 {
+	int err;
+
 	if (gpio > HIGHEST_GPIO)
 		/* Cannot initialize gpio: maximum gpio exceeded */
-		return -1;
+		return -EINVAL;
 
 	if (!CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED)) {
-		if (gpio_export(gpio) != 0)
-			return -1;
+
+		err = gpio_export(gpio);
+		if (err < 0)
+			return err;
+
 		SET_BIT(gpio_map[gpio-1], BIT_INITIALIZED);
 	}
 
-	if (gpio_direction(gpio, mode) != 0)
-		return -1;
+	err = gpio_direction(gpio, mode);
+	if (err < 0)
+		return err;
 
 	if (mode == HAL_GPIO_INPUT)
 		CLR_BIT(gpio_map[gpio-1], BIT_DIRECTION);
@@ -291,15 +323,15 @@ void hal_gpio_analog_write(uint8_t gpio, int value)
 
 int hal_gpio_get_fd(uint8_t gpio, int edge)
 {
-	int ret;
+	int err;
 
 	if (!CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED) ||
 		CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION))
 		return -EIO;
 
-	ret = gpio_edge(gpio, edge);
-	if (ret < 0)
-		return ret;
+	err = gpio_edge(gpio, edge);
+	if (err < 0)
+		return err;
 
 	return get_gpio_fd(gpio);
 }
