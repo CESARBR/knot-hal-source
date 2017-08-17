@@ -291,6 +291,15 @@ void hal_gpio_analog_write(uint8_t gpio, int value)
 
 int hal_gpio_get_fd(uint8_t gpio, int edge)
 {
-	gpio_edge(gpio, edge);
+	int ret;
+
+	if (!CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED) ||
+		CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION))
+		return -EIO;
+
+	ret = gpio_edge(gpio, edge);
+	if (ret < 0)
+		return ret;
+
 	return get_gpio_fd(gpio);
 }
