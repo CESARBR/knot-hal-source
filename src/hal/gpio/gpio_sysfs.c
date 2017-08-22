@@ -321,6 +321,20 @@ void hal_gpio_analog_write(uint8_t gpio, int value)
 
 }
 
+/*
+ * Warning: According to the linux documentation you must
+ * follow a set of rules when watching a GPIO pin to trigger
+ * the interruption properly:
+ *
+ * "If you use poll(2), set the events POLLPRI and POLLERR. If you
+ * use select(2), set the file descriptor in exceptfds. After
+ * poll(2) returns, either lseek(2) to the beginning of the sysfs
+ * file and read the new value or close the file and re-open it
+ * to read the value.".
+ *
+ * In case you are using GLIB you must set the conditions
+ * G_IO_PRI and G_IO_ERR.
+ */
 int hal_gpio_get_fd(uint8_t gpio, int edge)
 {
 	int err;
