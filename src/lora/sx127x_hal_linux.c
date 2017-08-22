@@ -95,6 +95,12 @@ uint8_t hal_spi(uint8_t outval)
 }
 
 
+//ISR---------------------------------------------------------------------------
+int init_gpio_fd(void)
+{
+	return hal_gpio_get_fd(pins.dio[0], HAL_GPIO_RISING);
+}
+
 void hal_disableIRQs(void)
 {
 

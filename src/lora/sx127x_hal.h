@@ -77,6 +77,11 @@ void hal_pins_unmap(void);
 uint8_t hal_spi(uint8_t outval);
 
 /*
+ * get gpio fd to watch
+ */
+int init_gpio_fd(void);
+
+/*
  * disable all CPU interrupts.
  *   - might be invoked nested
  *   - will be followed by matching call to hal_enableIRQs()
