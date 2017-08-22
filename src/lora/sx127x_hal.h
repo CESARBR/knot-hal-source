@@ -65,6 +65,11 @@ void hal_pin_rxtx(uint8_t val);
 void hal_pin_rst(uint8_t val);
 
 /*
+ * unmap all pins
+ */
+void hal_pins_unmap(void);
+
+/*
  * perform 8-bit SPI transaction with radio.
  *   - write given byte 'outval'
  *   - read byte and return value

@@ -68,6 +68,12 @@ void hal_pin_rst(uint8_t val)
 	}
 }
 
+void hal_pins_unmap(void)
+{
+	hal_gpio_unmap();
+}
+
+
 // SPI--------------------------------------------------------------------------
 static int fd_spi;
 
