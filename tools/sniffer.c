@@ -154,7 +154,7 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 	}
 }
 
-static int sniffer_run(void)
+static int sniffer_start(void)
 {
 	unsigned long sec, usec;
 	struct timeval tm, reftm;
@@ -241,9 +241,11 @@ int main(int argc, char *argv[])
 
 	printf("nRF24 Sniffer\n");
 
-	err = sniffer_run();
+	err = sniffer_start();
 	if (err < 0)
 	       return err;
+
+	sniffer_stop();
 
 	return 0;
 }
