@@ -632,12 +632,7 @@ void radio_irq_handler(uint8_t dio, uint8_t *buffer, size_t *len_buffer)
 
 int radio_irq_flag(uint8_t mask)
 {
-	uint8_t flags = readReg(LORARegIrqFlags);
-
-	if ((flags & mask) == mask)
-		return 0;
-
-	return 1;
+	return readReg(LORARegIrqFlags) & mask;
 }
 
 void radio_set_config(uint32_t freq, int8_t txpow, uint8_t sf, uint8_t bw,
