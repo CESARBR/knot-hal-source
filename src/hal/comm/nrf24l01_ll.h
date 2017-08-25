@@ -100,8 +100,8 @@ struct nrf24_ll_crtl_pdu {
 	uint8_t payload[0];
 } __attribute__ ((packed));
 
+#define NRF24_KEEPALIVE_SEND_MS		750
 
-#define NRF24_KEEPALIVE_SEND_MS		512
 #define NRF24_KEEPALIVE_TIMEOUT_MS	(10 * NRF24_KEEPALIVE_SEND_MS)
 
 /*
