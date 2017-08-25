@@ -69,6 +69,24 @@ void spi_deinit(int8_t spi_fd)
 	pdummy_len = 0;
 }
 
+/*
+ * This function performs a write through SPI without
+ * overwriting the tx buffer and then performs a read
+ * on the device.
+ *
+ * This strategy is particularly good when dealing with
+ * simple devices such as radios, nfc readers and memory
+ * chips. Those devices usually wait for a command and
+ * then answer it.
+ *
+ * With this function is also possible to perform a
+ * more common SPI transfer (which reads and writes
+ * at the same time and overwrite the tx buffer) by
+ * simply calling:
+ *
+ * 	spi_transfer(spi_fd, NULL, 0, tx_buffer, tx_len);
+ *
+ */
 int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		int lrx)
 {
