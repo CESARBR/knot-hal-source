@@ -27,6 +27,9 @@
 
 #define BITS_PER_WORD		8
 
+static uint8_t *pdummy;
+static int pdummy_len;
+
 static uint32_t speed = 10000000; /* 10 MHz */
 
 int8_t spi_init(const char *dev)
@@ -47,6 +50,11 @@ int8_t spi_init(const char *dev)
 
 	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
 
+	pdummy = (uint8_t *) malloc(sizeof(uint8_t));
+	if (pdummy == NULL)
+		return -ENOMEM;
+	pdummy_len = 1;
+
 	return spi_fd;
 }
 
@@ -56,6 +64,9 @@ void spi_deinit(int8_t spi_fd)
 		close(spi_fd);
 		spi_fd = -1;
 	}
+
+	free(pdummy);
+	pdummy_len = 0;
 }
 
 int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
@@ -64,7 +75,6 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
 	uint8_t mode = SPI_MODE_0;
 	uint16_t delay = 5;
-	uint8_t *pdummy = NULL;
 	int ntransfer = 0;
 	unsigned int ret;
 
@@ -78,11 +88,21 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 	 * to spi( read or write command)
 	 */
 	if (tx != NULL && ltx != 0) {
-		pdummy = (uint8_t *) malloc(ltx);
-		if (pdummy == NULL)
-			return -ENOMEM;
+		/*
+		 * Resize the dummy buffer using malloc() for better
+		 * performance, once realloc() may have to move the
+		 * content of the buffer when it allocates more space.
+		 */
+		if (ltx > pdummy_len) {
+			if (pdummy != NULL)
+				free(pdummy);
 
-		memset(pdummy, 0, ltx);
+			pdummy = (uint8_t *) malloc(ltx * sizeof(uint8_t));
+			if (pdummy == NULL)
+				return -ENOMEM;
+
+			pdummy_len = ltx;
+		}
 
 		pdata_ioc->tx_buf = (unsigned long) tx;
 		pdata_ioc->rx_buf = (unsigned long) pdummy;
@@ -93,7 +113,6 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->bits_per_word = BITS_PER_WORD;
 		++ntransfer;
 		++pdata_ioc;
-
 	}
 
 	/*
@@ -114,9 +133,6 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 	ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
 
 	ret = ioctl(spi_fd, SPI_IOC_MESSAGE(ntransfer), data_ioc);
-
-	if (tx != NULL)
-		free(pdummy);
 
 	return ret ? -errno : 0;
 }
