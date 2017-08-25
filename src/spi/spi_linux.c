@@ -73,7 +73,8 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 
 	memset(data_ioc, 0, sizeof(data_ioc));
 
-	/* If tx isn't empty, tx contains the command that will be send
+	/*
+	 * If tx isn't empty, tx contains the command that will be send
 	 * to spi( read or write command)
 	 */
 	if (tx != NULL && ltx != 0) {
@@ -95,7 +96,8 @@ int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 
 	}
 
-	/* rx will receive from spi the value of the command that was
+	/*
+	 * rx will receive from spi the value of the command that was
 	 * send previously
 	 */
 	if (rx != NULL && lrx != 0) {
