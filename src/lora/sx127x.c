@@ -7,7 +7,6 @@
  *
  */
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
 #include <errno.h>
@@ -390,7 +389,7 @@ static void rxlora(uint8_t rxmode)
 
 	// now instruct the radio to receive
 	if (rxmode == RXMODE_SINGLE) { // single rx
-		hal_waitUntil(LMIC.rxtime); // busy wait until exact rx time
+		hal_wait_until(LMIC.rxtime); // busy wait until exact rx time
 		opmode(OPMODE_RX_SINGLE);
 	} else { // continous rx (scan or rssi)
 		opmode(OPMODE_RX);
@@ -448,7 +447,7 @@ static void rxfsk(uint8_t rxmode)
 	hal_pin_rxtx(0);
 
 	// now instruct the radio to receive
-	hal_waitUntil(LMIC.rxtime); // busy wait until exact rx time
+	hal_wait_until(LMIC.rxtime); // busy wait until exact rx time
 	opmode(OPMODE_RX); // no single rx mode available in FSK
 }
 
@@ -478,9 +477,9 @@ void radio_init(void)
 #else
 	hal_pin_rst(1); // drive RST pin high
 #endif
-	hal_waitUntil(os_getTime() + ms2osticks(1)); // wait >100us
+	hal_wait_until(os_getTime() + ms2osticks(1)); // wait >100us
 	hal_pin_rst(2); // configure RST pin floating!
-	hal_waitUntil(os_getTime() + ms2osticks(5)); // wait 5ms
+	hal_wait_until(os_getTime() + ms2osticks(5)); // wait 5ms
 
 	opmode(OPMODE_SLEEP);
 

@@ -123,7 +123,7 @@ uint32_t hal_ticks(void)
 	return hal_time_us();
 }
 
-void hal_waitUntil(uint32_t time)
+void hal_wait_until(uint32_t time)
 {
 	uint32_t time_us = hal_ticks();
 
@@ -133,7 +133,7 @@ void hal_waitUntil(uint32_t time)
 		hal_delay_us(time_us - time);
 }
 
-uint8_t hal_checkTimer(uint32_t targettime)
+uint8_t hal_check_timer(uint32_t targettime)
 {
 	//not implemented
 	return 0;

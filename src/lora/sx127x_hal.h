@@ -106,14 +106,14 @@ uint32_t hal_ticks(void);
 /*
  * busy-wait until specified timestamp (in ticks) is reached.
  */
-void hal_waitUntil(uint32_t time);
+void hal_wait_until(uint32_t time);
 
 /*
  * check and rewind timer for target time.
  *   - return 1 if target time is close
  *   - otherwise rewind timer for target time or full period and return 0
  */
-uint8_t hal_checkTimer(uint32_t targettime);
+uint8_t hal_check_timer(uint32_t targettime);
 
 /*
  * perform fatal failure action.
