@@ -14,7 +14,6 @@
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
 
-
 typedef struct {
 	uint8_t enaa,
 	en_rxaddr,
@@ -57,7 +56,8 @@ static inline int8_t nrf24reg_read(int8_t spi_fd, uint8_t reg)
 	return (int8_t)value;
 }
 
-static inline void inr_data(int8_t spi_fd, uint8_t reg, void *pd, uint16_t len)
+static inline void nrf24data_read(int8_t spi_fd, uint8_t reg,
+					void *pd, uint16_t len)
 {
 	memset(pd, NRF24_NOP, len);
 	reg = NRF24_R_REGISTER(reg);
@@ -68,13 +68,14 @@ static inline void inr_data(int8_t spi_fd, uint8_t reg, void *pd, uint16_t len)
  * Send to spi transfer the write command
  * and the data that will be written
  */
-static inline void outr(int8_t spi_fd, uint8_t reg, uint8_t value)
+static inline void nrf24reg_write(int8_t spi_fd, uint8_t reg, uint8_t value)
 {
 	reg = NRF24_W_REGISTER(reg);
 	spi_transfer(spi_fd, &reg, DATA_SIZE, &value, DATA_SIZE);
 }
 
-static inline void outr_data(int8_t spi_fd, uint8_t reg, void *pd, uint16_t len)
+static inline void nrf24data_write(int8_t spi_fd, uint8_t reg,
+					void *pd, uint16_t len)
 {
 	reg = NRF24_W_REGISTER(reg);
 	spi_transfer(spi_fd, &reg, DATA_SIZE, pd, len);
@@ -105,7 +106,7 @@ static void set_address_pipe(int8_t spi_fd, uint8_t reg, uint8_t *pipe_addr)
 	uint8_t addr[5];
 	uint16_t len;
 
-	/* memcpy is necessary because outr_data cleans value after send */
+	/* memcpy is necessary because nrf24data_write cleans value after send */
 	memcpy(addr, pipe_addr, sizeof(addr));
 
 	switch (reg) {
@@ -119,7 +120,7 @@ static void set_address_pipe(int8_t spi_fd, uint8_t reg, uint8_t *pipe_addr)
 		break;
 	}
 
-	outr_data(spi_fd, reg, &addr, len);
+	nrf24data_write(spi_fd, reg, &addr, len);
 }
 
 /* Get address of pipe */
@@ -138,12 +139,12 @@ static uint8_t *get_address_pipe(int8_t spi_fd, uint8_t pipe)
 		break;
 
 	default:
-		inr_data(spi_fd, NRF24_RX_ADDR_P1, pipe_addr, len);
+		nrf24data_read(spi_fd, NRF24_RX_ADDR_P1, pipe_addr, len);
 		len = DATA_SIZE;
 		break;
 	}
 
-	inr_data(spi_fd, pipe_reg[pipe].rx_addr, pipe_addr, len);
+	nrf24data_read(spi_fd, pipe_reg[pipe].rx_addr, pipe_addr, len);
 
 	return pipe_addr;
 }
@@ -175,43 +176,47 @@ int8_t nrf24l01_init(const char *dev, uint8_t tx_pwr)
 		return spi_fd;
 
 	/* Reset device in power down mode */
-	outr(spi_fd, NRF24_CONFIG, NRF24_CONFIG_RST);
+	nrf24reg_write(spi_fd, NRF24_CONFIG, NRF24_CONFIG_RST);
 	/* Delay to establish to operational timing of the nRF24L01 */
 	delay_us(TPD2STBY);
 
 	/* Reset channel and TX observe registers */
-	outr(spi_fd, NRF24_RF_CH, nrf24reg_read(spi_fd, NRF24_RF_CH) & ~NRF24_RF_CH_MASK);
+	nrf24reg_write(spi_fd, NRF24_RF_CH,
+		nrf24reg_read(spi_fd, NRF24_RF_CH) & ~NRF24_RF_CH_MASK);
 	/* Set the device channel */
-	outr(spi_fd, NRF24_RF_CH, NRF24_CH(NRF24_CHANNEL_DEFAULT));
+	nrf24reg_write(spi_fd, NRF24_RF_CH, NRF24_CH(NRF24_CHANNEL_DEFAULT));
 
 	/* Set RF speed and output power */
 	value = nrf24reg_read(spi_fd, NRF24_RF_SETUP) & ~NRF24_RF_SETUP_MASK;
-	outr(spi_fd, NRF24_RF_SETUP, value | NRF24_RF_DR(NRF24_DATA_RATE)|
-			NRF24_RF_PWR(tx_pwr));
+	nrf24reg_write(spi_fd, NRF24_RF_SETUP, value |
+			NRF24_RF_DR(NRF24_DATA_RATE) | NRF24_RF_PWR(tx_pwr));
 
 	/* Set address widths */
 	value = nrf24reg_read(spi_fd, NRF24_SETUP_AW) & ~NRF24_SETUP_AW_MASK;
-	outr(spi_fd, NRF24_SETUP_AW, value | NRF24_AW(NRF24_ADDR_WIDTHS));
+	nrf24reg_write(spi_fd, NRF24_SETUP_AW,
+			value | NRF24_AW(NRF24_ADDR_WIDTHS));
 
 	/* Set device to standby-I mode */
 	value = nrf24reg_read(spi_fd, NRF24_CONFIG) & ~NRF24_CONFIG_MASK;
 	value |= NRF24_CFG_MASK_RX_DR | NRF24_CFG_MASK_TX_DS;
 	value |= NRF24_CFG_MASK_MAX_RT | NRF24_CFG_EN_CRC;
 	value |= NRF24_CFG_CRCO | NRF24_CFG_PWR_UP;
-	outr(spi_fd, NRF24_CONFIG, value);
+	nrf24reg_write(spi_fd, NRF24_CONFIG, value);
 
 	delay_us(TPD2STBY);
 
 	/* Disable Auto Retransmit Count */
-	outr(spi_fd, NRF24_SETUP_RETR, NRF24_RETR_ARC(NRF24_ARC_DISABLE));
+	nrf24reg_write(spi_fd, NRF24_SETUP_RETR,
+			NRF24_RETR_ARC(NRF24_ARC_DISABLE));
 
 	/* Disable all Auto Acknowledgment of pipes */
-	outr(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
+	nrf24reg_write(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
 			& ~NRF24_EN_AA_MASK);
 
 	/* Disable all RX addresses */
-	outr(spi_fd, NRF24_EN_RXADDR, nrf24reg_read(spi_fd, NRF24_EN_RXADDR)
-		& ~NRF24_EN_RXADDR_MASK);
+	nrf24reg_write(spi_fd, NRF24_EN_RXADDR,
+			nrf24reg_read(spi_fd, NRF24_EN_RXADDR)
+			& ~NRF24_EN_RXADDR_MASK);
 
 	/*
 	 * Features available:
@@ -228,19 +233,20 @@ int8_t nrf24l01_init(const char *dev, uint8_t tx_pwr)
 	 * ack by default.
 	 * The option no ack can be set in function nrf24l01_set_ptx.
 	 */
-	outr(spi_fd, NRF24_FEATURE, (nrf24reg_read(spi_fd, NRF24_FEATURE)
-		& ~NRF24_FEATURE_MASK) | NRF24_FT_EN_DPL);
+	nrf24reg_write(spi_fd, NRF24_FEATURE,
+			(nrf24reg_read(spi_fd, NRF24_FEATURE)
+			 & ~NRF24_FEATURE_MASK) | NRF24_FT_EN_DPL);
 
 	value = nrf24reg_read(spi_fd, NRF24_DYNPD) & ~NRF24_DYNPD_MASK;
 	value |= NRF24_DPL_P5 | NRF24_DPL_P4;
 	value |= NRF24_DPL_P3 | NRF24_DPL_P2;
 	value |= NRF24_DPL_P1 | NRF24_DPL_P0;
 
-	outr(spi_fd, NRF24_DYNPD, value);
+	nrf24reg_write(spi_fd, NRF24_DYNPD, value);
 
 	/* Reset pending status */
 	value = nrf24reg_read(spi_fd, NRF24_STATUS) & ~NRF24_STATUS_MASK;
-	outr(spi_fd, NRF24_STATUS, value | NRF24_ST_RX_DR
+	nrf24reg_write(spi_fd, NRF24_STATUS, value | NRF24_ST_RX_DR
 		| NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
 
 
@@ -256,8 +262,9 @@ int8_t nrf24l01_deinit(int8_t spi_fd)
 
 	disable();
 	/* Power down the radio */
-	outr(spi_fd, NRF24_CONFIG, nrf24reg_read(spi_fd, NRF24_CONFIG) &
-							~NRF24_CFG_PWR_UP);
+	nrf24reg_write(spi_fd, NRF24_CONFIG,
+			nrf24reg_read(spi_fd, NRF24_CONFIG) &
+			~NRF24_CFG_PWR_UP);
 
 	/* Deinit SPI and GPIO */
 	io_reset(spi_fd);
@@ -285,12 +292,12 @@ int8_t nrf24l01_set_channel(int8_t spi_fd, uint8_t ch)
 
 	if (ch != NRF24_CH(nrf24reg_read(spi_fd, NRF24_RF_CH))) {
 		set_standby1();
-		outr(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR
+		nrf24reg_write(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR
 			| NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
 		command(spi_fd, NRF24_FLUSH_TX);
 		command(spi_fd, NRF24_FLUSH_RX);
 		/* Set the device channel */
-		outr(spi_fd, NRF24_RF_CH,
+		nrf24reg_write(spi_fd, NRF24_RF_CH,
 			NRF24_CH(_CONSTRAIN(ch, NRF24_CH_MIN, max)));
 	}
 
@@ -316,14 +323,16 @@ int8_t nrf24l01_open_pipe(int8_t spi_fd, uint8_t pipe, uint8_t *pipe_addr,
 	/* Enable pipe */
 	if (!(nrf24reg_read(spi_fd, NRF24_EN_RXADDR) & rpipe.en_rxaddr)) {
 		set_address_pipe(spi_fd, rpipe.rx_addr, pipe_addr);
-		outr(spi_fd, NRF24_EN_RXADDR,
+		nrf24reg_write(spi_fd, NRF24_EN_RXADDR,
 			nrf24reg_read(spi_fd, NRF24_EN_RXADDR) | rpipe.en_rxaddr);
 
 		if (!ack)
-			outr(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
+			nrf24reg_write(spi_fd, NRF24_EN_AA,
+					nrf24reg_read(spi_fd, NRF24_EN_AA)
 					& ~pipe_reg[pipe].enaa);
 		else
-			outr(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
+			nrf24reg_write(spi_fd, NRF24_EN_AA,
+					nrf24reg_read(spi_fd, NRF24_EN_AA)
 					| pipe_reg[pipe].enaa);
 	}
 
@@ -350,10 +359,12 @@ int8_t nrf24l01_close_pipe(int8_t spi_fd, int8_t pipe)
 		 * The data pipes are enabled with the bits in the EN_RXADDR
 		 * Disable the EN_RXADDR for this pipe
 		 */
-		outr(spi_fd, NRF24_EN_RXADDR, nrf24reg_read(spi_fd, NRF24_EN_RXADDR)
+		nrf24reg_write(spi_fd, NRF24_EN_RXADDR,
+				nrf24reg_read(spi_fd, NRF24_EN_RXADDR)
 				& ~rpipe.en_rxaddr);
 		/* Disable auto ack in this pipe */
-		outr(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
+		nrf24reg_write(spi_fd, NRF24_EN_AA,
+				nrf24reg_read(spi_fd, NRF24_EN_AA)
 				& ~rpipe.enaa);
 	}
 
@@ -382,15 +393,18 @@ int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 	 */
 	if (nrf24reg_read(spi_fd, NRF24_EN_AA) & pipe_reg[pipe].enaa
 				&& pipe != NRF24_PIPE0_ADDR)
-		outr(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
-					| NRF24_AA_P0);
+		nrf24reg_write(spi_fd, NRF24_EN_AA,
+				nrf24reg_read(spi_fd, NRF24_EN_AA)
+				| NRF24_AA_P0);
 	else
-		outr(spi_fd, NRF24_EN_AA, nrf24reg_read(spi_fd, NRF24_EN_AA)
+		nrf24reg_write(spi_fd, NRF24_EN_AA,
+				nrf24reg_read(spi_fd, NRF24_EN_AA)
 				& ~NRF24_AA_P0);
 
 	set_address_pipe(spi_fd, NRF24_RX_ADDR_P0,
-						get_address_pipe(spi_fd, pipe));
-	set_address_pipe(spi_fd, NRF24_TX_ADDR, get_address_pipe(spi_fd, pipe));
+			get_address_pipe(spi_fd, pipe));
+	set_address_pipe(spi_fd, NRF24_TX_ADDR,
+			get_address_pipe(spi_fd, pipe));
 	#if (NRF24_ARC != NRF24_ARC_DISABLE)
 		/*
 		* Set ARC and ARD by pipe index to different
@@ -405,12 +419,13 @@ int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 		* pipe 4 - 1500us
 		* pipe 5 - 1750us
 		*/
-		outr(spi_fd, NRF24_SETUP_RETR,
+		nrf24reg_write(spi_fd, NRF24_SETUP_RETR,
 			NRF24_RETR_ARD((pipe + 1))
 			| NRF24_RETR_ARC(NRF24_ARC));
 	#endif
-	outr(spi_fd, NRF24_STATUS, NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
-	outr(spi_fd, NRF24_CONFIG, nrf24reg_read(spi_fd, NRF24_CONFIG)
+	nrf24reg_write(spi_fd, NRF24_STATUS, NRF24_ST_TX_DS | NRF24_ST_MAX_RT);
+	nrf24reg_write(spi_fd, NRF24_CONFIG,
+			nrf24reg_read(spi_fd, NRF24_CONFIG)
 			& ~NRF24_CFG_PRIM_RX);
 	/* Enable and delay time to TSTBY2A timing */
 	enable();
@@ -452,7 +467,7 @@ int8_t nrf24l01_ptx_wait_datasent(int8_t spi_fd)
 						NRF24_ST_TX_DS)) {
 		/* Send failed: Max number of TX retransmits? */
 		if (value & NRF24_ST_MAX_RT) {
-			outr(spi_fd, NRF24_STATUS, NRF24_ST_MAX_RT);
+			nrf24reg_write(spi_fd, NRF24_STATUS, NRF24_ST_MAX_RT);
 			command(spi_fd, NRF24_FLUSH_TX);
 			return -1;
 		}
@@ -479,8 +494,8 @@ int8_t nrf24l01_set_prx(int8_t spi_fd, uint8_t *pipe0_addr)
 	set_standby1();
 	set_address_pipe(spi_fd, NRF24_RX_ADDR_P0, pipe0_addr);
 	/* RX Settings */
-	outr(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR);
-	outr(spi_fd, NRF24_CONFIG, nrf24reg_read(spi_fd, NRF24_CONFIG)
+	nrf24reg_write(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR);
+	nrf24reg_write(spi_fd, NRF24_CONFIG, nrf24reg_read(spi_fd, NRF24_CONFIG)
 			| NRF24_CFG_PRIM_RX);
 	/* Enable and delay time to TSTBY2A timing */
 	enable();
@@ -515,7 +530,7 @@ int8_t nrf24l01_prx_data(int8_t spi_fd, void *pdata, uint16_t len)
 {
 	uint16_t rxlen = 0;
 
-	outr(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR);
+	nrf24reg_write(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR);
 
 	command_data(spi_fd, NRF24_R_RX_PL_WID, &rxlen, DATA_SIZE);
 	/* Note: flush RX FIFO if the value read is larger than 32 bytes.*/
