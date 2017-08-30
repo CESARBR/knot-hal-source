@@ -74,8 +74,8 @@ static struct peer peers[MAX_PEERS] = {
 	{.socket_fd = -1}
 };
 
-struct bcast_presence {
-	char name[20];
+struct beacon {
+	char *name;
 	unsigned long last_beacon;
 };
 
@@ -105,6 +105,14 @@ static const gchar introspection_xml[] =
 	"    </method>"
 	"  </interface>"
 	"</node>";
+
+static void beacon_free(void *user_data)
+{
+	struct beacon *peer = user_data;
+
+	g_free(peer->name);
+	g_free(peer);
+}
 
 static int write_file(const gchar *addr, const gchar *key, const gchar *name)
 {
@@ -347,14 +355,14 @@ static int peers_to_json(struct json_object *peers_bcast_json)
 	g_hash_table_iter_init (&iter, peer_bcast_table);
 
 	while (g_hash_table_iter_next (&iter, &key, &value)) {
-		struct bcast_presence *peer = value;
+		struct beacon *peer = value;
 
 		jobj = json_object_new_object();
 		if (peer == NULL)
 			continue;
 
 		json_object_object_add(jobj, "name",
-					json_object_new_string(peer->name));
+				       json_object_new_string(peer->name));
 		json_object_object_add(jobj, "mac",
 					json_object_new_string((char *) key));
 		json_object_object_add(jobj, "last_beacon",
@@ -743,7 +751,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	uint8_t i;
 	int sock, nsk;
 	char mac_str[MAC_ADDRESS_SIZE];
-	struct bcast_presence *peer;
+	struct beacon *peer;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
 			(struct mgmt_evt_nrf24_bcast_presence *) mhdr->payload;
 
@@ -753,19 +761,23 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 		peer->last_beacon = hal_time_ms();
 		goto done;
 	}
-	peer = g_try_new0(struct bcast_presence, 1);
+	peer = g_try_new0(struct beacon, 1);
 	if (peer == NULL)
 		return -ENOMEM;
 	/*
 	 * Print every MAC sending presence in order to ease the discover of
 	 * things trying to connect to the gw.
 	 */
-	hal_log_info("Thing sending presence. MAC = %s Name = %s",
-							mac_str, evt_pre->name);
 	peer->last_beacon = hal_time_ms();
-	strncpy(peer->name, (char *) evt_pre->name,
-					MIN(sizeof(peer->name) - 1,
-						strlen((char *)evt_pre->name)));
+
+	/* Creating a UTF-8 copy of the name */
+	peer->name = g_utf8_make_valid((const char *) evt_pre->name,
+					strlen((const char *) evt_pre->name));
+	if (!peer->name)
+		peer->name = g_strdup("unknown");
+
+	hal_log_info("Thing sending presence. MAC = %s Name = %s",
+						mac_str, peer->name);
 	/*
 	 * MAC and device name will be printed only once, but the last presence
 	 * time is updated. Every time a user refresh the list in the webui
@@ -1205,7 +1217,7 @@ done:
 
 static gboolean check_timeout(gpointer key, gpointer value, gpointer user_data)
 {
-	struct bcast_presence *peer = value;
+	struct beacon *peer = value;
 
 	/* If it returns true the key/value is removed */
 	if (hal_timeout(hal_time_ms(), peer->last_beacon,
@@ -1295,7 +1307,7 @@ int manager_start(const char *file, const char *host, int port,
 		return err;
 
 	peer_bcast_table = g_hash_table_new_full(g_str_hash, g_str_equal,
-								g_free, g_free);
+							g_free, beacon_free);
 	g_timeout_add_seconds(5, timeout_iterator, NULL);
 
 	return 0;
