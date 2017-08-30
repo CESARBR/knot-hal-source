@@ -60,7 +60,6 @@ static struct adapter {
 } adapter;
 
 struct peer {
-	char name[10];
 	uint64_t mac;
 	int8_t socket_fd; /* HAL comm socket */
 	int8_t ksock; /* KNoT raw socket: Unix socket or TCP */
@@ -816,11 +815,6 @@ done:
 		/* Set mac value for this position */
 		peers[position].mac =
 				evt_pre->mac.address.uint64;
-
-		/* Copy the slave name */
-		strncpy(peers[position].name, (char *) evt_pre->name,
-					MIN(sizeof(peers[position].name) - 1,
-						strlen((char *)evt_pre->name)));
 
 		/* Watch knotd socket */
 		io = g_io_channel_unix_new(peers[position].ksock);
