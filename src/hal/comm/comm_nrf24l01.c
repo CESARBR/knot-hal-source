@@ -689,6 +689,7 @@ static void running(void)
 		start = hal_time_ms();
 		/* Go to next state */
 		state = MGMT;
+		break;
 	case MGMT:
 
 		read_mgmt(driverIndex);
@@ -713,6 +714,7 @@ static void running(void)
 
 		/* Go to next state */
 		state = RAW;
+		break;
 	case RAW:
 
 		/* Start broadcast or scan? */
