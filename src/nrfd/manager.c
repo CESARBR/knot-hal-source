@@ -586,6 +586,7 @@ static void dbus_on_close(guint owner_id)
 		if (adapter.known_peers[i].addr.address.uint64 != 0)
 			g_free(adapter.known_peers[i].alias);
 	}
+
 	g_free(adapter.file_name);
 	g_bus_unown_name(owner_id);
 	g_dbus_node_info_unref(introspection_data);
@@ -916,7 +917,6 @@ static int8_t clients_read()
 
 static int8_t mgmt_read(void)
 {
-
 	uint8_t buffer[256];
 	struct mgmt_nrf24_header *mhdr = (struct mgmt_nrf24_header *) buffer;
 	ssize_t rbytes;
@@ -925,15 +925,15 @@ static int8_t mgmt_read(void)
 
 	/* mgmt on bad state? */
 	if (rbytes < 0 && rbytes != -EAGAIN)
-		return -1;
+		return rbytes;
 
 	/* Nothing to read? */
 	if (rbytes == -EAGAIN)
-		return -1;
+		return rbytes;
 
 	/* Return/ignore if it is not an event? */
 	if (!(mhdr->opcode & 0x0200))
-		return -1;
+		return -EPROTO;
 
 	switch (mhdr->opcode) {
 
@@ -951,6 +951,7 @@ static int8_t mgmt_read(void)
 		evt_disconnected(mhdr);
 		break;
 	}
+
 	return 0;
 }
 
@@ -958,6 +959,7 @@ static gboolean read_idle(gpointer user_data)
 {
 	mgmt_read();
 	clients_read();
+
 	return TRUE;
 }
 
@@ -1009,7 +1011,7 @@ static void radio_stop(void)
 
 static char *load_config(const char *file)
 {
-	char *buffer = NULL;
+	char *buffer;
 	int length;
 	FILE *fl = fopen(file, "r");
 
@@ -1122,13 +1124,14 @@ static int parse_config(const char *config, int *channel, int *dbm,
 	if (json_object_object_get_ex(obj_radio,  "TxPower", &obj_tmp))
 		*dbm = json_object_get_int(obj_tmp);
 
-	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp))
+	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp)) {
 		if (json_object_get_string(obj_tmp) != NULL) {
 			err =
 			nrf24_str2mac(json_object_get_string(obj_tmp), mac);
 			if (err == -1)
 				goto done;
 		}
+	}
 
 	/* Success */
 	err = 0;
@@ -1254,6 +1257,7 @@ int manager_start(const char *file, const char *host, int port,
 	err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
 	if (err < 0) {
 		hal_log_error("parse_config(): %d", err);
+		free(json_str);
 		return err;
 	}
 
@@ -1262,6 +1266,7 @@ int manager_start(const char *file, const char *host, int port,
 	err = parse_nodes(nodes_file);
 	if (err < 0) {
 		hal_log_error("parse_nodes(): %d", err);
+		free(json_str);
 		return err;
 	}
 
