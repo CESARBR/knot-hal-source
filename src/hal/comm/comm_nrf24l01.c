@@ -551,6 +551,9 @@ static int read_raw(int spi_fd, int sockfd)
 			if (peers[sockfd-1].len_rx != 0)
 				break; /* Discard packet */
 
+			/* Incoming data: reset keepalive counter */
+			peers[sockfd-1].keepalive = 1;
+
 			/* Reset offset if sequence number is zero */
 			if (ipdu->nseq == 0) {
 				peers[sockfd-1].offset_rx = 0;
