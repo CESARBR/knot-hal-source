@@ -82,7 +82,7 @@ struct beacon {
 static GHashTable *peer_bcast_table;
 static uint8_t count_clients;
 
-static GDBusNodeInfo *introspection_data = NULL;
+static GDBusNodeInfo *introspection_data;
 
 /* Introspection data for the service we are exporting */
 static const gchar introspection_xml[] =
@@ -181,7 +181,7 @@ static GVariant *handle_device_get_property(GDBusConnection *connection,
 				gpointer user_data)
 {
 	GVariant *gvar = NULL;
-	char str_mac[24];
+	char str_mac[MAC_ADDRESS_SIZE];
 	gint dev;
 
 	dev = GPOINTER_TO_INT(user_data);
@@ -422,7 +422,7 @@ static GVariant *handle_get_property(GDBusConnection  *connection,
 				gpointer user_data)
 {
 	GVariant *gvar = NULL;
-	char str_mac[24];
+	char str_mac[MAC_ADDRESS_SIZE];
 
 	if (g_strcmp0(property_name, "Address") == 0) {
 		nrf24_mac2str(&adapter.mac, str_mac);
@@ -1072,7 +1072,7 @@ static int gen_save_mac(const char *config, const char *file,
 
 	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp)) {
 
-			char mac_string[24];
+			char mac_string[MAC_ADDRESS_SIZE];
 			uint8_t mac_mask = 4;
 			mac->address.uint64 = 0;
 
