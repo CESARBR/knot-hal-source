@@ -524,8 +524,11 @@ static int read_raw(int spi_fd, int sockfd)
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
 					peers[sockfd-1].mac,
 					mac_local);
+				/* Acceptor: reset the counter */
+				peers[sockfd-1].keepalive = 1;
+
 			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
-				/* Resets the counter */
+				/* Initiator: reset the counter */
 				peers[sockfd-1].keepalive = 1;
 			}
 
