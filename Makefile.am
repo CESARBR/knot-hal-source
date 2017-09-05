@@ -48,6 +48,7 @@ tools_sniffer_LDADD = libs/libphy_driver.a \
 				libs/libhaltime.a \
 				libs/libnrf24l01.a \
 				libs/libspi.a \
+				libs/libhallog.a \
 				@GLIB_LIBS@
 tools_sniffer_LDFLAGS = $(AM_LDFLAGS)
 tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \

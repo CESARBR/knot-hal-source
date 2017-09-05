@@ -16,6 +16,7 @@
 #include "hal/avr_errno.h"
 #include "hal/avr_unistd.h"
 #else
+#include "hal/linux_log.h"
 #include <errno.h>
 #include <unistd.h>
 #endif
@@ -161,6 +162,47 @@ enum {
 	TIMEOUT_INTERVAL
 };
 
+#ifdef ARDUINO
+#define DBG_RECV(mac1, mac2, pdu, len)  DBG()
+#define DBG_SEND(mac1, mac2, pdu, len)  DBG()
+
+static void DBG(void)
+{
+}
+
+#else
+
+#define DBG_RECV(mac1, mac2, pdu, len)  DBG('<', mac1, mac2, pdu, len)
+#define DBG_SEND(mac1, mac2, pdu, len)  DBG('>', mac1, mac2, pdu, len)
+
+static void DBG(char dir, const struct nrf24_mac *mac,
+			const struct nrf24_mac *peer_mac,
+			const uint8_t *pdu, size_t len)
+{
+	char buffer[128];
+	char *ptr = buffer + 50;
+	size_t i;
+
+	memset(buffer, 0, sizeof(buffer));
+
+	nrf24_mac2str(mac, buffer);
+
+	buffer[23] = ' ';
+	buffer[24] = dir;
+	buffer[25] = ' ';
+
+	nrf24_mac2str(peer_mac, buffer + 26);
+	buffer[49] = ' ';
+
+	for (i = 0; i < len && ((i * 2) < sizeof(buffer)); i++) {
+		snprintf(ptr, 3, "%02x", pdu[i]);
+		ptr += 2;
+	}
+
+	hal_log_dbg("%s", buffer);
+}
+#endif
+
 /* Local functions */
 /*
 * Calculates data-channel time as a sum of each allocated pipe tr time.
@@ -220,18 +262,21 @@ static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
 		(struct nrf24_ll_crtl_pdu *) opdu->payload;
 	struct nrf24_ll_disconnect *lldc =
 		(struct nrf24_ll_disconnect *) llctrl->payload;
-	int err;
+	int err, len;
 
 	opdu->lid = NRF24_PDU_LID_CONTROL;
 	p.pipe = sockfd;
 	llctrl->opcode = NRF24_LL_CRTL_OP_DISCONNECT;
 	lldc->dst_addr.address.uint64 = dst.address.uint64;
 	lldc->src_addr.address.uint64 = src.address.uint64;
-	err = phy_write(spi_fd, &p,
-					sizeof(struct nrf24_ll_data_pdu) +
-					sizeof(struct nrf24_ll_crtl_pdu) +
-					sizeof(struct nrf24_ll_disconnect));
+	len = sizeof(struct nrf24_ll_data_pdu)
+		+ sizeof(struct nrf24_ll_crtl_pdu)
+		+ sizeof(struct nrf24_ll_disconnect);
 
+	DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
+				(const uint8_t *) opdu, len);
+
+	err = phy_write(spi_fd, &p, len);
 	if (err < 0)
 		return err;
 
@@ -241,7 +286,7 @@ static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
 static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 				struct nrf24_mac dst, struct nrf24_mac src)
 {
-	int err;
+	int err, len;
 	/* Assemble keep alive packet */
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu =
@@ -259,8 +304,12 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	llkeepalive->dst_addr.address.uint64 = dst.address.uint64;
 	llkeepalive->src_addr.address.uint64 = src.address.uint64;
 	/* Sends keep alive packet */
-	err = phy_write(spi_fd, &p, sizeof(*opdu) + sizeof(*llctrl) +
-							sizeof(*llkeepalive));
+	len = sizeof(*opdu) + sizeof(*llctrl) + sizeof(*llkeepalive);
+
+	DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
+					(const uint8_t *) opdu, len);
+
+	err = phy_write(spi_fd, &p, len);
 	if (err < 0)
 		return err;
 
@@ -402,6 +451,8 @@ static int read_mgmt(int spi_fd)
 
 		mgmt.len_rx = sizeof(*mgmtev_hdr) + sizeof(*mgmtev_cn);
 
+		DBG_RECV(&llc->src_addr, &llc->dst_addr, (const uint8_t *) ipdu, ilen);
+
 		break;
 	default:
 		return -EINVAL;
@@ -457,6 +508,9 @@ static int write_raw(int spi_fd, int sockfd)
 		memcpy(opdu->payload, peers[sockfd-1].buffer_tx +
 			(peers[sockfd-1].len_tx - left), plen);
 
+		DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
+				 (const uint8_t *) opdu, plen + DATA_HDR_SIZE);
+
 		/* Send packet */
 		err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
 		/*
@@ -503,6 +557,8 @@ static int read_raw(int spi_fd, int sockfd)
 	while ((ilen = phy_read(spi_fd, &p, NRF24_MTU)) > 0) {
 
 		/* Initiator/acceptor: reset anchor */
+		DBG_RECV(&mac_local, &peers[sockfd - 1].mac, (const uint8_t *) ipdu, ilen);
+
 		peers[sockfd-1].keepalive_anchor = hal_time_ms();
 
 		/* Check if is data or Control */
