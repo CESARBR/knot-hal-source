@@ -159,6 +159,7 @@ static int sniffer_start(void)
 	struct timeval tm, reftm;
 	struct nrf24_io_pack p;
 	ssize_t plen;
+	time_t last_sec = LONG_MAX;
 
 	cli_fd = phy_open("NRF0");
 	if (cli_fd < 0)
@@ -182,11 +183,20 @@ static int sniffer_start(void)
 		else
 			p.pipe = 1;
 
+		gettimeofday(&tm, NULL);
+
+		/* Probably disconnected: return no broadcast channel */
+		if ((tm.tv_sec - last_sec) > 5) {
+			phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+			phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
+			last_sec = tm.tv_sec;
+		}
+
 		plen = phy_read(cli_fd, &p, NRF24_MTU);
 		if (plen <= 0)
 			continue;
 
-		gettimeofday(&tm, NULL);
+		last_sec = tm.tv_sec;
 		if (tm.tv_usec < reftm.tv_usec) {
 			sec = tm.tv_sec - reftm.tv_sec - 1;
 			usec = tm.tv_usec + 1000000 - reftm.tv_usec;
