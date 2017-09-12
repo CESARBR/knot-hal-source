@@ -53,18 +53,20 @@ static void decode_raw(unsigned long sec, unsigned long usec,
 		ctrl = (struct nrf24_ll_crtl_pdu *) ipdu->payload;
 		kpalive = (struct nrf24_ll_keepalive *) ctrl->payload;
 
-		if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ)
+		nrf24_mac2str(&kpalive->src_addr, src);
+		nrf24_mac2str(&kpalive->dst_addr, dst);
+
+		if (ctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ) {
 			printf("%05ld.%06ld nRF24: CRTL | Keep Alive Req " \
 						"(0x%02x) plen:%zd\n", sec,
 						usec, ctrl->opcode, plen);
-		else
+			printf("  %s > %s\n", src, dst);
+		} else {
 			printf("%05ld.%06ld nRF24: CRTL | Keep Alive Rsp " \
 						"(0x%02x) plen:%zd\n", sec,
 						usec, ctrl->opcode, plen);
-
-		nrf24_mac2str(&kpalive->src_addr, src);
-		nrf24_mac2str(&kpalive->dst_addr, dst);
-		printf("  %s > %s\n", src, dst);
+			printf("  %s < %s\n", dst, src);
+		}
 		break;
 	case NRF24_PDU_LID_DATA_FRAG:
 	case NRF24_PDU_LID_DATA_END:
