@@ -121,7 +121,7 @@ static void decode_mgmt(unsigned long sec, unsigned long usec,
 		nrf24_mac2str(&llcn->src_addr, src);
 		nrf24_mac2str(&llcn->dst_addr, dst);
 
-		if (option_mac && strcmp(option_mac, dst) != 0)
+		if (g_strcmp0(option_mac, dst) != 0)
 			break;
 
 		/* Now track connected device ONLY */
