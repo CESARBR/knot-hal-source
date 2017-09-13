@@ -325,6 +325,7 @@ static int check_keepalive(int spi_fd, int sockfd)
 						NRF24_KEEPALIVE_TIMEOUT_MS) > 0)
 		return -ETIMEDOUT;
 
+	/* Disabled? (Acceptor is always 0) */
 	if (peers[sockfd-1].keepalive == 0)
 		return 0;
 
@@ -580,8 +581,6 @@ static int read_raw(int spi_fd, int sockfd)
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
 					peers[sockfd-1].mac,
 					mac_local);
-				/* Acceptor: reset the counter */
-				peers[sockfd-1].keepalive = 1;
 
 			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
 				/* Initiator: reset the counter */
