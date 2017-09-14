@@ -38,7 +38,7 @@ static void sig_term(int sig)
 	quit = 1;
 }
 
-static void decode_raw(unsigned long sec, unsigned long usec,
+static inline void decode_raw(unsigned long sec, unsigned long usec,
 					const uint8_t *payload, ssize_t plen)
 {
 	const struct nrf24_ll_data_pdu *ipdu =
@@ -90,7 +90,7 @@ static void decode_raw(unsigned long sec, unsigned long usec,
 	}
 }
 
-static void decode_mgmt(unsigned long sec, unsigned long usec,
+static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 				const uint8_t *payload, ssize_t plen)
 {
 	struct nrf24_ll_presence *ll;
