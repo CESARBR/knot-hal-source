@@ -46,6 +46,11 @@
 #define DATA_SIZE 128
 #define MGMT_SIZE 32
 #define MGMT_TIMEOUT 10
+
+#define WINDOW_BCAST		5				/* ms */
+#define INTERVAL_BCAST		6				/* ms */
+#define BURST_BCAST		(WINDOW_BCAST*1000)/10		/* 500 us */
+
 static uint8_t raw_timeout = 10;
 
 /*Retransmission start time and channel offset*/
@@ -145,9 +150,6 @@ static int driverIndex = -1;
 static int channel_mgmt = 76;
 static int channel_raw = 22;
 
-static uint16_t window_bcast = 5;	/* ms */
-static uint16_t interval_bcast = 6;	/* ms */
-
 enum {
 	START_MGMT,
 	MGMT,
@@ -157,7 +159,7 @@ enum {
 
 enum {
 	PRESENCE,
-	TIMEOUT_WINDOW,
+	BURST_WINDOW,
 	STANDBY,
 	TIMEOUT_INTERVAL
 };
@@ -684,6 +686,7 @@ static void presence_connect(int spi_fd)
 	static unsigned long start;
 	/* Start timeout */
 	static uint8_t state = PRESENCE;
+	static uint8_t previous_state = TIMEOUT_INTERVAL;
 
 	switch (state) {
 	case PRESENCE:
@@ -712,23 +715,30 @@ static void presence_connect(int spi_fd)
 		len += nameLen;
 
 		phy_write(spi_fd, &p, len);
-		/* Init time */
-		start = hal_time_ms();
-		state = TIMEOUT_WINDOW;
-		break;
-	case TIMEOUT_WINDOW:
-		if (hal_timeout(hal_time_ms(), start, window_bcast) > 0)
-			state = STANDBY;
 
+		/* Init time */
+		if (previous_state == TIMEOUT_INTERVAL)
+			start = hal_time_ms();
+
+		state = BURST_WINDOW;
+		break;
+	case BURST_WINDOW:
+		if (hal_timeout(hal_time_ms(), start, WINDOW_BCAST) > 0)
+			state = STANDBY;
+		else if (hal_timeout(hal_time_us(), start*1000, BURST_BCAST) > 0)
+			state = PRESENCE;
+
+		previous_state = BURST_WINDOW;
 		break;
 	case STANDBY:
 		phy_ioctl(spi_fd, NRF24_CMD_SET_STANDBY, NULL);
 		state = TIMEOUT_INTERVAL;
 		break;
 	case TIMEOUT_INTERVAL:
-		if (hal_timeout(hal_time_ms(), start, interval_bcast) > 0)
+		if (hal_timeout(hal_time_ms(), start, INTERVAL_BCAST) > 0)
 			state = PRESENCE;
 
+		previous_state = TIMEOUT_INTERVAL;
 		break;
 	}
 }
