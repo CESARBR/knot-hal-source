@@ -705,6 +705,7 @@ static int tcp_connect(void)
 static void kwatch_io_destroy(gpointer user_data)
 {
 	struct peer *p = (struct peer *) user_data;
+
 	hal_comm_close(p->socket_fd);
 	close(p->ksock);
 	p->socket_fd = -1;
@@ -1079,8 +1080,7 @@ static int gen_save_mac(const char *config, const char *file,
 			hal_getrandom(mac->address.b + mac_mask,
 						sizeof(*mac) - mac_mask);
 
-			err = nrf24_mac2str((const struct nrf24_mac *) mac,
-								mac_string);
+			err = nrf24_mac2str(mac, mac_string);
 			if (err == -1)
 				goto done;
 
