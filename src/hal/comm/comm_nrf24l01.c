@@ -397,6 +397,13 @@ static int read_mgmt(int spi_fd)
 	/* If is a presente type */
 	case NRF24_PDU_TYPE_PRESENCE:
 
+		/*
+		 * If broadcasting: Ignore presence from other devices.
+		 * TODO: Find a better approach to manage this scenario.
+		 */
+		if (listen)
+			return -EAGAIN;
+
 		if (ilen < (ssize_t) (sizeof(struct nrf24_ll_mgmt_pdu) +
 					sizeof(struct nrf24_ll_presence)))
 			return -EINVAL;
