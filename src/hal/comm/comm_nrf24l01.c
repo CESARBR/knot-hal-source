@@ -30,11 +30,12 @@
 #include "nrf24l01_ll.h"
 
 
-/*Transmission time (ms) values for each pipe. Note that every next
-* pipe there's a increase on the trans and retrans time. For more
-* on how these values were calculated, please refer to  nrf24l01 specs
-* or check out this very commit message.
-*/
+/*
+ * Transmission time (ms) values for each pipe. Note that every next
+ * pipe there's a increase on the trans and retrans time. For more
+ * on how these values were calculated, please refer to  nrf24l01 specs
+ * or check out this very commit message.
+ */
 #define PIPE1_WINDOW 15
 #define PIPE2_WINDOW 18
 #define PIPE3_WINDOW 22
@@ -205,13 +206,12 @@ static void DBG(char dir, const struct nrf24_mac *mac,
 }
 #endif
 
-/* Local functions */
 /*
-* Calculates data-channel time as a sum of each allocated pipe tr time.
-* This already accounts for startup time, time on air and other delays.
-* For more on this, please refer to nrf24l01 specs or to this commit's
-* log message.
-*/
+ * Calculates data-channel time as a sum of each allocated pipe tr time.
+ * This already accounts for startup time, time on air and other delays.
+ * For more on this, please refer to nrf24l01 specs or to this commit's
+ * log message.
+ */
 static uint8_t new_raw_time()
 {
 	uint8_t new_time = 0;
@@ -233,7 +233,6 @@ static uint8_t new_raw_time()
 
 	return new_time;
 }
-
 
 static inline int alloc_pipe(void)
 {
