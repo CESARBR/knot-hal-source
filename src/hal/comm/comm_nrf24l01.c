@@ -976,8 +976,8 @@ int hal_comm_close(int sockfd)
 			write_disconnect(driverIndex, sockfd,
 					peers[sockfd-1].mac, mac_local);
 		/* Free pipe & & resize raw time */
-		peers[sockfd-1].pipe = -1;
 		CLR_BIT(pipe_bitmask, peers[sockfd - 1].pipe);
+		peers[sockfd-1].pipe = -1;
 		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
 		raw_timeout = new_raw_time();
 		/* Disable to send keep alive request */
