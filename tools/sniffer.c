@@ -121,16 +121,6 @@ static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 		nrf24_mac2str(&llcn->src_addr, src);
 		nrf24_mac2str(&llcn->dst_addr, dst);
 
-		if (g_strcmp0(option_mac, dst) != 0)
-			break;
-
-		/* Now track connected device ONLY */
-		channel = llcn->channel;
-		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
-		adrrp.pipe = 1;
-		memcpy(adrrp.aa, llcn->aa, sizeof(adrrp.aa));
-		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
-
 		/* Header type is a connect request type */
 		printf("%05ld.%06ld nRF24: Connect Req(0x%02x) plen:%zd\n",
 					       sec, usec, ipdu->type, plen);
@@ -143,6 +133,17 @@ static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 		       llcn->aa[2],
 		       llcn->aa[3],
 		       llcn->aa[4]);
+
+		if (g_strcmp0(option_mac, dst) != 0)
+			break;
+
+		/* Now track connected device ONLY */
+		channel = llcn->channel;
+		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+		adrrp.pipe = 1;
+		memcpy(adrrp.aa, llcn->aa, sizeof(adrrp.aa));
+		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
+
 		break;
 	default:
 		printf("%05ld.%06ld nRF24: Unknown (0x%02x) plen:%zd\n",
