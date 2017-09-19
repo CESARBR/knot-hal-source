@@ -19,7 +19,7 @@
 
 #include "phy_driver.h"
 #include "nrf24l01.h"
-#include "nrf24l01_ll.h"
+#include "hal/nrf24_ll.h"
 #include "phy_driver_nrf24.h"
 
 static int cli_fd;

@@ -20,7 +20,6 @@ extern "C" {
 #define HAL_COMM_PF_LORA		3
 
 #define HAL_COMM_PROTO_RAW		0 /* Raw data(User): serial/NRF24 */
-#define HAL_COMM_PROTO_MGMT		1 /* Management: Commands and events */
 
 /*
  * nRF24 and other radios. Returns -ENFILE (limit of resources/pipes has

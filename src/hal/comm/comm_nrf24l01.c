@@ -15,6 +15,7 @@
 #ifdef ARDUINO
 #include "hal/avr_errno.h"
 #include "hal/avr_unistd.h"
+#include "hal/avr_log.h"
 #else
 #include "hal/linux_log.h"
 #include <errno.h>
@@ -22,12 +23,12 @@
 #endif
 
 #include "hal/nrf24.h"
+#include "hal/nrf24_ll.h"
 #include "hal/comm.h"
 #include "hal/time.h"
 #include "hal/config.h"
 #include "phy_driver.h"
 #include "phy_driver_nrf24.h"
-#include "nrf24l01_ll.h"
 
 
 /*
@@ -64,9 +65,21 @@ static uint8_t rt_offset = 0;
 
 /* Global to know if listen function was called */
 static uint8_t listen = 0;
+static int sockfd_counter = 0;
+
+/*
+ * Amount of sockets/clients using the pipes
+ * pipe0 <-> Index 0: reserved to broadcasting
+ * pipe1..5 <-> Index 1..5: reserved to regular clients
+ */
+static uint8_t pipe_refs[] = { 0, 0, 0, 0, 0, 0};
 
 /*
  * Bitmask to track assigned pipes.
+ * Pipes are resources shared between nRf24 'sockets'. Currently
+ * only one pipe will be assigned to a unique socket. However, this
+ * approach can be extended in the future allowing more than one client
+ * 'socket' per pipe at different time slot.
  *
  * 0000 0001: pipe0
  * 0000 0010: pipe1
@@ -81,55 +94,48 @@ static uint8_t pipe_bitmask = 0b00000001; /* Default: scanning/broadcasting */
 
 static struct nrf24_mac mac_local = {.address.uint64 = 0 };
 
-/* Structure to save broadcast context */
-struct nrf24_mgmt {
-	int8_t pipe;
-	uint8_t buffer_rx[MGMT_SIZE];
-	size_t len_rx;
-	uint8_t buffer_tx[MGMT_SIZE];
-	size_t len_tx;
-};
-
-static struct nrf24_mgmt mgmt = {.pipe = -1, .len_rx = 0};
-
 /* Structure to save peers context */
-struct nrf24_data {
-	int8_t pipe;
+struct nrf24_raw {
+	struct nrf24_mac mac;	/* Peer MAC address */
+	uint8_t pipe; /* 1 to 5 */
+	int sockfd;
 	uint8_t buffer_rx[DATA_SIZE];
 	size_t len_rx;
 	uint8_t buffer_tx[DATA_SIZE];
 	size_t len_tx;
+
 	uint8_t seqnumber_tx;
 	uint8_t seqnumber_rx;
 	size_t offset_rx;
 	unsigned long keepalive_anchor; /* Last packet received */
 	uint8_t keepalive; /* zero: disabled or positive: window attempts */
-	struct nrf24_mac mac;
 };
 
 #ifndef ARDUINO	/* If master then 5 peers */
-static struct nrf24_data peers[5] = {
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0}
+static struct nrf24_raw peers[5] = {
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0},
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0},
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0},
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0},
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0}
 };
-#else	/* If slave then 1 peer */
-static struct nrf24_data peers[1] = {
-	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
+#else	/* If slave then 1 peer  and 1 Broadcast channel */
+static struct nrf24_raw peers[2] = {
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0},
+	{.sockfd = -1, .pipe = 0, .len_rx = 0, .seqnumber_tx = 0,
+				.seqnumber_rx = 0, .offset_rx = 0},
 };
 #endif
 
 /* ARRAY SIZE */
-#define CONNECTION_COUNTER	((int) (sizeof(peers) \
-				 / sizeof(peers[0])))
+#define MAX_PEERS	((int) (sizeof(peers) \
+				 / sizeof(struct nrf24_raw)))
 
 /*
  * TODO: Get this values from config file
@@ -165,47 +171,6 @@ enum {
 	TIMEOUT_INTERVAL
 };
 
-#ifdef ARDUINO
-#define DBG_RECV(mac1, mac2, pdu, len)  DBG()
-#define DBG_SEND(mac1, mac2, pdu, len)  DBG()
-
-static void DBG(void)
-{
-}
-
-#else
-
-#define DBG_RECV(mac1, mac2, pdu, len)  DBG('<', mac1, mac2, pdu, len)
-#define DBG_SEND(mac1, mac2, pdu, len)  DBG('>', mac1, mac2, pdu, len)
-
-static void DBG(char dir, const struct nrf24_mac *mac,
-			const struct nrf24_mac *peer_mac,
-			const uint8_t *pdu, size_t len)
-{
-	char buffer[128];
-	char *ptr = buffer + 50;
-	size_t i;
-
-	memset(buffer, 0, sizeof(buffer));
-
-	nrf24_mac2str(mac, buffer);
-
-	buffer[23] = ' ';
-	buffer[24] = dir;
-	buffer[25] = ' ';
-
-	nrf24_mac2str(peer_mac, buffer + 26);
-	buffer[49] = ' ';
-
-	for (i = 0; i < len && ((i * 2) < sizeof(buffer)); i++) {
-		snprintf(ptr, 3, "%02x", pdu[i]);
-		ptr += 2;
-	}
-
-	hal_log_dbg("%s", buffer);
-}
-#endif
-
 /*
  * Calculates data-channel time as a sum of each allocated pipe tr time.
  * This already accounts for startup time, time on air and other delays.
@@ -234,60 +199,98 @@ static uint8_t new_raw_time()
 	return new_time;
 }
 
-static inline int alloc_pipe(void)
+static int pipe_raw_alloc(void)
 {
 	uint8_t i;
+	int index = sizeof(pipe_refs) - 1;
+	int min = pipe_refs[index];
 
-	for (i = 0; i < CONNECTION_COUNTER; i++) {
-		if (peers[i].pipe == -1) {
-			/* Peers initialization */
-			memset(&peers[i], 0, sizeof(peers[i]));
-			/* One peer for pipe*/
-			peers[i].pipe = i+1;
-			SET_BIT(pipe_bitmask, peers[i].pipe);
-			return peers[i].pipe;
+	/* Search the last occupied pipe */
+	for (i = sizeof(pipe_refs) - 1; i > 0; i--) {
+		if (pipe_refs[i] < min) {
+			min = pipe_refs[i];
+			index = i;
 		}
 	}
 
-	/* No free pipe */
-	return -1;
+	/* At the moment, it is restricted to one client per pipe */
+	if (min > 0)
+		return -EUSERS;
+
+	pipe_refs[index]++;
+
+	return index;
 }
 
-static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
-				struct nrf24_mac src)
+/* pipe0 to pipe5 */
+static void pipe_ref(uint8_t pipe)
 {
-	struct nrf24_io_pack p;
-	struct nrf24_ll_data_pdu *opdu =
-		(struct nrf24_ll_data_pdu *) p.payload;
-	struct nrf24_ll_crtl_pdu *llctrl =
-		(struct nrf24_ll_crtl_pdu *) opdu->payload;
-	struct nrf24_ll_disconnect *lldc =
-		(struct nrf24_ll_disconnect *) llctrl->payload;
-	int err, len;
+	if (pipe < sizeof(pipe_refs))
+		pipe_refs[pipe]++;
+}
 
-	opdu->lid = NRF24_PDU_LID_CONTROL;
-	p.pipe = sockfd;
-	llctrl->opcode = NRF24_LL_CRTL_OP_DISCONNECT;
-	lldc->dst_addr.address.uint64 = dst.address.uint64;
-	lldc->src_addr.address.uint64 = src.address.uint64;
-	len = sizeof(struct nrf24_ll_data_pdu)
-		+ sizeof(struct nrf24_ll_crtl_pdu)
-		+ sizeof(struct nrf24_ll_disconnect);
+/* pipe0 to pipe5 */
+static void pipe_unref(uint8_t pipe)
+{
+	if (pipe < sizeof(pipe_refs))
+		pipe_refs[pipe]--;
+}
 
-	DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
-				(const uint8_t *) opdu, len);
+static struct nrf24_raw *peer_alloc(int pipe)
+{
+	struct nrf24_raw *peer;
+	int i;
 
-	err = phy_write(spi_fd, &p, len);
-	if (err < 0)
-		return err;
+	for (i = 0; i < MAX_PEERS; i++) {
+		peer = &peers[i];
+		if (peer->sockfd == -1) {
+			peer->sockfd = ++sockfd_counter;
+			peer->pipe = pipe;
+
+			return peer;
+		}
+	}
+
+	return NULL;
+}
+
+static struct nrf24_raw *peer_get(int sockfd)
+{
+	int i;
+
+	for (i = 0; i < MAX_PEERS; i++) {
+		if (sockfd == peers[i].sockfd)
+			return &peers[i];
+	}
+
+	return NULL;
+}
+
+static int peer_unref(struct nrf24_raw *peer)
+{
+	uint8_t pipe;
+
+	/* Release pipe */
+	pipe = peer->pipe;
+	if (pipe)
+		pipe_unref(pipe);
+
+	/* Reset to default values */
+	peer->sockfd = -1;
+	peer->pipe = 0;
+	peer->len_rx = 0;
+	peer->seqnumber_tx = 0;
+	peer->seqnumber_rx = 0;
+	peer->offset_rx = 0;
+	peer->keepalive = 0;
 
 	return 0;
 }
 
-static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
-				struct nrf24_mac dst, struct nrf24_mac src)
+static int write_keepalive(int spi_fd, const struct nrf24_raw *peer,
+				int keepalive_op, struct nrf24_mac dst,
+				struct nrf24_mac src)
 {
-	int err, len;
 	/* Assemble keep alive packet */
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu =
@@ -296,9 +299,10 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 		(struct nrf24_ll_crtl_pdu *) opdu->payload;
 	struct nrf24_ll_keepalive *llkeepalive =
 		(struct nrf24_ll_keepalive *) llctrl->payload;
+	int err, len;
 
 	opdu->lid = NRF24_PDU_LID_CONTROL;
-	p.pipe = sockfd;
+	p.pipe = peer->pipe;
 	/* Keep alive opcode - Request or Response */
 	llctrl->opcode = keepalive_op;
 	/* src and dst address to keepalive */
@@ -307,9 +311,6 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	/* Sends keep alive packet */
 	len = sizeof(*opdu) + sizeof(*llctrl) + sizeof(*llkeepalive);
 
-	DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
-					(const uint8_t *) opdu, len);
-
 	err = phy_write(spi_fd, &p, len);
 	if (err < 0)
 		return err;
@@ -317,85 +318,41 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	return 0;
 }
 
-static int check_keepalive(int spi_fd, int sockfd)
+static int check_keepalive(int spi_fd, struct nrf24_raw *peer)
 {
 	uint32_t time_ms = hal_time_ms();
 
 	/* Check if timeout occurred */
-	if (hal_timeout(time_ms, peers[sockfd-1].keepalive_anchor,
+	if (hal_timeout(time_ms, peer->keepalive_anchor,
 						NRF24_KEEPALIVE_TIMEOUT_MS) > 0)
 		return -ETIMEDOUT;
 
 	/* Disabled? (Acceptor is always 0) */
-	if (peers[sockfd-1].keepalive == 0)
+	if (peer->keepalive == 0)
 		return 0;
 
-	if (hal_timeout(time_ms, peers[sockfd-1].keepalive_anchor,
-		peers[sockfd-1].keepalive * NRF24_KEEPALIVE_SEND_MS) <= 0)
+	if (hal_timeout(time_ms, peer->keepalive_anchor,
+		peer->keepalive * NRF24_KEEPALIVE_SEND_MS) <= 0)
 		return 0;
 
-	peers[sockfd-1].keepalive++;
+	peer->keepalive++;
 
 	/* Sends keepalive packet */
-	return write_keepalive(spi_fd, sockfd,
+	return write_keepalive(spi_fd, peer,
 			      NRF24_LL_CRTL_OP_KEEPALIVE_REQ,
-			      peers[sockfd-1].mac, mac_local);
+			      peer->mac, mac_local);
 }
 
-static int write_mgmt(int spi_fd)
+static ssize_t read_channel_broadcast(const uint8_t *payload, size_t plen,
+						uint8_t *buffer, size_t blen)
 {
-	int err;
-	struct nrf24_io_pack p;
-
-	/* If nothing to do */
-	if (mgmt.len_tx == 0)
-		return -EAGAIN;
-
-	/* Set pipe to be sent */
-	p.pipe = 0;
-	/* Copy buffer_tx to payload */
-	memcpy(p.payload, mgmt.buffer_tx, mgmt.len_tx);
-
-	err = phy_write(spi_fd, &p, mgmt.len_tx);
-	if (err < 0)
-		return err;
-
-	/* Reset len_tx */
-	mgmt.len_tx = 0;
-
-	return err;
-}
-
-static int read_mgmt(int spi_fd)
-{
-	struct nrf24_io_pack p;
-	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *)p.payload;
-	struct mgmt_evt_nrf24_bcast_presence *mgmtev_bcast;
-	struct mgmt_evt_nrf24_connected *mgmtev_cn;
-	struct mgmt_nrf24_header *mgmtev_hdr;
+	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *) payload;
 	struct nrf24_ll_mgmt_connect *llc;
-	struct nrf24_ll_presence *llp;
-	ssize_t ilen;
-
-	/* Read from management pipe */
-	p.pipe = 0;
-	p.payload[0] = 0;
-	/* Read data */
-	ilen = phy_read(spi_fd, &p, NRF24_MTU);
-	if (ilen < 0)
-		return -EAGAIN;
-
-	/* If already has something in rx buffer then return BUSY */
-	if (mgmt.len_rx != 0)
-		return -EBUSY;
-
-	/* Event header structure */
-	mgmtev_hdr = (struct mgmt_nrf24_header *) mgmt.buffer_rx;
+	ssize_t olen;
 
 	switch (ipdu->type) {
 	/* If is a presente type */
 	case NRF24_PDU_TYPE_PRESENCE:
-
 		/*
 		 * If broadcasting: Ignore presence from other devices.
 		 * TODO: Find a better approach to manage this scenario.
@@ -403,64 +360,34 @@ static int read_mgmt(int spi_fd)
 		if (listen)
 			return -EAGAIN;
 
-		if (ilen < (ssize_t) (sizeof(struct nrf24_ll_mgmt_pdu) +
+		if (plen < (ssize_t) (sizeof(struct nrf24_ll_mgmt_pdu) +
 					sizeof(struct nrf24_ll_presence)))
 			return -EINVAL;
 
-		/* Event presence structure */
-		mgmtev_bcast = (struct mgmt_evt_nrf24_bcast_presence *)mgmtev_hdr->payload;
+		if (plen > blen)
+			return -EPROTO;
+
 		/* Presence structure */
-		llp = (struct nrf24_ll_presence *) ipdu->payload;
-
-		/* Header type is a broadcast presence */
-		mgmtev_hdr->opcode = MGMT_EVT_NRF24_BCAST_PRESENCE;
-		mgmtev_hdr->index = 0;
-		/* Copy source address */
-		mgmtev_bcast->mac.address.uint64 = llp->mac.address.uint64;
-		/*
-		 * The packet structure contains the
-		 * mgmt_pdu header, the MAC address
-		 * and the slave name. The name length
-		 * is equal to input length (ilen) minus
-		 * header length and minus MAC address length.
-		 */
-		memcpy(mgmtev_bcast->name, llp->name,
-				ilen - sizeof(*llp) - sizeof(*ipdu));
-
-		/*
-		 * The rx buffer length is equal to the
-		 * event header length + presence packet length.
-		 * Presence packet len = (input len - mgmt_pdu header len)
-		 */
-		mgmt.len_rx = ilen - sizeof(*ipdu) + sizeof(*mgmtev_hdr);
+		memcpy(buffer, payload, plen);
+		olen = plen;
 
 		break;
 	/* If is a connect request type */
 	case NRF24_PDU_TYPE_CONNECT_REQ:
 
-		if (ilen != (sizeof(struct nrf24_ll_mgmt_pdu) +
+		if (plen != (sizeof(struct nrf24_ll_mgmt_pdu) +
 			     sizeof(struct nrf24_ll_mgmt_connect)))
 			return -EINVAL;
 
-		/* Event connect structure */
-		mgmtev_cn = (struct mgmt_evt_nrf24_connected *)mgmtev_hdr->payload;
 		/* Link layer connect structure */
 		llc = (struct nrf24_ll_mgmt_connect *) ipdu->payload;
 
-		/* Header type is a connect request type */
-		mgmtev_hdr->opcode = MGMT_EVT_NRF24_CONNECTED;
-		mgmtev_hdr->index = 0;
-		/* Copy src and dst address*/
-		mgmtev_cn->src.address.uint64 = llc->src_addr.address.uint64;
-		mgmtev_cn->dst.address.uint64 = llc->dst_addr.address.uint64;
-		/* Copy channel */
-		mgmtev_cn->channel = llc->channel;
-		/* Copy access address */
-		memcpy(mgmtev_cn->aa, llc->aa, sizeof(mgmtev_cn->aa));
+		/* Ignore if it is not addressed to local address */
+		if (mac_local.address.uint64 != llc->dst_addr.address.uint64)
+			return -EAGAIN;
 
-		mgmt.len_rx = sizeof(*mgmtev_hdr) + sizeof(*mgmtev_cn);
-
-		DBG_RECV(&llc->src_addr, &llc->dst_addr, (const uint8_t *) ipdu, ilen);
+		memcpy(buffer, payload, plen);
+		olen = plen;
 
 		break;
 	default:
@@ -468,28 +395,53 @@ static int read_mgmt(int spi_fd)
 	}
 
 	/* Returns the amount of bytes read */
-	return ilen;
+	return olen;
 }
 
-static int write_raw(int spi_fd, int sockfd)
+static int write_raw(int spi_fd, struct nrf24_raw *peer)
 {
 	int err;
 	struct nrf24_io_pack p;
-	struct nrf24_ll_data_pdu *opdu = (void *)p.payload;
+
+	/* If nothing to do */
+	if (peer->len_tx == 0)
+		return -EAGAIN;
+
+	/* Set pipe to be sent */
+	p.pipe = 0;
+	memcpy(p.payload, peer->buffer_tx, peer->len_tx);
+
+	err = phy_write(spi_fd, &p, peer->len_tx);
+	if (err < 0)
+		return err;
+
+	/* Reset len_tx */
+	peer->len_tx = 0;
+
+	return err;
+
+}
+
+static int write_raw_data(int spi_fd, struct nrf24_raw *peer)
+{
+	struct nrf24_io_pack p;
+	struct nrf24_ll_data_pdu *opdu = (void *) p.payload;
 	size_t plen, left;
+	int err;
 
 	/* If has nothing to send, returns EBUSY */
-	if (peers[sockfd-1].len_tx == 0)
+	if (peer->len_tx == 0)
 		return -EAGAIN;
 
 	/* If len is larger than the maximum message size */
-	if (peers[sockfd-1].len_tx > DATA_SIZE)
+	if (peer->len_tx > DATA_SIZE)
 		return -EINVAL;
 
 	/* Set pipe to be sent */
-	p.pipe = sockfd;
+	p.pipe = peer->pipe;
+
 	/* Amount of bytes to be sent */
-	left = peers[sockfd-1].len_tx;
+	left = peer->len_tx;
 
 	while (left) {
 
@@ -500,6 +452,7 @@ static int write_raw(int spi_fd, int sockfd)
 		 * payload length = NRF24_PW_MSG_SIZE,
 		 * if not, payload length = left
 		 */
+
 		plen = _MIN(left, NRF24_PW_MSG_SIZE);
 
 		/*
@@ -511,14 +464,11 @@ static int write_raw(int spi_fd, int sockfd)
 			NRF24_PDU_LID_DATA_FRAG : NRF24_PDU_LID_DATA_END;
 
 		/* Packet sequence number */
-		opdu->nseq = peers[sockfd-1].seqnumber_tx;
+		opdu->nseq = peer->seqnumber_tx;
 
 		/* Offset = len - left */
-		memcpy(opdu->payload, peers[sockfd-1].buffer_tx +
-			(peers[sockfd-1].len_tx - left), plen);
-
-		DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
-				 (const uint8_t *) opdu, plen + DATA_HDR_SIZE);
+		memcpy(opdu->payload, peer->buffer_tx + (peer->len_tx - left),
+									plen);
 
 		/* Send packet */
 		err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
@@ -527,151 +477,151 @@ static int write_raw(int spi_fd, int sockfd)
 		 * and sequence number
 		 */
 		if (err < 0) {
-			peers[sockfd-1].len_tx = 0;
-			peers[sockfd-1].seqnumber_tx = 0;
+			peer->len_tx = 0;
+			peer->seqnumber_tx = 0;
 			return err;
 		}
 
 		left -= plen;
-		peers[sockfd-1].seqnumber_tx++;
+		peer->seqnumber_tx++;
 	}
 
-	err = peers[sockfd-1].len_tx;
+	err = peer->len_tx;
 
 	/* Resets controls */
-	peers[sockfd-1].len_tx = 0;
-	peers[sockfd-1].seqnumber_tx = 0;
+	peer->len_tx = 0;
+	peer->seqnumber_tx = 0;
 
 	return err;
 }
 
-static int read_raw(int spi_fd, int sockfd)
+static ssize_t read_channel_data(struct nrf24_raw *peer,
+					const uint8_t *payload, size_t plen)
+{
+	const struct nrf24_ll_data_pdu *ipdu = (void *) payload;
+	const struct nrf24_ll_crtl_pdu *llctrl;
+	const struct nrf24_ll_keepalive *llkeepalive;
+
+	/* TODO: avoiding passing peer */
+
+	/* Check if is data or Control */
+	switch (ipdu->lid) {
+
+		/* If is Control */
+	case NRF24_PDU_LID_CONTROL:
+		llctrl = (struct nrf24_ll_crtl_pdu *)ipdu->payload;
+		llkeepalive = (struct nrf24_ll_keepalive *) llctrl->payload;
+
+		if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ &&
+		    llkeepalive->src_addr.address.uint64 ==
+		    peer->mac.address.uint64 &&
+		    llkeepalive->dst_addr.address.uint64 ==
+		    mac_local.address.uint64) {
+			write_keepalive(driverIndex, peer,
+					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
+					peer->mac, mac_local);
+
+		} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
+			/* Initiator: reset the counter */
+			peer->keepalive = 1;
+		}
+
+		/* If packet is disconnect request */
+		else if (llctrl->opcode == NRF24_LL_CRTL_OP_DISCONNECT)  {
+			/* TODO: Manage disconnect request */
+		}
+
+		break;
+		/* If is Data */
+	case NRF24_PDU_LID_DATA_FRAG:
+	case NRF24_PDU_LID_DATA_END:
+		if (peer->len_rx != 0)
+			break; /* Discard packet */
+
+		/* Incoming data: reset keepalive counter */
+		peer->keepalive = 1;
+
+		/* Reset offset if sequence number is zero */
+		if (ipdu->nseq == 0) {
+			peer->offset_rx = 0;
+			peer->seqnumber_rx = 0;
+		}
+
+		/* If sequence number error */
+		if (peer->seqnumber_rx < ipdu->nseq)
+			break;
+		/*
+		 * TODO: disconnect, data error!?!?!?
+		 * Illegal byte sequence
+		 */
+
+		if (peer->seqnumber_rx > ipdu->nseq)
+			break; /* Discard packet duplicated */
+
+		/* FIXME: review */
+		/* Payloag length = input length - header size */
+		plen = plen - DATA_HDR_SIZE;
+
+		if (ipdu->lid == NRF24_PDU_LID_DATA_FRAG &&
+		    plen < NRF24_PW_MSG_SIZE)
+			break;
+		/*
+		 * TODO: disconnect, data error!?!?!?
+		 * Not a data message
+		 */
+
+		/* Reads no more than DATA_SIZE bytes */
+		if (peer->offset_rx + plen > DATA_SIZE)
+			plen = DATA_SIZE - peer->offset_rx;
+
+		memcpy(peer->buffer_rx + peer->offset_rx,
+		       ipdu->payload, plen);
+		peer->offset_rx += plen;
+		peer->seqnumber_rx++;
+
+		/* If is DATA_END then put in rx buffer */
+		if (ipdu->lid == NRF24_PDU_LID_DATA_END) {
+			/* Sets packet length read */
+			peer->len_rx =
+				peer->offset_rx;
+
+			/*
+			 * If the complete msg is received,
+			 * resets the controls
+			 */
+			peer->seqnumber_rx = 0;
+			peer->offset_rx = 0;
+		}
+		break;
+	}
+
+	return 0;
+}
+
+static int read_raw(int spi_fd, struct nrf24_raw *peer)
 {
 	struct nrf24_io_pack p;
-	const struct nrf24_ll_data_pdu *ipdu = (void *) p.payload;
-	struct mgmt_nrf24_header *mgmtev_hdr;
-	struct mgmt_evt_nrf24_disconnected *mgmtev_dc;
-	struct nrf24_ll_disconnect *lldc;
-	struct nrf24_ll_keepalive *llkeepalive;
-	struct nrf24_ll_crtl_pdu *llctrl;
-	size_t plen;
-	ssize_t ilen;
+	ssize_t ilen, len_rx;
 
-	p.pipe = sockfd;
-	p.payload[0] = 0;
+	p.pipe = peer->pipe;
 	/*
 	 * Reads the data while to exist,
 	 * on success, the number of bytes read is returned
 	 */
 	while ((ilen = phy_read(spi_fd, &p, NRF24_MTU)) > 0) {
-
-		/* Initiator/acceptor: reset anchor */
-		DBG_RECV(&mac_local, &peers[sockfd - 1].mac, (const uint8_t *) ipdu, ilen);
-
-		peers[sockfd-1].keepalive_anchor = hal_time_ms();
-
-		/* Check if is data or Control */
-		switch (ipdu->lid) {
-
-		/* If is Control */
-		case NRF24_PDU_LID_CONTROL:
-			llctrl = (struct nrf24_ll_crtl_pdu *)ipdu->payload;
-			llkeepalive = (struct nrf24_ll_keepalive *)
-							llctrl->payload;
-			lldc = (struct nrf24_ll_disconnect *) llctrl->payload;
-
-			if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ &&
-				llkeepalive->src_addr.address.uint64 ==
-				peers[sockfd-1].mac.address.uint64 &&
-				llkeepalive->dst_addr.address.uint64 ==
-				mac_local.address.uint64) {
-				write_keepalive(spi_fd, sockfd,
-					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
-					peers[sockfd-1].mac,
-					mac_local);
-
-			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
-				/* Initiator: reset the counter */
-				peers[sockfd-1].keepalive = 1;
-			}
-
-			/* If packet is disconnect request */
-			else if (llctrl->opcode == NRF24_LL_CRTL_OP_DISCONNECT &&
-							mgmt.len_rx == 0) {
-				mgmtev_hdr = (struct mgmt_nrf24_header *)
-								mgmt.buffer_rx;
-				mgmtev_dc = (struct mgmt_evt_nrf24_disconnected *)
-							mgmtev_hdr->payload;
-
-				mgmtev_hdr->opcode = MGMT_EVT_NRF24_DISCONNECTED;
-				mgmtev_dc->mac.address.uint64 =
-					lldc->src_addr.address.uint64;
-				mgmt.len_rx = sizeof(*mgmtev_hdr) +
-							sizeof(*mgmtev_dc);
-			}
-
-			break;
-		/* If is Data */
-		case NRF24_PDU_LID_DATA_FRAG:
-		case NRF24_PDU_LID_DATA_END:
-			if (peers[sockfd-1].len_rx != 0)
-				break; /* Discard packet */
-
-			/* Incoming data: reset keepalive counter */
-			peers[sockfd-1].keepalive = 1;
-
-			/* Reset offset if sequence number is zero */
-			if (ipdu->nseq == 0) {
-				peers[sockfd-1].offset_rx = 0;
-				peers[sockfd-1].seqnumber_rx = 0;
-			}
-
-			/* If sequence number error */
-			if (peers[sockfd-1].seqnumber_rx < ipdu->nseq)
-				break;
-				/*
-				 * TODO: disconnect, data error!?!?!?
-				 * Illegal byte sequence
-				 */
-
-			if (peers[sockfd-1].seqnumber_rx > ipdu->nseq)
-				break; /* Discard packet duplicated */
-
-			/* Payloag length = input length - header size */
-			plen = ilen - DATA_HDR_SIZE;
-
-			if (ipdu->lid == NRF24_PDU_LID_DATA_FRAG &&
-				plen < NRF24_PW_MSG_SIZE)
-				break;
-				/*
-				 * TODO: disconnect, data error!?!?!?
-				 * Not a data message
-				 */
-
-			/* Reads no more than DATA_SIZE bytes */
-			if (peers[sockfd-1].offset_rx + plen > DATA_SIZE)
-				plen = DATA_SIZE - peers[sockfd-1].offset_rx;
-
-			memcpy(peers[sockfd-1].buffer_rx +
-				peers[sockfd-1].offset_rx, ipdu->payload, plen);
-			peers[sockfd-1].offset_rx += plen;
-			peers[sockfd-1].seqnumber_rx++;
-
-			/* If is DATA_END then put in rx buffer */
-			if (ipdu->lid == NRF24_PDU_LID_DATA_END) {
-				/* Sets packet length read */
-				peers[sockfd-1].len_rx =
-					peers[sockfd-1].offset_rx;
-
-				/*
-				 * If the complete msg is received,
-				 * resets the controls
-				 */
-				peers[sockfd-1].seqnumber_rx = 0;
-				peers[sockfd-1].offset_rx = 0;
-			}
-			break;
+		if (p.pipe != 0) {
+			/* RAW data (including control) channel */
+			peer->keepalive_anchor = hal_time_ms();
+			len_rx = read_channel_data(peer, p.payload, ilen);
+		} else {
+			/* Broadcasting channel */
+			len_rx = read_channel_broadcast(p.payload, ilen,
+							peer->buffer_rx,
+							sizeof(peer->buffer_rx));
 		}
+
+		if (len_rx > 0)
+			peer->len_rx = len_rx;
 	}
 
 	return 0;
@@ -729,6 +679,7 @@ static void presence_connect(int spi_fd)
 		state = BURST_WINDOW;
 		break;
 	case BURST_WINDOW:
+
 		if (hal_timeout(hal_time_ms(), start, WINDOW_BCAST) > 0)
 			state = STANDBY;
 		else if (hal_timeout(hal_time_us(), start*1000, BURST_BCAST) > 0)
@@ -751,11 +702,7 @@ static void presence_connect(int spi_fd)
 
 static void running(void)
 {
-	struct mgmt_nrf24_header *mgmtev_hdr;
-	struct mgmt_evt_nrf24_disconnected *mgmtev_dc;
 	static int state = START_MGMT;
-	/* Index peers */
-	static int sockIndex = 1;
 	static unsigned long start;
 
 	switch (state) {
@@ -769,18 +716,17 @@ static void running(void)
 		break;
 	case MGMT:
 
-		read_mgmt(driverIndex);
-		write_mgmt(driverIndex);
+		read_raw(driverIndex, &peers[0]);
+		write_raw(driverIndex, &peers[0]);
 
 		/* Broadcasting/acceptor */
 		if (listen)
 			presence_connect(driverIndex);
 
-		/* Peers connected? */
-		if (pipe_bitmask & PIPE_RAW_BITMASK) {
-			if (hal_timeout(hal_time_ms(), start, MGMT_TIMEOUT) > 0)
-				state = START_RAW;
-		}
+		/* TODO: Switch to RAW if connected to at least one peer */
+		if (hal_timeout(hal_time_ms(), start, MGMT_TIMEOUT) > 0)
+			state = START_RAW;
+
 		break;
 
 	case START_RAW:
@@ -794,57 +740,33 @@ static void running(void)
 		break;
 	case RAW:
 
-		/* Start broadcast or scan? */
-		if (CHK_BIT(pipe_bitmask, 0)) {
-			/*Checks for RAW timeout and RTs offset time*/
-			if (hal_timeout(hal_time_ms(), start, raw_timeout) > 0 &&
-			    hal_timeout(hal_time_ms(), rt_stamp, (rt_offset)) > 0)
-				state = START_MGMT;
+		/* TODO: Switch to MGMT if not connected to all possible peers */
+#if 0
+		/* Checks for RAW timeout and RTs offset time */
+		if (hal_timeout(hal_time_ms(), start, raw_timeout) > 0 &&
+		    hal_timeout(hal_time_ms(), rt_stamp, (rt_offset)) > 0)
+			state = START_MGMT;
+#else
+		if (hal_timeout(hal_time_ms(), start, raw_timeout))
+			state = START_MGMT;
+
+#endif
+
+		read_raw(driverIndex, &peers[1]);
+		write_raw_data(driverIndex, &peers[1]);
+		rt_stamp = hal_time_ms();
+
+		/*
+		 * If keepalive is enabled
+		 * Check if timeout occurred and generates
+		 * disconnect event
+		 */
+
+		if (check_keepalive(driverIndex, &peers[1]) == -ETIMEDOUT) {
+			/* TODO: Send disconnect packet to slave */
+			peer_unref(&peers[1]);
+			raw_timeout = new_raw_time();
 		}
-
-		/* Check if pipe is allocated */
-		if (peers[sockIndex-1].pipe != -1) {
-			read_raw(driverIndex, sockIndex);
-			write_raw(driverIndex, sockIndex);
-			rt_stamp = hal_time_ms();
-
-			/*
-			 * If keepalive is enabled
-			 * Check if timeout occurred and generates
-			 * disconnect event
-			 */
-
-			if (check_keepalive(driverIndex, sockIndex) == -ETIMEDOUT &&
-				mgmt.len_rx == 0) {
-
-				mgmtev_hdr = (struct mgmt_nrf24_header *)
-								mgmt.buffer_rx;
-				mgmtev_dc = (struct mgmt_evt_nrf24_disconnected *)
-							mgmtev_hdr->payload;
-
-				mgmtev_hdr->opcode = MGMT_EVT_NRF24_DISCONNECTED;
-
-				mgmtev_dc->mac.address.uint64 =
-					peers[sockIndex-1].mac.address.uint64;
-				mgmt.len_rx = sizeof(*mgmtev_hdr) +
-								sizeof(*mgmtev_dc);
-
-				/* TODO: Send disconnect packet to slave */
-
-				/* Free pipe & resize raw time */
-				CLR_BIT(pipe_bitmask, peers[sockIndex - 1].pipe);
-				peers[sockIndex - 1].pipe = -1;
-				peers[sockIndex - 1].keepalive = 0;
-				phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE,
-								&sockIndex);
-				raw_timeout = new_raw_time();
-			}
-		}
-
-		sockIndex++;
-		/* Resets sockIndex if sockIndex > CONNECTION_COUNTER */
-		if (sockIndex > CONNECTION_COUNTER)
-			sockIndex = 1;
 
 		break;
 
@@ -880,11 +802,9 @@ int hal_comm_deinit(void)
 	if (driverIndex == -1)
 		return -EPERM;
 
-	/* Clear all peers*/
-	for (i = 0; i < CONNECTION_COUNTER; i++) {
-		if (peers[i].pipe != -1)
-			peers[i].pipe = -1;
-	}
+	/* Clear all peers */
+	for (i = 0; i < MAX_PEERS; i++)
+		peers[i].pipe = 0;
 
 	pipe_bitmask = 0b00000001;
 	/* Close driver */
@@ -900,8 +820,11 @@ int hal_comm_deinit(void)
 
 int hal_comm_socket(int domain, int protocol)
 {
-	int retval;
 	struct addr_pipe ap;
+	struct nrf24_raw *sock;
+	uint8_t pipe = 0;
+
+	/* TODO: domain and protocol are not used */
 
 	/* If domain is not NRF24 */
 	if (domain != HAL_COMM_PF_NRF24)
@@ -911,128 +834,74 @@ int hal_comm_socket(int domain, int protocol)
 	if (driverIndex == -1)
 		return -EPERM;	/* Operation not permitted */
 
-	switch (protocol) {
+	if (protocol != HAL_COMM_PROTO_RAW)
+		return -EINVAL;
 
-	case HAL_COMM_PROTO_MGMT:
-		/* If Management, disable ACK and returns 0 */
-		if (mgmt.pipe == 0)
-			return -EUSERS; /* Returns too many users */
-		ap.ack = false;
-		retval = 0;
-		mgmt.pipe = 0;
+	/* Assign pipe0 */
+	pipe_ref(pipe);
+	sock = peer_alloc(pipe);
+	if (!sock)
+		return -EBUSY;
 
-		/* Copy broadcast address */
-		memcpy(ap.aa, aa_pipe0, sizeof(ap.aa));
-		break;
+	ap.ack = false;
+	ap.pipe  = pipe;
+	memcpy(ap.aa, aa_pipe0, sizeof(ap.aa));
 
-	case HAL_COMM_PROTO_RAW:
-		if (mgmt.pipe == -1) {
-			/* If Management is not open*/
-			ap.ack = false;
-			mgmt.pipe = 0;
-			retval = 0;
-			/* Copy broadcast address */
-			memcpy(ap.aa, aa_pipe0, sizeof(ap.aa));
-			break;
-		}
-		/*
-		 * If raw data, enable ACK
-		 * and returns an available pipe
-		 * from 1 to 5
-		 */
-		retval = alloc_pipe();
-		/* If not pipe available */
-		if (retval < 0)
-			return -EUSERS; /* Returns too many users */
-
-		ap.ack = true;
-
-		/*
-		 * Copy the 5 LSBs of master mac addres
-		 * to access address and the last least
-		 * significant byte is the pipe index.
-		 */
-		memcpy(ap.aa, &mac_local.address.b[3], sizeof(ap.aa));
-		ap.aa[0] = (uint8_t)retval;
-
-		break;
-
-	default:
-		return -EINVAL; /* Invalid argument */
-	}
-
-	ap.pipe = retval;
-
-	/* Open pipe */
 	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &ap);
 
-	return retval;
+	return sock->sockfd;
 }
 
 int hal_comm_close(int sockfd)
 {
+	struct nrf24_raw *peer;
+	uint8_t pipe;
+
 	if (driverIndex == -1)
 		return -EPERM;
 
-	/* Pipe 0 is not closed because ACK arrives in this pipe */
-	if (sockfd >= 1 && sockfd <= 5 && peers[sockfd-1].pipe != -1) {
-		/* Send disconnect packet */
-		if (mac_local.address.uint64 != 0)
-			/* Slave side */
-			write_disconnect(driverIndex, sockfd,
-					peers[sockfd-1].mac, mac_local);
-		/* Free pipe & & resize raw time */
-		CLR_BIT(pipe_bitmask, peers[sockfd - 1].pipe);
-		peers[sockfd-1].pipe = -1;
-		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &sockfd);
-		raw_timeout = new_raw_time();
-		/* Disable to send keep alive request */
-		peers[sockfd-1].keepalive = 0;
+	peer = peer_get(sockfd);
+	if (!peer)
+		return -ENOTCONN;
+
+	pipe = peer->pipe;
+
+	if (pipe) {
+		pipe_unref(pipe);
+		phy_ioctl(driverIndex, NRF24_CMD_RESET_PIPE, &pipe);
 	}
+
+	peer_unref(peer);
+
+	raw_timeout = new_raw_time();
 
 	return 0;
 }
 
 ssize_t hal_comm_read(int sockfd, void *buffer, size_t count)
 {
+	struct nrf24_raw *peer;
 	size_t length = 0;
 
 	/* Run background procedures */
 	running();
 
-	if (sockfd < 0 || sockfd > 5 || count == 0)
-		return -EINVAL;
+	peer = peer_get(sockfd);
+	if (!peer)
+		return -ENOTCONN;
 
-	/* If management */
-	if (sockfd == 0) {
-		/* If has something to read */
-		if (mgmt.len_rx != 0) {
-			/*
-			 * If the amount of bytes available
-			 * to be read is greather than count
-			 * then read count bytes
-			 */
-			length = mgmt.len_rx > count ? count : mgmt.len_rx;
-			/* Copy rx buffer */
-			memcpy(buffer, mgmt.buffer_rx, length);
-
-			/* Reset rx len */
-			mgmt.len_rx = 0;
-		} else /* Return -EAGAIN has nothing to be read */
-			return -EAGAIN;
-
-	} else if (peers[sockfd-1].len_rx != 0) {
+	if (peer->len_rx != 0) {
 		/*
 		 * If the amount of bytes available
 		 * to be read is greather than count
 		 * then read count bytes
 		 */
-		length = peers[sockfd-1].len_rx > count ?
-				 count : peers[sockfd-1].len_rx;
+		length = peer->len_rx > count ?
+				 count : peer->len_rx;
 		/* Copy rx buffer */
-		memcpy(buffer, peers[sockfd-1].buffer_rx, length);
+		memcpy(buffer, peer->buffer_rx, length);
 		/* Reset rx len */
-		peers[sockfd-1].len_rx = 0;
+		peer->len_rx = 0;
 	} else
 		return -EAGAIN;
 
@@ -1043,20 +912,25 @@ ssize_t hal_comm_read(int sockfd, void *buffer, size_t count)
 
 ssize_t hal_comm_write(int sockfd, const void *buffer, size_t count)
 {
+	struct nrf24_raw *peer;
 
 	/* Run background procedures */
 	running();
 
-	if (sockfd < 1 || sockfd > 5 || count == 0 || count > DATA_SIZE)
+	if (count > DATA_SIZE)
 		return -EINVAL;
 
+	peer = peer_get(sockfd);
+	if (!peer)
+		return -ENOTCONN;
+
 	/* If already has something to write then returns busy */
-	if (peers[sockfd-1].len_tx != 0)
+	if (peer->len_tx != 0)
 		return -EBUSY;
 
 	/* Copy data to be write in tx buffer */
-	memcpy(peers[sockfd-1].buffer_tx, buffer, count);
-	peers[sockfd-1].len_tx = count;
+	memcpy(peer->buffer_tx, buffer, count);
+	peer->len_tx = count;
 
 	return count;
 }
@@ -1075,108 +949,151 @@ int hal_comm_listen(int sockfd)
 int hal_comm_accept(int sockfd, void *addr)
 {
 	struct nrf24_mac *mac = (struct nrf24_mac *) addr;
-
-	/* TODO: Run background procedures */
-	struct mgmt_nrf24_header *mgmtev_hdr =
-				(struct mgmt_nrf24_header *) mgmt.buffer_rx;
-	struct mgmt_evt_nrf24_connected *mgmtev_cn =
-			(struct mgmt_evt_nrf24_connected *)mgmtev_hdr->payload;
+	const struct nrf24_ll_mgmt_pdu *ipdu;
+	const struct nrf24_ll_mgmt_connect *llc;
+	struct nrf24_raw *peer, *peer_new;
 	struct addr_pipe p_addr;
 	int pipe;
+
 	/* Run background procedures */
 	running();
 
-	if (mgmt.len_rx == 0)
+	peer = peer_get(sockfd);
+	if (!peer)
+		return -ENOTCONN;
+
+	if (peer->len_rx == 0)
 		return -EAGAIN;
 
-	/* Free management read to receive new packet */
-	mgmt.len_rx = 0;
+	/* TODO: missing PDU type verification */
+	ipdu = (struct nrf24_ll_mgmt_pdu *) peer->buffer_rx;
+	llc = (struct nrf24_ll_mgmt_connect *) ipdu->payload;
 
-	if (mgmtev_hdr->opcode != MGMT_EVT_NRF24_CONNECTED ||
-		mgmtev_cn->dst.address.uint64 != mac_local.address.uint64)
-		return -EAGAIN;
+	/* Mark as read */
+	peer->len_rx = 0;
 
+#ifdef ARDUINO
+	hal_log_str("Accept()");
+#endif
 
-	pipe = alloc_pipe();
+	pipe = pipe_raw_alloc();
 	/* If not pipe available */
 	if (pipe < 0)
-		return -EUSERS; /* Returns too many users */
+		return pipe; /* Returns too many users */
+
+	/*
+	 * Creating a new socket to assign to the nRF24 peer
+	 * FIXME: it should inherit sockfd. At the moment
+	 * sockfd is not being used.
+	 */
+	peer_new = peer_alloc(pipe);
+	if (!peer_new) {
+		pipe_unref(pipe);
+		return -EUSERS;
+	}
+
+#ifdef ARDUINO
+	hal_log_int(peer_new->sockfd);
+	hal_log_int(pipe);
+#endif
+
+	peer_new->pipe = pipe;
 
 	/* If accept then stop listen */
 	listen = 0;
 
 	/* Set aa in pipe */
 	p_addr.pipe = pipe;
-	memcpy(p_addr.aa, mgmtev_cn->aa, sizeof(p_addr.aa));
-	p_addr.ack = 1;
-	/*open pipe*/
+	memcpy(p_addr.aa, llc->aa, sizeof(p_addr.aa));
+	p_addr.ack = true;
+
+	/* Open pipe */
 	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &p_addr);
-	/*Resize data channel time*/
+
+	/* Resize data channel time */
 	raw_timeout = new_raw_time();
 
-	/* Source address for keepalive message */
-	peers[pipe-1].mac.address.uint64 =
-		mgmtev_cn->src.address.uint64;
 	/* Disable keep alive request */
-	peers[pipe-1].keepalive = 0;
+	peer_new->keepalive = 0;
+
 	/* Start timeout */
-	peers[pipe-1].keepalive_anchor = hal_time_ms();
+	peer_new->keepalive_anchor = hal_time_ms();
+
+	/* Source address for keepalive message */
+	peer_new->mac.address.uint64 = llc->src_addr.address.uint64;
 
 	/* Copy peer address */
-	mac->address.uint64 = mgmtev_cn->src.address.uint64;
+	mac->address.uint64 = llc->src_addr.address.uint64;
 
 	/* Return pipe */
-	return pipe;
+	return peer_new->sockfd;
 }
-
 
 int hal_comm_connect(int sockfd, uint64_t *addr)
 {
-	struct nrf24_ll_mgmt_pdu *opdu =
-		(struct nrf24_ll_mgmt_pdu *)mgmt.buffer_tx;
-	struct nrf24_ll_mgmt_connect *payload =
-				(struct nrf24_ll_mgmt_connect *) opdu->payload;
+	struct nrf24_ll_mgmt_pdu *opdu;
+	struct nrf24_ll_mgmt_connect *payload;
+	struct addr_pipe ap;
+	struct nrf24_raw *peer;
+	struct nrf24_raw *peer_raw = &peers[0];
 	size_t len;
+	int pipe;
 
 	/* Run background procedures */
 	running();
 
 	/* If already has something to write then returns busy */
-	if (mgmt.len_tx != 0)
-		return -EBUSY;
+	if (peer_raw->len_tx != 0)
+		return -EINPROGRESS;
 
+	peer = peer_get(sockfd);
+	if (!peer)
+		return -ENOTCONN;
+
+	memcpy(ap.aa, &mac_local.address.b[3], 4);
+
+	/* Assign a new pipe (not zero) to manage the new peer */
+	if (peer->pipe == 0) {
+		pipe = pipe_raw_alloc();
+		/* If not pipe available */
+		if (pipe < 0)
+			return pipe;
+
+		peer->pipe = pipe;
+		ap.pipe = pipe;
+		ap.ack = true;
+		ap.aa[0] = pipe;
+
+		phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &ap);
+	} else {
+		ap.aa[0] = peer->pipe;
+	}
+
+	/*
+	 * New pipe is now allocated. However connect request is
+	 * sent over broadcast channel
+	 */
+	opdu = (struct nrf24_ll_mgmt_pdu *) peer_raw->buffer_tx;
 	opdu->type = NRF24_PDU_TYPE_CONNECT_REQ;
 
+	payload = (struct nrf24_ll_mgmt_connect *) opdu->payload;
 	payload->src_addr = mac_local;
 	payload->dst_addr.address.uint64 = *addr;
 	payload->channel = channel_raw;
-	/*
-	 * Set in payload the addr to be set in client.
-	 * sockfd contains the pipe allocated for the client
-	 * aa_pipes contains the Access Address for each pipe
-	 */
 
-	/*
-	 * Copy the 5 LSBs of master mac addres
-	 * to access address and the last least
-	 * significant byte is the socket index.
-	 */
-
-	memcpy(payload->aa, &mac_local.address.b[3],
-		sizeof(payload->aa));
-	payload->aa[0] = (uint8_t)sockfd;
+	memcpy(payload->aa, ap.aa, sizeof(payload->aa));
 
 	/* Source address for keepalive message */
-	peers[sockfd-1].mac.address.uint64 = *addr;
+	peer->mac.address.uint64 = *addr;
 
 	len = sizeof(struct nrf24_ll_mgmt_connect);
 	len += sizeof(struct nrf24_ll_mgmt_pdu);
 
 	/* Start timeout */
-	peers[sockfd-1].keepalive_anchor = hal_time_ms();
+	peer->keepalive_anchor = hal_time_ms();
 	/* Enable keep alive: 5 attempts until timeout */
-	peers[sockfd-1].keepalive = 1;
-	mgmt.len_tx = len;
+	peer->keepalive = 1;
+	peer_raw->len_tx = len;
 
 	return 0;
 }

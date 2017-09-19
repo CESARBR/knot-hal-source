@@ -23,6 +23,7 @@
 #include <sys/un.h>
 
 #include "hal/nrf24.h"
+#include "hal/nrf24_ll.h"
 #include "hal/comm.h"
 #include "hal/time.h"
 
@@ -60,7 +61,7 @@ static struct adapter {
 } adapter;
 
 struct peer {
-	uint64_t mac;
+	struct nrf24_mac mac;
 	int8_t socket_fd; /* HAL comm socket */
 	int8_t ksock; /* KNoT raw socket: Unix socket or TCP */
 	guint kwatch; /* KNoT raw socket watch */
@@ -613,7 +614,7 @@ static int8_t get_peer(struct nrf24_mac mac)
 
 	for (i = 0; i < MAX_PEERS; i++)
 		if (peers[i].socket_fd != -1 &&
-			peers[i].mac == mac.address.uint64)
+			peers[i].mac.address.uint64 == mac.address.uint64)
 			return i;
 
 	return -EINVAL;
@@ -745,7 +746,7 @@ static gboolean kwatch_io_read(GIOChannel *io, GIOCondition cond,
 	return TRUE;
 }
 
-static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
+static int8_t ll_presence_handler(const struct nrf24_ll_presence *llp)
 {
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	GIOChannel *io;
@@ -754,10 +755,9 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	int sock, nsk;
 	char mac_str[MAC_ADDRESS_SIZE];
 	struct beacon *peer;
-	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
-			(struct mgmt_evt_nrf24_bcast_presence *) mhdr->payload;
+	uint64_t dst;
 
-	nrf24_mac2str(&evt_pre->mac, mac_str);
+	nrf24_mac2str(&llp->mac, mac_str);
 	peer = g_hash_table_lookup(peer_bcast_table, mac_str);
 	if (peer != NULL) {
 		peer->last_beacon = hal_time_ms();
@@ -773,8 +773,8 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	peer->last_beacon = hal_time_ms();
 
 	/* Creating a UTF-8 copy of the name */
-	peer->name = g_utf8_make_valid((const char *) evt_pre->name,
-					strlen((const char *) evt_pre->name));
+	peer->name = g_utf8_make_valid((const char *) llp->name,
+					strlen((const char *) llp->name));
 	if (!peer->name)
 		peer->name = g_strdup("unknown");
 
@@ -788,14 +788,14 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	g_hash_table_insert(peer_bcast_table, g_strdup(mac_str), peer);
 done:
 	/* Check if peer is allowed to connect */
-	if (check_permission(evt_pre->mac) < 0)
+	if (check_permission(llp->mac) < 0)
 		return -EPERM;
 
 	if (count_clients >= MAX_PEERS)
 		return -EUSERS; /* MAX PEERS */
 
 	/* Check if this peer is already allocated */
-	position = get_peer(evt_pre->mac);
+	position = get_peer(llp->mac);
 	/* If this is a new peer */
 	if (position < 0) {
 		/* Get free peers position */
@@ -805,6 +805,7 @@ done:
 
 		/* Radio socket: nRF24 */
 		nsk = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
+		hal_log_dbg("%s %d sock:%d", __PRETTY_FUNCTION__, __LINE__, nsk);
 		if (nsk < 0) {
 			hal_log_error("hal_comm_socket(nRF24): %s(%d)",
 							strerror(nsk), nsk);
@@ -827,8 +828,7 @@ done:
 		peers[position].socket_fd = nsk;
 
 		/* Set mac value for this position */
-		peers[position].mac =
-				evt_pre->mac.address.uint64;
+		peers[position].mac = llp->mac;
 
 		/* Watch knotd socket */
 		io = g_io_channel_unix_new(peers[position].ksock);
@@ -848,7 +848,7 @@ done:
 		count_clients++;
 
 		for (i = 0; i < MAX_PEERS; i++) {
-			if (evt_pre->mac.address.uint64 ==
+			if (llp->mac.address.uint64 ==
 				adapter.known_peers[i].addr.address.uint64) {
 				adapter.known_peers[i].status = TRUE;
 				break;
@@ -859,38 +859,16 @@ done:
 	}
 
 	/* Send Connect */
-	return hal_comm_connect(peers[position].socket_fd,
-			&evt_pre->mac.address.uint64);
-}
-
-static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
-{
-	char mac_str[MAC_ADDRESS_SIZE];
-	int8_t position;
-
-	struct mgmt_evt_nrf24_disconnected *evt_disc =
-			(struct mgmt_evt_nrf24_disconnected *) mhdr->payload;
-
-	nrf24_mac2str(&evt_disc->mac, mac_str);
-	hal_log_info("Peer disconnected(%s)", mac_str);
-
-	if (count_clients == 0)
-		return -EINVAL;
-
-	position = get_peer(evt_disc->mac);
-	if (position < 0)
-		return position;
-
-	g_source_remove(peers[position].kwatch);
-	return 0;
+	dst = llp->mac.address.uint64;
+	return hal_comm_connect(peers[position].socket_fd, &dst);
 }
 
 /* Read RAW from Clients */
 static int8_t clients_read()
 {
-	int8_t i;
+	char mac_str[MAC_ADDRESS_SIZE];
 	uint8_t buffer[256];
-	int rx, err;
+	int rx, err, i;
 
 	/* No client */
 	if (count_clients == 0)
@@ -902,6 +880,16 @@ static int8_t clients_read()
 			continue;
 
 		rx = hal_comm_read(p->socket_fd, &buffer, sizeof(buffer));
+
+		if (rx == -EBADF) {
+			nrf24_mac2str(&p->mac, mac_str);
+			hal_log_info("Peer disconnected(%s)", mac_str);
+
+			g_source_remove(p->kwatch);
+			p->kwatch = 0;
+			continue;
+		}
+
 		if (rx < 0)
 			continue;
 
@@ -919,7 +907,7 @@ static int8_t clients_read()
 static int8_t mgmt_read(void)
 {
 	uint8_t buffer[256];
-	struct mgmt_nrf24_header *mhdr = (struct mgmt_nrf24_header *) buffer;
+	const struct nrf24_ll_mgmt_pdu *pdu;
 	ssize_t rbytes;
 
 	rbytes = hal_comm_read(mgmtfd, buffer, sizeof(buffer));
@@ -932,26 +920,11 @@ static int8_t mgmt_read(void)
 	if (rbytes == -EAGAIN)
 		return rbytes;
 
-	/* Return/ignore if it is not an event? */
-	if (!(mhdr->opcode & 0x0200))
+	pdu = (const struct nrf24_ll_mgmt_pdu *) buffer;
+	if (pdu->type != NRF24_PDU_TYPE_PRESENCE)
 		return -EPROTO;
 
-	switch (mhdr->opcode) {
-
-	case MGMT_EVT_NRF24_BCAST_PRESENCE:
-		evt_presence(mhdr);
-		break;
-
-	case MGMT_EVT_NRF24_BCAST_SETUP:
-		break;
-
-	case MGMT_EVT_NRF24_BCAST_BEACON:
-		break;
-
-	case MGMT_EVT_NRF24_DISCONNECTED:
-		evt_disconnected(mhdr);
-		break;
-	}
+	ll_presence_handler((const struct nrf24_ll_presence *) pdu->payload);
 
 	return 0;
 }
@@ -975,7 +948,7 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr,
 		return err;
 	}
 
-	mgmtfd = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_MGMT);
+	mgmtfd = hal_comm_socket(HAL_COMM_PF_NRF24, HAL_COMM_PROTO_RAW);
 	if (mgmtfd < 0) {
 		hal_log_error("Cannot create socket for radio (%d)", mgmtfd);
 		goto done;
