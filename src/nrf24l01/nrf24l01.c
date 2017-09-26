@@ -129,7 +129,6 @@ static uint8_t *get_address_pipe(int8_t spi_fd, uint8_t pipe)
 	uint16_t len;
 	static uint8_t pipe_addr[8];
 
-	memset(pipe_addr, 0, sizeof(pipe_addr));
 	len = NRF24_AW_RD(nrf24reg_read(spi_fd, NRF24_SETUP_AW));
 
 	switch (pipe_reg[pipe].rx_addr) {
