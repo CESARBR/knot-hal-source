@@ -39,11 +39,17 @@ static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 	/* Transmits the data */
 	nrf24l01_ptx_data(spi_fd, (void *)p->payload, len);
 
-	/* Waits for ACK */
-	err = nrf24l01_ptx_wait_datasent(spi_fd);
+	/*
+	 * FIXME: Hardcoding logic for pipe 0
+	 * Don't wait for ACK if pipe is broadcasting.
+	 */
+	if (p->pipe != 0) {
+		/* Waits for ACK */
+		err = nrf24l01_ptx_wait_datasent(spi_fd);
 
-	if (err < 0)
-		return err;
+		if (err < 0)
+			return err;
+	}
 
 	/*
 	 * The radio do not receive and send at the same time
