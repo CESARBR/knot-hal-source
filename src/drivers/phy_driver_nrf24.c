@@ -25,9 +25,6 @@
 #include "phy_driver_private.h"
 #include "phy_driver_nrf24.h"
 
-
-static const uint8_t broadcast_addr[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
-	
 static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 {
 	int err;
@@ -56,7 +53,7 @@ static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 	 * It's a good practice to put the radio in RX mode
 	 * and only switch to TX mode when transmitting data.
 	 */
-	nrf24l01_set_prx(spi_fd, (uint8_t*) broadcast_addr);
+	nrf24l01_set_prx(spi_fd);
 	/*
 	 * On success, the number of bytes written is returned
 	 * Otherwise, -1 is returned.
@@ -132,7 +129,7 @@ static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 	}
 
 	if (cmd != NRF24_CMD_SET_STANDBY)
-		nrf24l01_set_prx(spi_fd, (uint8_t*) broadcast_addr);
+		nrf24l01_set_prx(spi_fd);
 
 	return err;
 }

@@ -57,7 +57,6 @@ static uint8_t raw_timeout = 10;
 
 /*Retransmission start time and channel offset*/
 static uint8_t rt_stamp = 0;
-static uint8_t rt_offset = 0;
 
 #define SET_BIT(val, idx)	((val) |= 1 << (idx))
 #define CLR_BIT(val, idx)	((val) &= ~(1 << (idx)))

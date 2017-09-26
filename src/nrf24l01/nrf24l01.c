@@ -104,46 +104,21 @@ static inline int8_t command_data(int8_t spi_fd, uint8_t cmd, void *pd,
 static void set_address_pipe(int8_t spi_fd, uint8_t reg, uint8_t *pipe_addr)
 {
 	uint8_t addr[5];
-	uint16_t len;
 
 	/* memcpy is necessary because nrf24data_write cleans value after send */
 	memcpy(addr, pipe_addr, sizeof(addr));
 
-	switch (reg) {
-	case NRF24_TX_ADDR:
-	case NRF24_RX_ADDR_P0:
-	case NRF24_RX_ADDR_P1:
-		len = NRF24_AW_RD(nrf24reg_read(spi_fd, NRF24_SETUP_AW));
-		break;
-	default:
-		len = DATA_SIZE;
-		break;
-	}
-
-	nrf24data_write(spi_fd, reg, &addr, len);
+	nrf24data_write(spi_fd, reg, &addr, sizeof(addr));
 }
 
 /* Get address of pipe */
 static uint8_t *get_address_pipe(int8_t spi_fd, uint8_t pipe)
 {
-	uint16_t len;
-	static uint8_t pipe_addr[8];
+	static uint8_t pipe_addr[5];
 
-	len = NRF24_AW_RD(nrf24reg_read(spi_fd, NRF24_SETUP_AW));
-
-	switch (pipe_reg[pipe].rx_addr) {
-	case NRF24_TX_ADDR:
-	case NRF24_RX_ADDR_P0:
-	case NRF24_RX_ADDR_P1:
-		break;
-
-	default:
-		nrf24data_read(spi_fd, NRF24_RX_ADDR_P1, pipe_addr, len);
-		len = DATA_SIZE;
-		break;
-	}
-
-	nrf24data_read(spi_fd, pipe_reg[pipe].rx_addr, pipe_addr, len);
+	/* Fetch access address from register */
+	nrf24data_read(spi_fd, pipe_reg[pipe].rx_addr,
+				pipe_addr, sizeof(pipe_addr));
 
 	return pipe_addr;
 }
@@ -378,6 +353,7 @@ int8_t nrf24l01_close_pipe(int8_t spi_fd, int8_t pipe)
  */
 int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 {
+	uint8_t *p_addr;
 	/* Out of range? */
 	if (pipe > NRF24_PIPE_MAX)
 		return -1;
@@ -400,10 +376,9 @@ int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 				nrf24reg_read(spi_fd, NRF24_EN_AA)
 				& ~NRF24_AA_P0);
 
-	set_address_pipe(spi_fd, NRF24_RX_ADDR_P0,
-			get_address_pipe(spi_fd, pipe));
-	set_address_pipe(spi_fd, NRF24_TX_ADDR,
-			get_address_pipe(spi_fd, pipe));
+	p_addr = get_address_pipe(spi_fd, pipe);
+	set_address_pipe(spi_fd, NRF24_RX_ADDR_P0, p_addr);
+	set_address_pipe(spi_fd, NRF24_TX_ADDR, p_addr);
 	#if (NRF24_ARC != NRF24_ARC_DISABLE)
 		/*
 		* Set ARC and ARD by pipe index to different
@@ -482,7 +457,7 @@ int8_t nrf24l01_ptx_wait_datasent(int8_t spi_fd)
  * See page 33 of nRF24L01_Product_Specification_v2_0.pdf
  * Receive the value of pipe 0 addr
  */
-int8_t nrf24l01_set_prx(int8_t spi_fd, uint8_t *pipe0_addr)
+int8_t nrf24l01_set_prx(int8_t spi_fd)
 {
 	/*
 	 * The addr of pipe 0 is necessary to avoid
@@ -491,7 +466,7 @@ int8_t nrf24l01_set_prx(int8_t spi_fd, uint8_t *pipe0_addr)
 	 * can be different.
 	 */
 	set_standby1();
-	set_address_pipe(spi_fd, NRF24_RX_ADDR_P0, pipe0_addr);
+
 	/* RX Settings */
 	nrf24reg_write(spi_fd, NRF24_STATUS, NRF24_ST_RX_DR);
 	nrf24reg_write(spi_fd, NRF24_CONFIG, nrf24reg_read(spi_fd, NRF24_CONFIG)
