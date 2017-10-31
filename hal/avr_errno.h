@@ -16,13 +16,16 @@ extern "C" {
 #define	EINVAL			22	/* Invalid argument */
 #define EAGAIN			11	/* Resource temporarily unavailable */
 #define EFAULT			14	/* Bad address */
+#define EPROTO			71	/* Protocol error */
 #define EBADMSG			74	/* Not a data message */
 #define EILSEQ			84	/* Illegal byte sequence */
 #define ENOSYS			38	/*  Function not implemented */
 #define EPERM			01	/* Operation not permitted */
 #define EUSERS			87	/* Too many users */
 #define EBUSY			16	/* Device or resource busy */
-#define ETIMEDOUT		110 /* Connection timed out */
+#define	ENOTCONN		107	/* Transport endpoint is not connected */
+#define ETIMEDOUT		110 	/* Connection timed out */
+#define	EINPROGRESS		115	/* Operation now in progress */
 
 #ifdef __cplusplus
 }

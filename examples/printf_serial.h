@@ -13,23 +13,16 @@
 #include <stdio.h>
 #include <HardwareSerial.h>
 
-static int _putchar(char ch, FILE*)
+static int _putchar(char ch, FILE*) 
 {
-	Serial.write(ch);
-	return ch;
-}
+  Serial.write(ch);
+  return ch;
+} 
 
 void printf_serial_init(void)
 {
-	/* Initialize serial and wait for port to open: */
-	Serial.begin(115200);
-	while (!Serial)
-		/*wait for serial port to connect. Needed for native USB*/
-		(void)0;
-
 	fdevopen(&_putchar, NULL);
 }
-#endif
+#endif // ARDUINO
 
-#endif
-
+#endif // __PRINTF_SERIAL_H__

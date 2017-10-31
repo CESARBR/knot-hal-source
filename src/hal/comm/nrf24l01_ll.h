@@ -7,8 +7,6 @@
  *
  */
 
-#include "hal/nrf24.h"
-
 #define NRF24_MTU					32
 
 /* Common to all devices */

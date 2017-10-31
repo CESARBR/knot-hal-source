@@ -26,7 +26,7 @@ static int cli_fd;
 static int quit;
 
 static int CHANNEL_MGMT = 76;			/* Beacon/Broadcast channel */
-static int channel;
+static struct channel channelack;
 static struct addr_pipe adrrp;
 static char *option_mac = NULL;
 
@@ -138,8 +138,8 @@ static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 			break;
 
 		/* Now track connected device ONLY */
-		channel = llcn->channel;
-		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+		channelack.value = llcn->channel;
+		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
 		adrrp.pipe = 1;
 		memcpy(adrrp.aa, llcn->aa, sizeof(adrrp.aa));
 		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
@@ -169,10 +169,10 @@ static int sniffer_start(void)
 		return -EIO;
 
 	/* Sniffer in broadcast channel*/
-	channel = CHANNEL_MGMT;
-	phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+	channelack.value = CHANNEL_MGMT;
+	channelack.ack = false;
+	phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
 	adrrp.pipe = 0;
-	adrrp.ack = false;
 	memcpy(adrrp.aa, mgmt_aa, sizeof(adrrp.aa));
 	phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
 
@@ -181,7 +181,7 @@ static int sniffer_start(void)
 
 	while (!quit) {
 
-		if (channel == CHANNEL_MGMT)
+		if (channelack.value == CHANNEL_MGMT)
 			p.pipe = 0;
 		else
 			p.pipe = 1;
@@ -190,7 +190,7 @@ static int sniffer_start(void)
 
 		/* Probably disconnected: return no broadcast channel */
 		if ((tm.tv_sec - last_sec) > 5) {
-			phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+			phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
 			phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
 			last_sec = tm.tv_sec;
 		}
@@ -208,7 +208,7 @@ static int sniffer_start(void)
 			usec = tm.tv_usec - reftm.tv_usec;
 		}
 
-		if (channel == CHANNEL_MGMT)
+		if (channelack.value == CHANNEL_MGMT)
 			decode_mgmt(sec, usec, p.payload, plen);
 		else
 			decode_raw(sec, usec, p.payload, plen);
@@ -261,4 +261,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-
