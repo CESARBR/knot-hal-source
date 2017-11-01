@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include "nrf24l01_io.h"
-#include "spi.h"
+#include "spi_bus.h"
 
 #define CE	25
 
@@ -85,12 +85,12 @@ int io_setup(const char *dev)
 	OUT_GPIO(CE);
 
 	disable();
-	return spi_init(dev);
+	return spi_bus_init(dev);
 }
 
 void io_reset(int spi_fd)
 {
 	disable();
 	munmap((void*)gpio, BLOCK_SIZE);
-	spi_deinit(spi_fd);
+	spi_bus_deinit(spi_fd);
 }

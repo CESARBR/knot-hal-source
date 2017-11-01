@@ -1,6 +1,6 @@
 lib_LIBRARIES = libspi.a
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
-lib_ARDUINO = spi_arduino.cpp spi.h
+lib_ARDUINO = spi_arduino.cpp spi_bus.h
 
 libspi_a_SOURCES = spi_linux.c
 libspi_a_CPPFLAGS = -I$(top_srcdir)/src

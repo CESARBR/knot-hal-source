@@ -15,7 +15,6 @@
 #include <glib.h>
 #include <stdbool.h>
 
-#include "spi.h"
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
 #include "hal/time.h"
