@@ -13,7 +13,7 @@
 #include "sx127x_hal.h"
 #include "hal/gpio_sysfs.h"
 #include "hal/time.h"
-#include "spi.h"
+#include "spi_bus.h"
 
 /*
  * Pinmap for Raspberry PI 3
@@ -79,14 +79,14 @@ static int fd_spi;
 
 static void init_spi(void)
 {
-	fd_spi = spi_init("/dev/spidev0.0");
+	fd_spi = spi_bus_init("/dev/spidev0.0");
 }
 
 uint8_t hal_spi(uint8_t outval)
 {
 	int err;
 
-	err =  spi_transfer(fd_spi, NULL, 0, &outval, 1);
+	err =  spi_bus_transfer(fd_spi, NULL, 0, &outval, 1);
 	if (err < 0)
 		return err;
 	else

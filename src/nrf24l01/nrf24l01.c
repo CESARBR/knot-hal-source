@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include "spi.h"
+#include "spi_bus.h"
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
 
@@ -52,7 +52,7 @@ static inline int8_t nrf24reg_read(int8_t spi_fd, uint8_t reg)
 	uint8_t value = NRF24_NOP;
 
 	reg = NRF24_R_REGISTER(reg);
-	spi_transfer(spi_fd, &reg, DATA_SIZE, &value, DATA_SIZE);
+	spi_bus_transfer(spi_fd, &reg, DATA_SIZE, &value, DATA_SIZE);
 	return (int8_t)value;
 }
 
@@ -61,7 +61,7 @@ static inline void nrf24data_read(int8_t spi_fd, uint8_t reg,
 {
 	memset(pd, NRF24_NOP, len);
 	reg = NRF24_R_REGISTER(reg);
-	spi_transfer(spi_fd, &reg, DATA_SIZE, pd, len);
+	spi_bus_transfer(spi_fd, &reg, DATA_SIZE, pd, len);
 }
 
 /*
@@ -71,14 +71,14 @@ static inline void nrf24data_read(int8_t spi_fd, uint8_t reg,
 static inline void nrf24reg_write(int8_t spi_fd, uint8_t reg, uint8_t value)
 {
 	reg = NRF24_W_REGISTER(reg);
-	spi_transfer(spi_fd, &reg, DATA_SIZE, &value, DATA_SIZE);
+	spi_bus_transfer(spi_fd, &reg, DATA_SIZE, &value, DATA_SIZE);
 }
 
 static inline void nrf24data_write(int8_t spi_fd, uint8_t reg,
 					void *pd, uint16_t len)
 {
 	reg = NRF24_W_REGISTER(reg);
-	spi_transfer(spi_fd, &reg, DATA_SIZE, pd, len);
+	spi_bus_transfer(spi_fd, &reg, DATA_SIZE, pd, len);
 }
 
 /*
@@ -87,7 +87,7 @@ static inline void nrf24data_write(int8_t spi_fd, uint8_t reg,
  */
 static inline int8_t command(int8_t spi_fd, uint8_t cmd)
 {
-	spi_transfer(spi_fd, NULL, 0, &cmd, DATA_SIZE);
+	spi_bus_transfer(spi_fd, NULL, 0, &cmd, DATA_SIZE);
 	/* Return device status register */
 	return (int8_t)cmd;
 }
@@ -95,7 +95,7 @@ static inline int8_t command(int8_t spi_fd, uint8_t cmd)
 static inline int8_t command_data(int8_t spi_fd, uint8_t cmd, void *pd,
 						uint16_t len)
 {
-	spi_transfer(spi_fd, &cmd, DATA_SIZE, pd, len);
+	spi_bus_transfer(spi_fd, &cmd, DATA_SIZE, pd, len);
 	/* Return device status register */
 	return command(spi_fd, NRF24_NOP);
 }

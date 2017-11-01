@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <SPI.h>
-#include "spi.h"
+#include "spi_bus.h"
 
 /*
  * FIXME: This code works only with Arduino UNO e Pro Mini
@@ -26,7 +26,7 @@ static int m_init = 0;
 
 static SPIClass *pspi = &SPI;
 
-int8_t spi_init(const char *dev)
+int8_t spi_bus_init(const char *dev)
 {
 	if (m_init)
 		return 1;
@@ -45,7 +45,7 @@ int8_t spi_init(const char *dev)
 	return 0;
 }
 
-void spi_deinit(int8_t spi_fd)
+void spi_bus_deinit(int8_t spi_fd)
 {
 	if (m_init) {
 		m_init = 0;
@@ -56,7 +56,7 @@ void spi_deinit(int8_t spi_fd)
 	}
 }
 
-int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx,
+int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx,
 							uint8_t *rx, int lrx)
 {
 	if (!m_init)

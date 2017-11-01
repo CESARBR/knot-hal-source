@@ -9,7 +9,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include "nrf24l01_io.h"
-#include "spi.h"
+#include "spi_bus.h"
 
 #define CE	1
 
@@ -38,11 +38,11 @@ int io_setup(const char *dev)
 	/* PB1 as output */
 	DDRB |= (1 << CE);
 	disable();
-	return spi_init("");
+	return spi_bus_init("");
 }
 
 void io_reset(int spi_fd)
 {
 	disable();
-	spi_deinit(spi_fd);
+	spi_bus_deinit(spi_fd);
 }

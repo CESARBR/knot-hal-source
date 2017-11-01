@@ -18,7 +18,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "spi.h"
+#include "spi_bus.h"
 
 #define HIGH			1
 
@@ -32,7 +32,7 @@ static int pdummy_len;
 
 static uint32_t speed = 10000000; /* 10 MHz */
 
-int8_t spi_init(const char *dev)
+int8_t spi_bus_init(const char *dev)
 {
 	int spi_fd;
 	uint8_t bits = BITS_PER_WORD;
@@ -58,7 +58,7 @@ int8_t spi_init(const char *dev)
 	return spi_fd;
 }
 
-void spi_deinit(int8_t spi_fd)
+void spi_bus_deinit(int8_t spi_fd)
 {
 	if (spi_fd > 0) {
 		close(spi_fd);
@@ -84,10 +84,10 @@ void spi_deinit(int8_t spi_fd)
  * at the same time and overwrite the tx buffer) by
  * simply calling:
  *
- * 	spi_transfer(spi_fd, NULL, 0, tx_buffer, tx_len);
+ * 	spi_bus_transfer(spi_fd, NULL, 0, tx_buffer, tx_len);
  *
  */
-int spi_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
+int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		int lrx)
 {
 	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
