@@ -91,7 +91,7 @@ struct nrf24_mgmt {
 	size_t len_tx;
 };
 
-static struct nrf24_mgmt mgmt = {.pipe = -1, .len_rx = 0};
+static struct nrf24_mgmt mgmt = {.pipe = -1, .len_rx = 0, .len_tx = 0};
 
 /* Structure to save peers context */
 struct nrf24_data {
@@ -159,12 +159,17 @@ enum {
 	RAW
 };
 
+static int running_state = START_MGMT;
+
 enum {
 	PRESENCE,
 	BURST_WINDOW,
 	STANDBY,
 	TIMEOUT_INTERVAL
 };
+
+static uint8_t presence_connect_state = PRESENCE;
+static uint8_t previous_state = TIMEOUT_INTERVAL;
 
 #ifdef ARDUINO
 #define DBG_RECV(mac1, mac2, pdu, len)  DBG()
@@ -692,11 +697,8 @@ static void presence_connect(int spi_fd)
 	size_t len, nameLen;
 	int err;
 	static unsigned long start;
-	/* Start timeout */
-	static uint8_t state = PRESENCE;
-	static uint8_t previous_state = TIMEOUT_INTERVAL;
 
-	switch (state) {
+	switch (presence_connect_state) {
 	case PRESENCE:
 		/* Send Presence */
 		if (mac_local.address.uint64 == 0)
@@ -729,23 +731,23 @@ static void presence_connect(int spi_fd)
 		if (previous_state == TIMEOUT_INTERVAL)
 			start = hal_time_ms();
 
-		state = BURST_WINDOW;
+		presence_connect_state = BURST_WINDOW;
 		break;
 	case BURST_WINDOW:
 		if (hal_timeout(hal_time_ms(), start, WINDOW_BCAST) > 0)
-			state = STANDBY;
+			presence_connect_state = STANDBY;
 		else if (hal_timeout(hal_time_us(), start*1000, BURST_BCAST) > 0)
-			state = PRESENCE;
+			presence_connect_state = PRESENCE;
 
 		previous_state = BURST_WINDOW;
 		break;
 	case STANDBY:
 		phy_ioctl(spi_fd, NRF24_CMD_SET_STANDBY, NULL);
-		state = TIMEOUT_INTERVAL;
+		presence_connect_state = TIMEOUT_INTERVAL;
 		break;
 	case TIMEOUT_INTERVAL:
 		if (hal_timeout(hal_time_ms(), start, INTERVAL_BCAST) > 0)
-			state = PRESENCE;
+			presence_connect_state = PRESENCE;
 
 		previous_state = TIMEOUT_INTERVAL;
 		break;
@@ -756,19 +758,18 @@ static void running(void)
 {
 	struct mgmt_nrf24_header *mgmtev_hdr;
 	struct mgmt_evt_nrf24_disconnected *mgmtev_dc;
-	static int state = START_MGMT;
 	/* Index peers */
 	static int sockIndex = 1;
 	static unsigned long start;
 
-	switch (state) {
+	switch (running_state) {
 	case START_MGMT:
 		/* Set channel to management channel */
 		phy_ioctl(driverIndex, NRF24_CMD_SET_CHANNEL, &channel_mgmt);
 		/* Start timeout */
 		start = hal_time_ms();
 		/* Go to next state */
-		state = MGMT;
+		running_state = MGMT;
 		break;
 	case MGMT:
 
@@ -782,7 +783,7 @@ static void running(void)
 		/* Peers connected? */
 		if (pipe_bitmask & PIPE_RAW_BITMASK) {
 			if (hal_timeout(hal_time_ms(), start, MGMT_TIMEOUT) > 0)
-				state = START_RAW;
+				running_state = START_RAW;
 		}
 		break;
 
@@ -793,18 +794,21 @@ static void running(void)
 		start = hal_time_ms();
 
 		/* Go to next state */
-		state = RAW;
+		running_state = RAW;
 		break;
 	case RAW:
 
 		/* Start broadcast or scan? */
-		if (CHK_BIT(pipe_bitmask, 0)) {
+#ifdef ARDUINO
+		if (!(pipe_bitmask & PIPE_RAW_BITMASK)) {
+#else
+		if ((pipe_bitmask & PIPE_RAW_BITMASK) != PIPE_RAW_BITMASK) {
+#endif
 			/*Checks for RAW timeout and RTs offset time*/
 			if (hal_timeout(hal_time_ms(), start, raw_timeout) > 0 &&
-			    hal_timeout(hal_time_ms(), rt_stamp, (rt_offset)) > 0)
-				state = START_MGMT;
+			hal_timeout(hal_time_ms(), rt_stamp, (rt_offset)) > 0)
+				running_state = START_MGMT;
 		}
-
 		/* Check if pipe is allocated */
 		if (peers[sockIndex-1].pipe != -1) {
 			read_raw(driverIndex, sockIndex);
@@ -883,13 +887,6 @@ int hal_comm_deinit(void)
 	if (driverIndex == -1)
 		return -EPERM;
 
-	/* Clear all peers*/
-	for (i = 0; i < CONNECTION_COUNTER; i++) {
-		if (peers[i].pipe != -1)
-			peers[i].pipe = -1;
-	}
-
-	pipe_bitmask = 0b00000001;
 	/* Close driver */
 	err = phy_close(driverIndex);
 	if (err < 0)
@@ -897,6 +894,22 @@ int hal_comm_deinit(void)
 
 	/* Dereferencing driverIndex */
 	driverIndex = -1;
+
+	/* Clear all peers*/
+	memset(peers, 0, sizeof(peers));
+	for (i = 0; i < CONNECTION_COUNTER; i++) {
+		peers[i].pipe = -1;
+	}
+
+	memset(&mgmt, 0, sizeof(mgmt));
+	mgmt.pipe = -1;
+
+	pipe_bitmask = 0b00000001;
+
+	/* Reset machine states */
+	running_state = START_MGMT;
+	presence_connect_state = PRESENCE;
+	previous_state = TIMEOUT_INTERVAL;
 
 	return err;
 }
