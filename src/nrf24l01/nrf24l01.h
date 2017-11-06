@@ -38,7 +38,7 @@
 #define NRF24_PAYLOAD_SIZE		32
 
 /* Invalid pipe */
-#define NRF24_NO_PIPE	0b111
+#define NRF24_NO_PIPE	NRF24_RX_FIFO_EMPTY
 
 #define PIPE_BROADCAST NRF24_PIPE0_ADDR
 
