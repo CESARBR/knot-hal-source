@@ -54,7 +54,7 @@ static ssize_t nrf24l01_write(int spi_fd, const void *buffer, size_t len)
 
 	if (err < 0 || err == 1)
 		return -1;
-		
+
 	return len;
 }
 

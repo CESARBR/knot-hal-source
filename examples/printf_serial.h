@@ -13,11 +13,11 @@
 #include <stdio.h>
 #include <HardwareSerial.h>
 
-static int _putchar(char ch, FILE*) 
+static int _putchar(char ch, FILE*)
 {
   Serial.write(ch);
   return ch;
-} 
+}
 
 void printf_serial_init(void)
 {
