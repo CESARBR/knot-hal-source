@@ -25,9 +25,10 @@
 #include "hal/comm.h"
 #include "hal/time.h"
 #include "hal/config.h"
+#include "nrf24l01.h"
+#include "nrf24l01_ll.h"
 #include "phy_driver.h"
 #include "phy_driver_nrf24.h"
-#include "nrf24l01_ll.h"
 
 
 /*
@@ -148,8 +149,8 @@ static int driverIndex = -1;
  * 38 and 39). Suggested nRF24 channels are channels 22 (2422 MHz), 50
  * (2450 MHz), 74 (2474 MHz), 76 (2476 MHz) and 97 (2497 MHz).
  */
-static int channel_mgmt = 76;
-static int channel_raw = 22;
+static struct channel channel_mgmt = {.value = 76, .ack = false};
+static struct channel channel_raw = {.value = 22, .ack = true};
 
 enum {
 	START_MGMT,
@@ -382,7 +383,7 @@ static int read_mgmt(int spi_fd)
 	p.payload[0] = 0;
 	/* Read data */
 	ilen = phy_read(spi_fd, &p, NRF24_MTU);
-	if (ilen < 0)
+	if (ilen <= 0)
 		return -EAGAIN;
 
 	/* If already has something in rx buffer then return BUSY */
@@ -689,6 +690,7 @@ static void presence_connect(int spi_fd)
 	struct nrf24_ll_presence *llp =
 				(struct nrf24_ll_presence *) opdu->payload;
 	size_t len, nameLen;
+	int err;
 	static unsigned long start;
 	/* Start timeout */
 	static uint8_t state = PRESENCE;
@@ -720,8 +722,9 @@ static void presence_connect(int spi_fd)
 		/* Increments name length */
 		len += nameLen;
 
-		phy_write(spi_fd, &p, len);
-
+		err = phy_write(spi_fd, &p, len);
+		if (err < 0)
+			break;
 		/* Init time */
 		if (previous_state == TIMEOUT_INTERVAL)
 			start = hal_time_ms();
@@ -917,7 +920,6 @@ int hal_comm_socket(int domain, int protocol)
 		/* If Management, disable ACK and returns 0 */
 		if (mgmt.pipe == 0)
 			return -EUSERS; /* Returns too many users */
-		ap.ack = false;
 		retval = 0;
 		mgmt.pipe = 0;
 
@@ -928,7 +930,6 @@ int hal_comm_socket(int domain, int protocol)
 	case HAL_COMM_PROTO_RAW:
 		if (mgmt.pipe == -1) {
 			/* If Management is not open*/
-			ap.ack = false;
 			mgmt.pipe = 0;
 			retval = 0;
 			/* Copy broadcast address */
@@ -944,8 +945,6 @@ int hal_comm_socket(int domain, int protocol)
 		/* If not pipe available */
 		if (retval < 0)
 			return -EUSERS; /* Returns too many users */
-
-		ap.ack = true;
 
 		/*
 		 * Copy the 5 LSBs of master mac addres
@@ -1108,7 +1107,6 @@ int hal_comm_accept(int sockfd, void *addr)
 	/* Set aa in pipe */
 	p_addr.pipe = pipe;
 	memcpy(p_addr.aa, mgmtev_cn->aa, sizeof(p_addr.aa));
-	p_addr.ack = 1;
 	/*open pipe*/
 	phy_ioctl(driverIndex, NRF24_CMD_SET_PIPE, &p_addr);
 	/*Resize data channel time*/
@@ -1149,7 +1147,7 @@ int hal_comm_connect(int sockfd, uint64_t *addr)
 
 	payload->src_addr = mac_local;
 	payload->dst_addr.address.uint64 = *addr;
-	payload->channel = channel_raw;
+	payload->channel = channel_raw.value;
 	/*
 	 * Set in payload the addr to be set in client.
 	 * sockfd contains the pipe allocated for the client

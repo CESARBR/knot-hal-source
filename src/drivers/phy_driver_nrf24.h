@@ -7,8 +7,6 @@
  *
  */
 
-#define NRF24_PAYLOAD_SIZE		32
-
 /* Used to read/write operations */
 struct nrf24_io_pack {
 	uint8_t pipe;
@@ -25,9 +23,14 @@ enum nrf24_cmds {
 				NRF24_CMD_SET_STANDBY,
 };
 
-/* Used to set pipe address*/
+/* Used to set pipe address */
 struct addr_pipe {
 	uint8_t pipe;
-	bool ack;
 	uint8_t aa[5];
+};
+
+/* Used to set channel */
+struct channel {
+	uint8_t value;
+	bool ack;
 };
