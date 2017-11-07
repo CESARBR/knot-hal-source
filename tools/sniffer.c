@@ -28,7 +28,7 @@ static int quit;
 static int CHANNEL_MGMT = 76;			/* Beacon/Broadcast channel */
 static struct channel channelack;
 static struct addr_pipe adrrp;
-static char *option_mac = NULL;
+static char *option_mac;
 
 /* Access Address for each pipe */
 static uint8_t mgmt_aa[] = { 0x8D, 0xD9, 0xBE, 0x96, 0xDE};
@@ -102,7 +102,7 @@ static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 	switch (ipdu->type) {
 		/* If is a presente type */
 	case NRF24_PDU_TYPE_PRESENCE:
-		ll = (struct nrf24_ll_presence*) ipdu->payload;
+		ll = (struct nrf24_ll_presence *) ipdu->payload;
 
 		nrf24_mac2str(&ll->mac, src);
 
@@ -169,9 +169,11 @@ static int sniffer_start(void)
 		return -EIO;
 
 	/* Sniffer in broadcast channel*/
+	p.pipe = 0;
 	channelack.value = CHANNEL_MGMT;
 	channelack.ack = false;
 	phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
+
 	adrrp.pipe = 0;
 	memcpy(adrrp.aa, mgmt_aa, sizeof(adrrp.aa));
 	phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
@@ -180,11 +182,6 @@ static int sniffer_start(void)
 	gettimeofday(&reftm, NULL);
 
 	while (!quit) {
-
-		if (channelack.value == CHANNEL_MGMT)
-			p.pipe = 0;
-		else
-			p.pipe = 1;
 
 		gettimeofday(&tm, NULL);
 
@@ -200,18 +197,21 @@ static int sniffer_start(void)
 			continue;
 
 		last_sec = tm.tv_sec;
+		sec = tm.tv_sec - reftm.tv_sec;
+		usec = tm.tv_usec - reftm.tv_usec;
+
 		if (tm.tv_usec < reftm.tv_usec) {
-			sec = tm.tv_sec - reftm.tv_sec - 1;
-			usec = tm.tv_usec + 1000000 - reftm.tv_usec;
-		} else {
-			sec = tm.tv_sec - reftm.tv_sec;
-			usec = tm.tv_usec - reftm.tv_usec;
+			sec--;
+			usec += 1000000;
 		}
 
-		if (channelack.value == CHANNEL_MGMT)
+		if (channelack.value == CHANNEL_MGMT) {
 			decode_mgmt(sec, usec, p.payload, plen);
-		else
+			p.pipe = 0;
+		} else {
 			decode_raw(sec, usec, p.payload, plen);
+			p.pipe = 1;
+		}
 	}
 
 	return 0;
@@ -225,7 +225,7 @@ static void sniffer_stop(void)
 
 static GOptionEntry options[] = {
 	{ "mac", 'm', 0, G_OPTION_ARG_STRING, &option_mac,
-                               "Specify MAC to filter", NULL},
+						"Specify MAC to filter", NULL},
 	{ NULL },
 };
 
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 
 	err = sniffer_start();
 	if (err < 0)
-	       return err;
+		return err;
 
 	sniffer_stop();
 
