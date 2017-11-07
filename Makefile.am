@@ -10,7 +10,7 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
-bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer \
+bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer tools/rpiecho \
 						src/seriald/seriald
 
 proxy_spiproxyd_SOURCES = proxy/main.c
@@ -56,6 +56,17 @@ tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 		-I$(top_srcdir)/src/spi \
 		-I$(top_srcdir)/src/nrf24l01
 
+tools_rpiecho_SOURCES = tools/rpiecho.c
+tools_rpiecho_LDADD = libs/libphy_driver.a \
+				 libs/libnrf24l01.a libs/libspi.a \
+				 libs/libhaltime.a \
+				 @GLIB_LIBS@
+tools_rpiecho_LDFLAGS = $(AM_LDFLAGS)
+tools_rpiecho_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/spi \
+				-I$(top_srcdir)/src/nrf24l01 \
+				-I$(top_srcdir)/nrf
 
 src_seriald_seriald_SOURCES = src/seriald/main.c \
 				src/seriald/manager.h src/seriald/manager.c
@@ -71,4 +82,4 @@ MAINTAINERCLEANFILES = Makefile.in \
 	ltmain.sh depcomp compile missing install-sh
 
 clean-local:
-	$(RM) -r proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer
+	$(RM) -r proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/rpiecho tools/sniffer
