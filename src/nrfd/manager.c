@@ -1074,11 +1074,9 @@ static int gen_save_mac(const char *config, const char *file,
 	if (json_object_object_get_ex(obj_radio,  "mac", &obj_tmp)) {
 
 			char mac_string[MAC_ADDRESS_SIZE];
-			uint8_t mac_mask = 4;
 			mac->address.uint64 = 0;
 
-			hal_getrandom(mac->address.b + mac_mask,
-						sizeof(*mac) - mac_mask);
+			hal_getrandom(mac->address.b, sizeof(*mac));
 
 			err = nrf24_mac2str(mac, mac_string);
 			if (err == -1)
