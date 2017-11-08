@@ -26,12 +26,17 @@ static int cli_fd;
 static int quit;
 
 static int CHANNEL_MGMT = 76;			/* Beacon/Broadcast channel */
-static struct channel channelack;
-static struct addr_pipe adrrp;
-static char *option_mac;
+static struct addr_pipe mgmt_pipe = {
+				.pipe = 0, /* Fixed broadcast channel */
+				.aa = {0x8D, 0xD9, 0xBE, 0x96, 0xDE}
+				};
 
-/* Access Address for each pipe */
-static uint8_t mgmt_aa[] = { 0x8D, 0xD9, 0xBE, 0x96, 0xDE};
+static struct addr_pipe raw_pipe = {
+				.pipe = 1, /* Data traffic */
+				.aa = {0x8D, 0xD9, 0xBE, 0x96, 0xDE}
+				};
+
+static char *option_mac;
 
 static void sig_term(int sig)
 {
@@ -90,14 +95,16 @@ static inline void decode_raw(unsigned long sec, unsigned long usec,
 	}
 }
 
-static inline void decode_mgmt(unsigned long sec, unsigned long usec,
+static inline uint8_t decode_mgmt(unsigned long sec, unsigned long usec,
 				const uint8_t *payload, ssize_t plen)
 {
 	struct nrf24_ll_presence *ll;
 	struct nrf24_ll_mgmt_connect *llcn;
 	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *) payload;
+	struct channel channel;
 	char src[32], dst[32];
 	int i;
+	uint8_t pipe = 0; /* Next pipe */
 
 	switch (ipdu->type) {
 		/* If is a presente type */
@@ -138,11 +145,18 @@ static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 			break;
 
 		/* Now track connected device ONLY */
-		channelack.value = llcn->channel;
-		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
-		adrrp.pipe = 1;
-		memcpy(adrrp.aa, llcn->aa, sizeof(adrrp.aa));
-		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
+
+		/* Set radio channel */
+		channel.value = llcn->channel;
+		channel.ack = false;
+		phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+
+		/* Set access address */
+		memcpy(raw_pipe.aa, llcn->aa, sizeof(raw_pipe.aa));
+		phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &raw_pipe);
+
+		/* Switch to RAW */
+		pipe = raw_pipe.pipe;
 
 		break;
 	default:
@@ -154,6 +168,8 @@ static inline void decode_mgmt(unsigned long sec, unsigned long usec,
 		printf("\n");
 		break;
 	}
+
+	return pipe;
 }
 
 static int sniffer_start(void)
@@ -161,6 +177,7 @@ static int sniffer_start(void)
 	unsigned long sec, usec;
 	struct timeval tm, reftm;
 	struct nrf24_io_pack p;
+	struct channel channel;
 	ssize_t plen;
 	time_t last_sec = LONG_MAX;
 
@@ -170,13 +187,14 @@ static int sniffer_start(void)
 
 	/* Sniffer in broadcast channel*/
 	p.pipe = 0;
-	channelack.value = CHANNEL_MGMT;
-	channelack.ack = false;
-	phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
 
-	adrrp.pipe = 0;
-	memcpy(adrrp.aa, mgmt_aa, sizeof(adrrp.aa));
-	phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
+	/* Sets radio channel */
+	channel.value = CHANNEL_MGMT;
+	channel.ack = false;
+	phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
+
+	/* Sets access address */
+	phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &mgmt_pipe);
 
 	/* Reference time */
 	gettimeofday(&reftm, NULL);
@@ -187,9 +205,10 @@ static int sniffer_start(void)
 
 		/* Probably disconnected: return no broadcast channel */
 		if ((tm.tv_sec - last_sec) > 5) {
-			phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channelack);
-			phy_ioctl(cli_fd, NRF24_CMD_SET_PIPE, &adrrp);
 			last_sec = tm.tv_sec;
+			/* Timeout: return to broadcast channel */
+			p.pipe = 0;
+			phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
 		}
 
 		plen = phy_read(cli_fd, &p, NRF24_MTU);
@@ -205,13 +224,11 @@ static int sniffer_start(void)
 			usec += 1000000;
 		}
 
-		if (channelack.value == CHANNEL_MGMT) {
-			decode_mgmt(sec, usec, p.payload, plen);
-			p.pipe = 0;
-		} else {
+		if (p.pipe == 0)
+			/* Switch to RAW or continue at Broadcast channel */
+			p.pipe = decode_mgmt(sec, usec, p.payload, plen);
+		else
 			decode_raw(sec, usec, p.payload, plen);
-			p.pipe = 1;
-		}
 	}
 
 	return 0;
