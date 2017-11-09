@@ -52,6 +52,8 @@
 #define INTERVAL_BCAST		60		/* ms */
 #define BURST_BCAST		WINDOW_BCAST	/* 1:1 */
 
+#define MAX_RT 3 /* Max write_raw retries */
+
 static uint8_t raw_timeout = RAW_TIMEOUT_DEFAULT;
 
 /* Retransmission start time and channel offset */
@@ -104,22 +106,29 @@ struct nrf24_data {
 	size_t offset_rx;
 	unsigned long keepalive_anchor; /* Last packet received */
 	uint8_t keepalive; /* zero: disabled or positive: window attempts */
+	uint8_t write_offset; /* Writting offset handler */
+	uint8_t write_rt; /* Writting retry counter */
 	struct nrf24_mac mac;
 };
 
 #ifndef ARDUINO	/* If master then 5 peers */
 static struct nrf24_data peers[5] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
+		.seqnumber_rx = 0, .offset_rx = 0,
+		.write_offset = 0, .write_rt = 0},
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
+		.seqnumber_rx = 0, .offset_rx = 0,
+		.write_offset = 0, .write_rt = 0},
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
+		.seqnumber_rx = 0, .offset_rx = 0,
+		.write_offset = 0, .write_rt = 0},
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0},
+		.seqnumber_rx = 0, .offset_rx = 0,
+		.write_offset = 0, .write_rt = 0},
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
-		.seqnumber_rx = 0, .offset_rx = 0}
-};
+		.seqnumber_rx = 0, .offset_rx = 0,
+		.write_offset = 0, .write_rt = 0},
+	};
 #else	/* If slave then 1 peer */
 static struct nrf24_data peers[1] = {
 	{.pipe = -1, .len_rx = 0, .seqnumber_tx = 0,
@@ -488,7 +497,7 @@ static int write_raw(int spi_fd, int sockfd)
 	int err;
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu = (void *)p.payload;
-	size_t plen, left;
+	size_t plen;
 
 	/* If has nothing to send, returns EBUSY */
 	if (peers[sockfd-1].len_tx == 0)
@@ -500,59 +509,65 @@ static int write_raw(int spi_fd, int sockfd)
 
 	/* Set pipe to be sent */
 	p.pipe = sockfd;
-	/* Amount of bytes to be sent */
-	left = peers[sockfd-1].len_tx;
 
-	while (left) {
+	/*
+	 * If left is larger than the NRF24_PW_MSG_SIZE,
+	 * payload length = NRF24_PW_MSG_SIZE,
+	 * if not, payload length = left
+	 */
+	plen = _MIN(peers[sockfd-1].len_tx, NRF24_PW_MSG_SIZE);
 
-		/* Delay to avoid sending all packets too fast */
-		hal_delay_us(512);
-		/*
-		 * If left is larger than the NRF24_PW_MSG_SIZE,
-		 * payload length = NRF24_PW_MSG_SIZE,
-		 * if not, payload length = left
-		 */
-		plen = _MIN(left, NRF24_PW_MSG_SIZE);
-
-		/*
-		 * If left is larger than the NRF24_PW_MSG_SIZE,
-		 * it means that the packet is fragmented,
-		 * if not, it means that it is the last packet.
-		 */
-		opdu->lid = (left > NRF24_PW_MSG_SIZE) ?
+	/*
+	 * If write_offset is larger than the NRF24_PW_MSG_SIZE,
+	 * it means that the packet is fragmented,
+	 * if not, it means that it is the last packet.
+	 */
+	opdu->lid = ((peers[sockfd-1].len_tx) > NRF24_PW_MSG_SIZE) ?
 			NRF24_PDU_LID_DATA_FRAG : NRF24_PDU_LID_DATA_END;
 
-		/* Packet sequence number */
-		opdu->nseq = peers[sockfd-1].seqnumber_tx;
+	/* Packet sequence number */
+	opdu->nseq = peers[sockfd-1].seqnumber_tx;
 
-		/* Offset = len - left */
-		memcpy(opdu->payload, peers[sockfd-1].buffer_tx +
-			(peers[sockfd-1].len_tx - left), plen);
+	/* Offset = len - write_offset */
+	memcpy(opdu->payload,
+	       peers[sockfd-1].buffer_tx + peers[sockfd-1].write_offset,
+	       plen);
 
-		DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
-				 (const uint8_t *) opdu, plen + DATA_HDR_SIZE);
+	DBG_SEND(&mac_local, &peers[sockfd - 1].mac,
+		(const uint8_t *) opdu, plen + DATA_HDR_SIZE);
 
-		/* Send packet */
-		err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
-		/*
-		 * If write error then reset tx len
-		 * and sequence number
-		 */
-		if (err < 0) {
+	/* Send packet */
+	err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
+	/*
+	 * If write error then reset tx len
+	 * and sequence number
+	 */
+	if (err < 0) {
+		if (peers[sockfd-1].write_rt >= MAX_RT){
 			peers[sockfd-1].len_tx = 0;
+			peers[sockfd-1].write_rt = 0;
+			peers[sockfd-1].write_offset = 0;
 			peers[sockfd-1].seqnumber_tx = 0;
 			return err;
 		}
+		peers[sockfd-1].write_rt++;
+		/* TODO: Handle transmission error */
 
-		left -= plen;
-		peers[sockfd-1].seqnumber_tx++;
 	}
+
+	peers[sockfd-1].write_offset += plen;
+	peers[sockfd-1].len_tx -= plen;
+	peers[sockfd-1].seqnumber_tx++;
+
 
 	err = peers[sockfd-1].len_tx;
 
-	/* Resets controls */
-	peers[sockfd-1].len_tx = 0;
-	peers[sockfd-1].seqnumber_tx = 0;
+	/* End of buffer */
+	if (err == 0) {
+		peers[sockfd-1].write_rt = 0;
+		peers[sockfd-1].write_offset = 0;
+		peers[sockfd-1].seqnumber_tx = 0;
+	}
 
 	return err;
 }
