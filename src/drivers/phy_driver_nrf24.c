@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifdef ARDUINO
 #include "hal/avr_errno.h"
@@ -103,8 +104,8 @@ static void nrf24l01_close(int spi_fd)
 static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 {
 	union {
-		struct addr_pipe *addr;
-		struct channel *ch;
+		struct addr_pipe addr;
+		struct channel ch;
 	} param;
 	int err = -1;
 
@@ -114,16 +115,16 @@ static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 	switch (cmd) {
 	/* Command to set address pipe */
 	case NRF24_CMD_SET_PIPE:
-		param.addr = (struct addr_pipe*)arg;
-		err = nrf24l01_open_pipe(spi_fd, param.addr->pipe, param.addr->aa);
+		memcpy(&param.addr, arg, sizeof(param.addr));
+		err = nrf24l01_open_pipe(spi_fd, param.addr.pipe, param.addr.aa);
 		break;
 	case NRF24_CMD_RESET_PIPE:
 		err = nrf24l01_close_pipe(spi_fd, *((int *) arg));
 		break;
 	/* Command to set channel pipe */
 	case NRF24_CMD_SET_CHANNEL:
-		param.ch = (struct channel*)arg;
-		err = nrf24l01_set_channel(spi_fd, param.ch->value, param.ch->ack);
+		memcpy(&param.ch, arg, sizeof(param.ch));
+		err = nrf24l01_set_channel(spi_fd, param.ch.value, param.ch.ack);
 		break;
 	case NRF24_CMD_SET_STANDBY:
 		break;
