@@ -18,6 +18,9 @@
 
 #define CE	25
 
+/* Time delay in microseconds (us) */
+#define	TPECE2CSN		4
+
 #define BCM2709_RPI2		0x3F000000
 #define BCM2708_RPI		0x20000000
 
@@ -57,6 +60,7 @@ void delay_us(float us)
 void enable(void)
 {
 	GPIO_SET = (1<<CE);
+	usleep(TPECE2CSN);
 }
 
 void disable(void)

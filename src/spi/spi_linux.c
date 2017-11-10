@@ -22,9 +22,6 @@
 
 #define HIGH			1
 
-/* delay for CSN */
-#define DELAY_US		5
-
 #define BITS_PER_WORD		8
 
 static uint8_t *pdummy;
@@ -92,7 +89,6 @@ int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 {
 	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
 	uint8_t mode = SPI_MODE_0;
-	uint16_t delay = 5;
 	int ntransfer = 0;
 	unsigned int ret;
 
@@ -125,8 +121,6 @@ int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->tx_buf = (unsigned long) tx;
 		pdata_ioc->rx_buf = (unsigned long) pdummy;
 		pdata_ioc->len = ltx;
-		pdata_ioc->delay_usecs =
-			(rx != NULL && lrx != 0) ? 0 : DELAY_US;
 		pdata_ioc->speed_hz = speed;
 		pdata_ioc->bits_per_word = BITS_PER_WORD;
 		++ntransfer;
@@ -141,7 +135,6 @@ int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->tx_buf = (unsigned long) rx;
 		pdata_ioc->rx_buf = (unsigned long) rx;
 		pdata_ioc->len = lrx;
-		pdata_ioc->delay_usecs = delay;
 		pdata_ioc->cs_change = HIGH;
 		pdata_ioc->speed_hz = speed;
 		pdata_ioc->bits_per_word = BITS_PER_WORD;

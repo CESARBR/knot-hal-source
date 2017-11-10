@@ -13,6 +13,9 @@
 
 #define CE	1
 
+/* Time delay in microseconds (us) */
+#define	TPECE2CSN		4
+
 void delay_us(float us)
 {
 	delayMicroseconds(us);
@@ -21,6 +24,7 @@ void delay_us(float us)
 void enable(void)
 {
 	PORTB |= (1 << CE);
+	delayMicroseconds(TPECE2CSN);
 }
 
 void disable(void)
