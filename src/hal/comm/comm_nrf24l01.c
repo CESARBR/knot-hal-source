@@ -30,7 +30,6 @@
 #include "phy_driver.h"
 #include "phy_driver_nrf24.h"
 
-
 /*
  * Transmission time (ms) values for each pipe. Note that every next
  * pipe there's a increase on the trans and retrans time. For more
@@ -43,7 +42,6 @@
 #define PIPE4_WINDOW 26
 #define PIPE5_WINDOW 30
 
-
 #define _MIN(a, b)		((a) < (b) ? (a) : (b))
 #define DATA_SIZE 128
 #define MGMT_SIZE 32
@@ -55,7 +53,7 @@
 
 static uint8_t raw_timeout = 10;
 
-/*Retransmission start time and channel offset*/
+/* Retransmission start time and channel offset */
 static uint8_t rt_stamp = 0;
 static uint8_t rt_offset = 0;
 
@@ -218,7 +216,7 @@ static void DBG(char dir, const struct nrf24_mac *mac,
  * For more on this, please refer to nrf24l01 specs or to this commit's
  * log message.
  */
-static uint8_t new_raw_time()
+static uint8_t new_raw_time(void)
 {
 	uint8_t new_time = 0;
 
@@ -259,8 +257,8 @@ static inline int alloc_pipe(void)
 	return -1;
 }
 
-static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
-				struct nrf24_mac src)
+static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac *dst,
+							struct nrf24_mac *src)
 {
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu =
@@ -274,8 +272,8 @@ static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
 	opdu->lid = NRF24_PDU_LID_CONTROL;
 	p.pipe = sockfd;
 	llctrl->opcode = NRF24_LL_CRTL_OP_DISCONNECT;
-	lldc->dst_addr.address.uint64 = dst.address.uint64;
-	lldc->src_addr.address.uint64 = src.address.uint64;
+	lldc->dst_addr.address.uint64 = dst->address.uint64;
+	lldc->src_addr.address.uint64 = src->address.uint64;
 	len = sizeof(struct nrf24_ll_data_pdu)
 		+ sizeof(struct nrf24_ll_crtl_pdu)
 		+ sizeof(struct nrf24_ll_disconnect);
@@ -291,7 +289,7 @@ static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac dst,
 }
 
 static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
-				struct nrf24_mac dst, struct nrf24_mac src)
+				struct nrf24_mac *dst, struct nrf24_mac *src)
 {
 	int err, len;
 	/* Assemble keep alive packet */
@@ -308,8 +306,8 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	/* Keep alive opcode - Request or Response */
 	llctrl->opcode = keepalive_op;
 	/* src and dst address to keepalive */
-	llkeepalive->dst_addr.address.uint64 = dst.address.uint64;
-	llkeepalive->src_addr.address.uint64 = src.address.uint64;
+	llkeepalive->dst_addr.address.uint64 = dst->address.uint64;
+	llkeepalive->src_addr.address.uint64 = src->address.uint64;
 	/* Sends keep alive packet */
 	len = sizeof(*opdu) + sizeof(*llctrl) + sizeof(*llkeepalive);
 
@@ -345,7 +343,7 @@ static int check_keepalive(int spi_fd, int sockfd)
 	/* Sends keepalive packet */
 	return write_keepalive(spi_fd, sockfd,
 			      NRF24_LL_CRTL_OP_KEEPALIVE_REQ,
-			      peers[sockfd-1].mac, mac_local);
+			      &peers[sockfd-1].mac, &mac_local);
 }
 
 static int write_mgmt(int spi_fd)
@@ -593,8 +591,7 @@ static int read_raw(int spi_fd, int sockfd)
 				mac_local.address.uint64) {
 				write_keepalive(spi_fd, sockfd,
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
-					peers[sockfd-1].mac,
-					mac_local);
+					&peers[sockfd-1].mac, &mac_local);
 
 			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
 				/* Disabled? (Acceptor is always 0) */
@@ -865,8 +862,7 @@ static void running(void)
 /* Global functions */
 int hal_comm_init(const char *pathname, const void *params)
 {
-
-	const struct nrf24_mac *mac = (const struct nrf24_mac *)params;
+	const struct nrf24_mac *mac = (const struct nrf24_mac *) params;
 
 	/* If driver not opened */
 	if (driverIndex != -1)
@@ -996,7 +992,7 @@ int hal_comm_close(int sockfd)
 		if (mac_local.address.uint64 != 0)
 			/* Slave side */
 			write_disconnect(driverIndex, sockfd,
-					peers[sockfd-1].mac, mac_local);
+					&peers[sockfd-1].mac, &mac_local);
 		/* Free pipe & & resize raw time */
 		CLR_BIT(pipe_bitmask, peers[sockfd - 1].pipe);
 		peers[sockfd-1].pipe = -1;
@@ -1056,7 +1052,6 @@ ssize_t hal_comm_read(int sockfd, void *buffer, size_t count)
 	return length;
 }
 
-
 ssize_t hal_comm_write(int sockfd, const void *buffer, size_t count)
 {
 
@@ -1112,7 +1107,6 @@ int hal_comm_accept(int sockfd, void *addr)
 		mgmtev_cn->dst.address.uint64 != mac_local.address.uint64)
 		return -EAGAIN;
 
-
 	pipe = alloc_pipe();
 	/* If not pipe available */
 	if (pipe < 0)
@@ -1143,7 +1137,6 @@ int hal_comm_accept(int sockfd, void *addr)
 	/* Return pipe */
 	return pipe;
 }
-
 
 int hal_comm_connect(int sockfd, uint64_t *addr)
 {
