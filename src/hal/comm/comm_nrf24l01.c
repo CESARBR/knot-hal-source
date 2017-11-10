@@ -49,9 +49,9 @@
 #define MGMT_SIZE 32
 #define MGMT_TIMEOUT 10
 
-#define WINDOW_BCAST		5				/* ms */
-#define INTERVAL_BCAST		6				/* ms */
-#define BURST_BCAST		(WINDOW_BCAST*1000)/10		/* 500 us */
+#define WINDOW_BCAST		5		/* ms */
+#define INTERVAL_BCAST		60		/* ms */
+#define BURST_BCAST		WINDOW_BCAST	/* 1:1 */
 
 static uint8_t raw_timeout = 10;
 
@@ -736,7 +736,7 @@ static void presence_connect(int spi_fd)
 	case BURST_WINDOW:
 		if (hal_timeout(hal_time_ms(), start, WINDOW_BCAST) > 0)
 			presence_connect_state = STANDBY;
-		else if (hal_timeout(hal_time_us(), start*1000, BURST_BCAST) > 0)
+		else if (hal_timeout(hal_time_ms(), start, BURST_BCAST) > 0)
 			presence_connect_state = PRESENCE;
 
 		previous_state = BURST_WINDOW;
