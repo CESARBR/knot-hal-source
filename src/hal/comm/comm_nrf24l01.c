@@ -597,8 +597,10 @@ static int read_raw(int spi_fd, int sockfd)
 					mac_local);
 
 			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
-				/* Initiator: reset the counter */
-				peers[sockfd-1].keepalive = 1;
+				/* Disabled? (Acceptor is always 0) */
+				if (peers[sockfd-1].keepalive != 0)
+					/* Incoming data: reset keepalive counter */
+					peers[sockfd-1].keepalive = 1;
 			}
 
 			/* If packet is disconnect request */
@@ -620,11 +622,13 @@ static int read_raw(int spi_fd, int sockfd)
 		/* If is Data */
 		case NRF24_PDU_LID_DATA_FRAG:
 		case NRF24_PDU_LID_DATA_END:
+			/* Disabled? (Acceptor is always 0) */
+			if (peers[sockfd-1].keepalive != 0)
+				/* Incoming data: reset keepalive counter */
+				peers[sockfd-1].keepalive = 1;
+
 			if (peers[sockfd-1].len_rx != 0)
 				break; /* Discard packet */
-
-			/* Incoming data: reset keepalive counter */
-			peers[sockfd-1].keepalive = 1;
 
 			/* Reset offset if sequence number is zero */
 			if (ipdu->nseq == 0) {
