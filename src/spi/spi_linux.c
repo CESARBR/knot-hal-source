@@ -20,9 +20,8 @@
 
 #include "spi_bus.h"
 
-#define HIGH			1
-
 #define BITS_PER_WORD		8
+#define MSBFIRST		0
 
 static uint8_t *pdummy;
 static int pdummy_len;
@@ -32,7 +31,6 @@ static uint32_t speed = 10000000; /* 10 MHz */
 int8_t spi_bus_init(const char *dev)
 {
 	int spi_fd;
-	uint8_t bits = BITS_PER_WORD;
 
 	spi_fd = open(dev, O_RDWR);
 
@@ -45,11 +43,11 @@ int8_t spi_bus_init(const char *dev)
 		return -errno;
 	}
 
-	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
-
 	pdummy = (uint8_t *) malloc(sizeof(uint8_t));
-	if (pdummy == NULL)
+	if (pdummy == NULL) {
+		close(spi_fd);
 		return -ENOMEM;
+	}
 	pdummy_len = 1;
 
 	return spi_fd;
@@ -59,7 +57,6 @@ void spi_bus_deinit(int8_t spi_fd)
 {
 	if (spi_fd > 0) {
 		close(spi_fd);
-		spi_fd = -1;
 	}
 
 	free(pdummy);
@@ -87,8 +84,11 @@ void spi_bus_deinit(int8_t spi_fd)
 int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		int lrx)
 {
-	struct spi_ioc_transfer data_ioc[2], *pdata_ioc = data_ioc;
-	uint8_t mode = SPI_MODE_0;
+	struct spi_ioc_transfer data_ioc[2],
+				*pdata_ioc = data_ioc;
+	uint8_t mode = SPI_MODE_0,
+		bits = BITS_PER_WORD,
+		lsbfirst = MSBFIRST;
 	int ntransfer = 0;
 	unsigned int ret;
 
@@ -121,8 +121,6 @@ int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->tx_buf = (unsigned long) tx;
 		pdata_ioc->rx_buf = (unsigned long) pdummy;
 		pdata_ioc->len = ltx;
-		pdata_ioc->speed_hz = speed;
-		pdata_ioc->bits_per_word = BITS_PER_WORD;
 		++ntransfer;
 		++pdata_ioc;
 	}
@@ -135,13 +133,13 @@ int spi_bus_transfer(int8_t spi_fd, const uint8_t *tx, int ltx, uint8_t *rx,
 		pdata_ioc->tx_buf = (unsigned long) rx;
 		pdata_ioc->rx_buf = (unsigned long) rx;
 		pdata_ioc->len = lrx;
-		pdata_ioc->cs_change = HIGH;
-		pdata_ioc->speed_hz = speed;
-		pdata_ioc->bits_per_word = BITS_PER_WORD;
 		++ntransfer;
 	}
 
 	ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
+	ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
+	ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
+	ioctl(spi_fd, SPI_IOC_WR_LSB_FIRST, &lsbfirst);
 
 	ret = ioctl(spi_fd, SPI_IOC_MESSAGE(ntransfer), data_ioc);
 
