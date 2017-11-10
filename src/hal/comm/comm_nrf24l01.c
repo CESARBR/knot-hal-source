@@ -451,6 +451,10 @@ static int read_mgmt(int spi_fd)
 		/* Link layer connect structure */
 		llc = (struct nrf24_ll_mgmt_connect *) ipdu->payload;
 
+		/* Do not copy to upper layer if address doesn't match */
+		if (llc->dst_addr.address.uint64 != mac_local.address.uint64)
+			return -EAGAIN;
+
 		/* Header type is a connect request type */
 		mgmtev_hdr->opcode = MGMT_EVT_NRF24_CONNECTED;
 		mgmtev_hdr->index = 0;
