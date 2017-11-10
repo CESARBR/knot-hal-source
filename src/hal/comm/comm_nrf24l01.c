@@ -46,12 +46,13 @@
 #define DATA_SIZE 128
 #define MGMT_SIZE 32
 #define MGMT_TIMEOUT 10
+#define RAW_TIMEOUT_DEFAULT 10
 
 #define WINDOW_BCAST		5		/* ms */
 #define INTERVAL_BCAST		60		/* ms */
 #define BURST_BCAST		WINDOW_BCAST	/* 1:1 */
 
-static uint8_t raw_timeout = 10;
+static uint8_t raw_timeout = RAW_TIMEOUT_DEFAULT;
 
 /* Retransmission start time and channel offset */
 static uint8_t rt_stamp = 0;
@@ -234,6 +235,9 @@ static uint8_t new_raw_time(void)
 	rt_offset = new_time/3;
 	if (rt_offset > 20)
 		rt_offset -= 5;
+
+	if (new_time == 0)
+		new_time = RAW_TIMEOUT_DEFAULT;
 
 	return new_time;
 }
