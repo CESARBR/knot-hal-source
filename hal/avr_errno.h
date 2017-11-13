@@ -22,6 +22,8 @@ extern "C" {
 #define EPERM			01	/* Operation not permitted */
 #define EUSERS			87	/* Too many users */
 #define EBUSY			16	/* Device or resource busy */
+#define EPROTO			71	/* Protocol error */
+#define ENOTCONN		107	/* Transport endpoint is not connected */
 #define ETIMEDOUT		110 /* Connection timed out */
 
 #ifdef __cplusplus
