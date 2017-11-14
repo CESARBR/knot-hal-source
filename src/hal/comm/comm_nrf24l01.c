@@ -572,7 +572,7 @@ static int write_raw(int spi_fd, int sockfd)
 	return err;
 }
 
-static int read_raw(int spi_fd, int sockfd)
+static int read_raw(int spi_fd)
 {
 	struct nrf24_io_pack p;
 	const struct nrf24_ll_data_pdu *ipdu = (void *) p.payload;
@@ -583,19 +583,25 @@ static int read_raw(int spi_fd, int sockfd)
 	struct nrf24_ll_crtl_pdu *llctrl;
 	size_t plen;
 	ssize_t ilen;
+	struct nrf24_data *peer;
 
-	p.pipe = sockfd;
-	p.payload[0] = 0;
+	p.pipe = NRF24_ANY_PIPE;
+
 	/*
 	 * Reads the data while to exist,
 	 * on success, the number of bytes read is returned
 	 */
 	while ((ilen = phy_read(spi_fd, &p, NRF24_MTU)) > 0) {
 
-		/* Initiator/acceptor: reset anchor */
-		DBG_RECV(&mac_local, &peers[sockfd - 1].mac, (const uint8_t *) ipdu, ilen);
+		if (!(pipe_bitmask & (1 << p.pipe)))
+			continue;
 
-		peers[sockfd-1].keepalive_anchor = hal_time_ms();
+		peer = &peers[p.pipe-1];
+
+		/* Initiator/acceptor: reset anchor */
+		DBG_RECV(&mac_local, &peer->mac, (const uint8_t *) ipdu, ilen);
+
+		peer->keepalive_anchor = hal_time_ms();
 
 		/* Check if is data or Control */
 		switch (ipdu->lid) {
@@ -609,18 +615,18 @@ static int read_raw(int spi_fd, int sockfd)
 
 			if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_REQ &&
 				llkeepalive->src_addr.address.uint64 ==
-				peers[sockfd-1].mac.address.uint64 &&
+				peer->mac.address.uint64 &&
 				llkeepalive->dst_addr.address.uint64 ==
 				mac_local.address.uint64) {
-				write_keepalive(spi_fd, sockfd,
+				write_keepalive(spi_fd, p.pipe,
 					NRF24_LL_CRTL_OP_KEEPALIVE_RSP,
-					&peers[sockfd-1].mac, &mac_local);
+					&peer->mac, &mac_local);
 
 			} else if (llctrl->opcode == NRF24_LL_CRTL_OP_KEEPALIVE_RSP) {
 				/* Disabled? (Acceptor is always 0) */
-				if (peers[sockfd-1].keepalive != 0)
+				if (peer->keepalive != 0)
 					/* Incoming data: reset keepalive counter */
-					peers[sockfd-1].keepalive = 1;
+					peer->keepalive = 1;
 			}
 
 			/* If packet is disconnect request */
@@ -643,28 +649,28 @@ static int read_raw(int spi_fd, int sockfd)
 		case NRF24_PDU_LID_DATA_FRAG:
 		case NRF24_PDU_LID_DATA_END:
 			/* Disabled? (Acceptor is always 0) */
-			if (peers[sockfd-1].keepalive != 0)
+			if (peer->keepalive != 0)
 				/* Incoming data: reset keepalive counter */
-				peers[sockfd-1].keepalive = 1;
+				peer->keepalive = 1;
 
-			if (peers[sockfd-1].len_rx != 0)
+			if (peer->len_rx != 0)
 				break; /* Discard packet */
 
 			/* Reset offset if sequence number is zero */
 			if (ipdu->nseq == 0) {
-				peers[sockfd-1].offset_rx = 0;
-				peers[sockfd-1].seqnumber_rx = 0;
+				peer->offset_rx = 0;
+				peer->seqnumber_rx = 0;
 			}
 
 			/* If sequence number error */
-			if (peers[sockfd-1].seqnumber_rx < ipdu->nseq)
+			if (peer->seqnumber_rx < ipdu->nseq)
 				break;
 				/*
 				 * TODO: disconnect, data error!?!?!?
 				 * Illegal byte sequence
 				 */
 
-			if (peers[sockfd-1].seqnumber_rx > ipdu->nseq)
+			if (peer->seqnumber_rx > ipdu->nseq)
 				break; /* Discard packet duplicated */
 
 			/* Payloag length = input length - header size */
@@ -679,26 +685,25 @@ static int read_raw(int spi_fd, int sockfd)
 				 */
 
 			/* Reads no more than DATA_SIZE bytes */
-			if (peers[sockfd-1].offset_rx + plen > DATA_SIZE)
-				plen = DATA_SIZE - peers[sockfd-1].offset_rx;
+			if (peer->offset_rx + plen > DATA_SIZE)
+				plen = DATA_SIZE - peer->offset_rx;
 
-			memcpy(peers[sockfd-1].buffer_rx +
-				peers[sockfd-1].offset_rx, ipdu->payload, plen);
-			peers[sockfd-1].offset_rx += plen;
-			peers[sockfd-1].seqnumber_rx++;
+			memcpy(peer->buffer_rx +
+				peer->offset_rx, ipdu->payload, plen);
+			peer->offset_rx += plen;
+			peer->seqnumber_rx++;
 
 			/* If is DATA_END then put in rx buffer */
 			if (ipdu->lid == NRF24_PDU_LID_DATA_END) {
 				/* Sets packet length read */
-				peers[sockfd-1].len_rx =
-					peers[sockfd-1].offset_rx;
+				peer->len_rx = peer->offset_rx;
 
 				/*
 				 * If the complete msg is received,
 				 * resets the controls
 				 */
-				peers[sockfd-1].seqnumber_rx = 0;
-				peers[sockfd-1].offset_rx = 0;
+				peer->seqnumber_rx = 0;
+				peer->offset_rx = 0;
 			}
 			break;
 		}
@@ -833,9 +838,11 @@ static void running(void)
 			hal_timeout(hal_time_ms(), rt_stamp, (rt_offset)) > 0)
 				running_state = START_MGMT;
 		}
+
+		read_raw(driverIndex);
+
 		/* Check if pipe is allocated */
 		if (peers[sockIndex-1].pipe != -1) {
-			read_raw(driverIndex, sockIndex);
 			write_raw(driverIndex, sockIndex);
 			rt_stamp = hal_time_ms();
 

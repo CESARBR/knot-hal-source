@@ -7,6 +7,9 @@
  *
  */
 
+/* Any pipe */
+#define NRF24_ANY_PIPE	7
+
 /* Used to read/write operations */
 struct nrf24_io_pack {
 	uint8_t pipe;
