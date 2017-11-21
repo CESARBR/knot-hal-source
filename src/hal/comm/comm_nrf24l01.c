@@ -892,7 +892,7 @@ static void running(void)
 /* Global functions */
 int hal_comm_init(const char *pathname, const void *params)
 {
-	const struct nrf24_mac *mac = (const struct nrf24_mac *) params;
+	const struct nrf24_config *config = (const struct nrf24_config *) params;
 
 	/* If driver not opened */
 	if (driverIndex != -1)
@@ -903,7 +903,11 @@ int hal_comm_init(const char *pathname, const void *params)
 	if (driverIndex < 0)
 		return driverIndex;
 
-	mac_local.address.uint64 = mac->address.uint64;
+	mac_local.address.uint64 = config->mac.address.uint64;
+
+	/* Change default broadcasting channel */
+	if (config->channel > 0)
+		channel_mgmt.value = config->channel;
 
 	return 0;
 }

@@ -28,6 +28,11 @@ struct nrf24_mac {
 	} address;
 };
 
+struct nrf24_config {
+	struct nrf24_mac mac;
+	int8_t channel;
+};
+
 /* Converts nrf24_mac address to string */
 int nrf24_mac2str(const struct nrf24_mac *, char *);
 
