@@ -25,7 +25,6 @@
 static int cli_fd;
 static int quit;
 
-static int CHANNEL_MGMT = 76;			/* Beacon/Broadcast channel */
 static struct addr_pipe mgmt_pipe = {
 				.pipe = 0, /* Fixed broadcast channel */
 				.aa = {0x8D, 0xD9, 0xBE, 0x96, 0xDE}
@@ -37,6 +36,7 @@ static struct addr_pipe raw_pipe = {
 				};
 
 static char *option_mac;
+static int option_channel = 76;	/* Beacon/Broadcast channel */
 
 static void sig_term(int sig)
 {
@@ -189,7 +189,7 @@ static int sniffer_start(void)
 	p.pipe = 0;
 
 	/* Sets radio channel */
-	channel.value = CHANNEL_MGMT;
+	channel.value = option_channel;
 	channel.ack = false;
 	phy_ioctl(cli_fd, NRF24_CMD_SET_CHANNEL, &channel);
 
@@ -241,6 +241,8 @@ static void sniffer_stop(void)
 }
 
 static GOptionEntry options[] = {
+	{ "channel", 'c', 0, G_OPTION_ARG_INT, &option_channel,
+				"Broadcasting channel (default 76)", NULL},
 	{ "mac", 'm', 0, G_OPTION_ARG_STRING, &option_mac,
 						"Specify MAC to filter", NULL},
 	{ NULL },
