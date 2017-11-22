@@ -31,6 +31,7 @@ struct nrf24_mac {
 struct nrf24_config {
 	struct nrf24_mac mac;
 	int8_t channel;
+	const char *name;
 };
 
 /* Converts nrf24_mac address to string */

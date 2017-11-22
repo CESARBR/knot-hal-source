@@ -967,7 +967,10 @@ static gboolean read_idle(gpointer user_data)
 static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr,
 						const struct nrf24_mac *mac)
 {
-	const struct nrf24_config config = { .mac = *mac, .channel = channel};
+	const struct nrf24_config config = {
+			.mac = *mac,
+			.channel = channel,
+			.name = "nrf0" };
 	int err;
 
 	err = hal_comm_init("NRF0", &config);
@@ -1253,6 +1256,8 @@ int manager_start(const char *file, const char *host, int port,
 		hal_log_error("load_config()");
 		return err;
 	}
+
+	/* TODO: Add name to config file */
 	err = parse_config(json_str, &cfg_channel, &cfg_dbm, &mac);
 	if (err < 0) {
 		hal_log_error("parse_config(): %d", err);

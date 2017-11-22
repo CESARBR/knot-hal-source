@@ -24,7 +24,6 @@
 #include "hal/nrf24.h"
 #include "hal/comm.h"
 #include "hal/time.h"
-#include "hal/config.h"
 #include "nrf24l01.h"
 #include "nrf24l01_ll.h"
 #include "phy_driver.h"
@@ -148,6 +147,9 @@ static uint8_t aa_pipe0[5] = {0x8D, 0xD9, 0xBE, 0x96, 0xDE};
 
 /* Global to save driver index */
 static int driverIndex = -1;
+
+/* Global to save adapter settings */
+static const struct nrf24_config *config;
 
 /*
  * Channel to management and raw data
@@ -746,10 +748,11 @@ static void presence_connect(int spi_fd)
 		 * greater than MGMT_SIZE, then only sends the remaining.
 		 * If not, sends the total name length.
 		 */
-		nameLen = (len + sizeof(THING_NAME) > MGMT_SIZE ?
-				MGMT_SIZE - len : sizeof(THING_NAME));
+		nameLen = (len + strlen(config->name) > MGMT_SIZE ?
+				MGMT_SIZE - len: strlen(config->name));
 
-		memcpy(llp->name, THING_NAME, nameLen);
+		/* The "thing_name" is copied without the '\0' character */
+		memcpy(llp->name, config->name, nameLen);
 		/* Increments name length */
 		len += nameLen;
 
@@ -892,8 +895,6 @@ static void running(void)
 /* Global functions */
 int hal_comm_init(const char *pathname, const void *params)
 {
-	const struct nrf24_config *config = (const struct nrf24_config *) params;
-
 	/* If driver not opened */
 	if (driverIndex != -1)
 		return -EPERM;
@@ -903,6 +904,7 @@ int hal_comm_init(const char *pathname, const void *params)
 	if (driverIndex < 0)
 		return driverIndex;
 
+	config = (const struct nrf24_config *) params;
 	mac_local.address.uint64 = config->mac.address.uint64;
 
 	/* Change default broadcasting channel */
