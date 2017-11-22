@@ -745,7 +745,7 @@ static gboolean kwatch_io_read(GIOChannel *io, GIOCondition cond,
 	return TRUE;
 }
 
-static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
+static int8_t evt_presence(struct mgmt_nrf24_header *mhdr, ssize_t rbytes)
 {
 	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	GIOChannel *io;
@@ -756,6 +756,7 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	struct beacon *peer;
 	struct mgmt_evt_nrf24_bcast_presence *evt_pre =
 			(struct mgmt_evt_nrf24_bcast_presence *) mhdr->payload;
+	ssize_t name_len;
 
 	nrf24_mac2str(&evt_pre->mac, mac_str);
 	peer = g_hash_table_lookup(peer_bcast_table, mac_str);
@@ -771,10 +772,15 @@ static int8_t evt_presence(struct mgmt_nrf24_header *mhdr)
 	 * things trying to connect to the gw.
 	 */
 	peer->last_beacon = hal_time_ms();
+	/*
+	 * Calculating the size of the name correctly: rbytes contains the
+	 * amount of data received and this contains two structures:
+	 * mgmt_nrf24_header & mgmt_evt_nrf24_bcast_presence.
+	 */
+	name_len = rbytes - sizeof(*mhdr) - sizeof(*evt_pre);
 
 	/* Creating a UTF-8 copy of the name */
-	peer->name = g_utf8_make_valid((const char *) evt_pre->name,
-					strlen((const char *) evt_pre->name));
+	peer->name = g_utf8_make_valid((const char *) evt_pre->name, name_len);
 	if (!peer->name)
 		peer->name = g_strdup("unknown");
 
@@ -939,7 +945,7 @@ static int8_t mgmt_read(void)
 	switch (mhdr->opcode) {
 
 	case MGMT_EVT_NRF24_BCAST_PRESENCE:
-		evt_presence(mhdr);
+		evt_presence(mhdr, rbytes);
 		break;
 
 	case MGMT_EVT_NRF24_BCAST_SETUP:
