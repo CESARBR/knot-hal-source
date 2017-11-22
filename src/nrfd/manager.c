@@ -892,31 +892,30 @@ static int8_t evt_disconnected(struct mgmt_nrf24_header *mhdr)
 }
 
 /* Read RAW from Clients */
-static int8_t clients_read()
+static int8_t clients_read(void)
 {
-	int8_t i;
 	uint8_t buffer[256];
-	int rx, err;
+	int rx, err, i;
+	static struct peer *p = peers;
 
-	/* No client */
 	if (count_clients == 0)
 		return 0;
 
-	for (i = 0; i < MAX_PEERS; i++) {
-		struct peer *p = &peers[i];
-		if (p->socket_fd == -1)
-			continue;
-
-		rx = hal_comm_read(p->socket_fd, &buffer, sizeof(buffer));
-		if (rx < 0)
-			continue;
-
-		if (write(p->ksock, buffer, rx) < 0) {
-			err = errno;
-			hal_log_error("write to knotd: %s(%d)",
-							strerror(err), err);
-			continue;
+	/* Handles clients found at a time */
+	for (i = MAX_PEERS; i != 0; --i) {
+		if (p->socket_fd != -1) {
+			rx = hal_comm_read(p->socket_fd, &buffer, sizeof(buffer));
+			if (rx > 0) {
+				if (write(p->ksock, buffer, rx) < 0) {
+					err = errno;
+					hal_log_error("write to knotd: %s(%d)",
+						      strerror(err), err);
+				}
+			}
+			i = 1; /* LOOP breaking */
 		}
+		if (++p == (peers + MAX_PEERS))
+			p = peers;
 	}
 
 	return 0;
