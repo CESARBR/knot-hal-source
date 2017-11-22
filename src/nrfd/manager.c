@@ -1242,7 +1242,7 @@ int manager_start(const char *file, const char *host, int port,
 					const char *spi, int channel, int dbm,
 					const char *nodes_file)
 {
-	int cfg_channel = NRF24_CH_MIN, cfg_dbm = 0;
+	int cfg_channel = 76, cfg_dbm = 0;
 	char *json_str;
 	struct nrf24_mac mac = {.address.uint64 = 0};
 	int err = -1;
@@ -1281,7 +1281,12 @@ int manager_start(const char *file, const char *host, int port,
 		hal_log_error("Invalid configuration file(%d): %s", err, file);
 		return err;
 	}
-	 /* Validate and set the channel */
+	/*
+	 * Priority order: 1) command line 2) config file.
+	 * If the user does not provide channel at command line (or channel is
+	 * invalid), switch to channel informed at config file. 76 is the
+	 * default vale if channel in not informed in the config file.
+	 */
 	if (channel < 0 || channel > 125)
 		channel = cfg_channel;
 
