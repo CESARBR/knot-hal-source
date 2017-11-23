@@ -116,9 +116,10 @@ static inline uint8_t decode_mgmt(unsigned long sec, unsigned long usec,
 		if (option_mac && strcmp(option_mac, src) != 0)
 			break;
 
+		i = plen - sizeof(*ipdu) - sizeof(*ll);
 		printf("%05ld.%06ld nRF24: Beacon(0x%02x|P) plen:%zd\n",
 		       sec, usec, ipdu->type, plen);
-		printf("  %s %s\n", src, ll->name);
+		printf("  %s %.*s\n", src, i, ll->name);
 		break;
 		/* If is a connect request type */
 	case NRF24_PDU_TYPE_CONNECT_REQ:
