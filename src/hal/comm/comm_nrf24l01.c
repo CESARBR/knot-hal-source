@@ -276,16 +276,20 @@ static int write_disconnect(int spi_fd, int sockfd, struct nrf24_mac *dst,
 							struct nrf24_mac *src)
 {
 	struct nrf24_io_pack p;
-	struct nrf24_ll_data_pdu *opdu =
-		(struct nrf24_ll_data_pdu *) p.payload;
-	struct nrf24_ll_crtl_pdu *llctrl =
-		(struct nrf24_ll_crtl_pdu *) opdu->payload;
-	struct nrf24_ll_disconnect *lldc =
-		(struct nrf24_ll_disconnect *) llctrl->payload;
+	struct nrf24_ll_data_pdu *opdu;
+	struct nrf24_ll_crtl_pdu *llctrl;
+	struct nrf24_ll_disconnect *lldc;
 	int err, len;
 
-	opdu->lid = NRF24_PDU_LID_CONTROL;
+	memset(&p, 0, sizeof(p));
+
 	p.pipe = sockfd;
+
+	opdu = (struct nrf24_ll_data_pdu *) p.payload;
+	llctrl = (struct nrf24_ll_crtl_pdu *) opdu->payload;
+	lldc = (struct nrf24_ll_disconnect *) llctrl->payload;
+
+	opdu->lid = NRF24_PDU_LID_CONTROL;
 	llctrl->opcode = NRF24_LL_CRTL_OP_DISCONNECT;
 	lldc->dst_addr.address.uint64 = dst->address.uint64;
 	lldc->src_addr.address.uint64 = src->address.uint64;
@@ -309,15 +313,19 @@ static int write_keepalive(int spi_fd, int sockfd, int keepalive_op,
 	int err, len;
 	/* Assemble keep alive packet */
 	struct nrf24_io_pack p;
-	struct nrf24_ll_data_pdu *opdu =
-		(struct nrf24_ll_data_pdu *) p.payload;
-	struct nrf24_ll_crtl_pdu *llctrl =
-		(struct nrf24_ll_crtl_pdu *) opdu->payload;
-	struct nrf24_ll_keepalive *llkeepalive =
-		(struct nrf24_ll_keepalive *) llctrl->payload;
+	struct nrf24_ll_data_pdu *opdu;
+	struct nrf24_ll_crtl_pdu *llctrl;
+	struct nrf24_ll_keepalive *llkeepalive;
+
+	memset(&p, 0, sizeof(p));
+
+	p.pipe = sockfd;
+
+	opdu = (struct nrf24_ll_data_pdu *) p.payload;
+	llctrl = (struct nrf24_ll_crtl_pdu *) opdu->payload;
+	llkeepalive = (struct nrf24_ll_keepalive *) llctrl->payload;
 
 	opdu->lid = NRF24_PDU_LID_CONTROL;
-	p.pipe = sockfd;
 	/* Keep alive opcode - Request or Response */
 	llctrl->opcode = keepalive_op;
 	/* src and dst address to keepalive */
@@ -388,7 +396,7 @@ static int write_mgmt(int spi_fd)
 static int read_mgmt(int spi_fd)
 {
 	struct nrf24_io_pack p;
-	struct nrf24_ll_mgmt_pdu *ipdu = (struct nrf24_ll_mgmt_pdu *)p.payload;
+	struct nrf24_ll_mgmt_pdu *ipdu;
 	struct mgmt_evt_nrf24_bcast_presence *mgmtev_bcast;
 	struct mgmt_evt_nrf24_connected *mgmtev_cn;
 	struct mgmt_nrf24_header *mgmtev_hdr;
@@ -397,8 +405,9 @@ static int read_mgmt(int spi_fd)
 	ssize_t ilen;
 
 	/* Read from management pipe */
-	p.pipe = 0;
-	p.payload[0] = 0;
+	memset(&p, 0, sizeof(p));
+
+	ipdu = (struct nrf24_ll_mgmt_pdu *)p.payload;
 	/* Read data */
 	ilen = phy_read(spi_fd, &p, NRF24_MTU);
 	if (ilen <= 0)
@@ -498,7 +507,7 @@ static int write_raw(int spi_fd, int sockfd)
 {
 	int err;
 	struct nrf24_io_pack p;
-	struct nrf24_ll_data_pdu *opdu = (void *)p.payload;
+	struct nrf24_ll_data_pdu *opdu;
 	size_t plen;
 
 	/* If has nothing to send, returns EBUSY */
@@ -509,8 +518,12 @@ static int write_raw(int spi_fd, int sockfd)
 	if (peers[sockfd-1].len_tx > DATA_SIZE)
 		return -EINVAL;
 
+	memset(&p, 0, sizeof(p));
+
 	/* Set pipe to be sent */
 	p.pipe = sockfd;
+
+	opdu = (void *)p.payload;
 
 	/*
 	 * If left is larger than the NRF24_PW_MSG_SIZE,
@@ -577,7 +590,7 @@ static int write_raw(int spi_fd, int sockfd)
 static int read_raw(int spi_fd)
 {
 	struct nrf24_io_pack p;
-	const struct nrf24_ll_data_pdu *ipdu = (void *) p.payload;
+	const struct nrf24_ll_data_pdu *ipdu;
 	struct mgmt_nrf24_header *mgmtev_hdr;
 	struct mgmt_evt_nrf24_disconnected *mgmtev_dc;
 	struct nrf24_ll_disconnect *lldc;
@@ -587,7 +600,12 @@ static int read_raw(int spi_fd)
 	ssize_t ilen;
 	struct nrf24_data *peer;
 
+
+	memset(&p, 0, sizeof(p));
+
 	p.pipe = NRF24_ANY_PIPE;
+
+	ipdu = (void *) p.payload;
 
 	/*
 	 * Reads the data while to exist,
