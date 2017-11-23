@@ -250,9 +250,7 @@ int8_t nrf24l01_deinit(int8_t spi_fd)
  */
 int8_t nrf24l01_set_channel(int8_t spi_fd, uint8_t ch, bool ack)
 {
-	uint8_t max;
-
-	max = NRF24_RF_DR(nrf24reg_read(spi_fd, NRF24_RF_SETUP)) ==
+	uint8_t max  = NRF24_RF_DR(nrf24reg_read(spi_fd, NRF24_RF_SETUP)) ==
 			NRF24_DR_2MBPS?NRF24_CH_MAX_2MBPS:NRF24_CH_MAX_1MBPS;
 
 	if (ch != _CONSTRAIN(ch, NRF24_CH_MIN, max))
@@ -402,6 +400,7 @@ int8_t nrf24l01_set_ptx(int8_t spi_fd, uint8_t pipe)
 	}
 
 	/* Set pipe address from pipe register */
+	memset(pipe_addr, 0, sizeof(pipe_addr));
 	get_address_pipe(spi_fd, pipe, pipe_addr);
 	if (nrf24reg_read(spi_fd, NRF24_SETUP_RETR) & NRF24_RETR_ARC_MASK) {
 		nrf24reg_write(spi_fd, NRF24_EN_RXADDR,
@@ -524,7 +523,7 @@ int8_t nrf24l01_prx_pipe_available(int8_t spi_fd)
  */
 int8_t nrf24l01_prx_data(int8_t spi_fd, void *pdata, uint16_t len)
 {
-	uint8_t rxlen;
+	uint8_t rxlen = 0;
 
 	command_data(spi_fd, NRF24_R_RX_PL_WID, &rxlen, DATA_SIZE);
 
