@@ -928,6 +928,7 @@ static int8_t mgmt_read(void)
 	struct mgmt_nrf24_header *mhdr = (struct mgmt_nrf24_header *) buffer;
 	ssize_t rbytes;
 
+	memset(buffer, 0x00, sizeof(buffer));
 	rbytes = hal_comm_read(mgmtfd, buffer, sizeof(buffer));
 
 	/* mgmt on bad state? */
