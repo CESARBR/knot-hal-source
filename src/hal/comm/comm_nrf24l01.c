@@ -1196,6 +1196,9 @@ int hal_comm_accept(int sockfd, void *addr)
 	/* Copy peer address */
 	mac->address.uint64 = mgmtev_cn->src.address.uint64;
 
+	/* Store channel informed by the peer */
+	channel_raw.value = mgmtev_cn->channel;
+
 	/* Return pipe */
 	return pipe;
 }
