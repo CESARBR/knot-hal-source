@@ -913,6 +913,8 @@ static void running(void)
 /* Global functions */
 int hal_comm_init(const char *pathname, const void *params)
 {
+	uint16_t ch;
+
 	/* If driver not opened */
 	if (driverIndex != -1)
 		return -EPERM;
@@ -928,6 +930,12 @@ int hal_comm_init(const char *pathname, const void *params)
 	/* Change default broadcasting channel */
 	if (config->channel > 0)
 		channel_mgmt.value = config->channel;
+
+	/* Choose pseudo aleatory data channel */
+	do {
+		hal_getrandom(&ch, sizeof(ch));
+		channel_raw.value = ch % 125;
+	} while (channel_mgmt.value == channel_raw.value);
 
 	return 0;
 }
