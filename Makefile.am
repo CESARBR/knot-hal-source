@@ -26,6 +26,7 @@ src_nrfd_nrfd_LDADD = libs/libhallog.a libs/libhalcommnrf24.a \
 				libs/libhalstorage.a \
 				libs/libnrf24l01.a \
 				libs/libspi.a \
+				libs/libhalgpio.a \
 				@GLIB_LIBS@ @JSON_LIBS@ \
 				@GIO_UNIX_LIBS@
 src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
@@ -35,6 +36,7 @@ src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/nrf24l01 \
 				-I$(top_srcdir)/src/drivers \
 				-I$(top_srcdir)/src/hal/comm \
+				-I$(top_srcdir)/src/hal/gpio_sysfs \
 				-I$(top_srcdir)/src/nrf24l01 @JSON_CFLAGS@
 
 src_lorad_lorad_SOURCES = src/lorad/main.c
@@ -49,22 +51,26 @@ tools_sniffer_LDADD = libs/libphy_driver.a \
 				libs/libnrf24l01.a \
 				libs/libspi.a \
 				libs/libhallog.a \
+				libs/libhalgpio.a \
 				@GLIB_LIBS@
 tools_sniffer_LDFLAGS = $(AM_LDFLAGS)
 tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 		-I$(top_srcdir)/src/drivers -I$(top_srcdir)/src/hal/comm \
 		-I$(top_srcdir)/src/spi \
+		-I$(top_srcdir)/src/hal/gpio_sysfs \
 		-I$(top_srcdir)/src/nrf24l01
 
 tools_rpiecho_SOURCES = tools/rpiecho.c
 tools_rpiecho_LDADD = libs/libphy_driver.a \
 				 libs/libnrf24l01.a libs/libspi.a \
+				 libs/libhalgpio.a \
 				 libs/libhaltime.a \
 				 @GLIB_LIBS@
 tools_rpiecho_LDFLAGS = $(AM_LDFLAGS)
 tools_rpiecho_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
 				-I$(top_srcdir)/src/spi \
+				-I$(top_srcdir)/src/hal/gpio_sysfs \
 				-I$(top_srcdir)/src/nrf24l01 \
 				-I$(top_srcdir)/nrf
 
