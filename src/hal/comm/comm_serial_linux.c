@@ -20,9 +20,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-/* FIXME: Remove this header */
-#include "hal/nrf24.h"
-
 #include "hal/comm.h"
 
 int hal_comm_init(const char *pathname, const void *params)
