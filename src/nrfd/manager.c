@@ -329,9 +329,9 @@ static gboolean remove_known_device(GDBusConnection *connection,
 	for (i = 0; i < MAX_PEERS; i++) {
 		if (adapter.known_peers[i].addr.address.uint64 ==
 							dev.address.uint64) {
-			if (!g_dbus_connection_unregister_object(connection,
-				adapter.known_peers[i].registration_id))
-				break;
+			g_dbus_connection_unregister_object(connection,
+				adapter.known_peers[i].registration_id);
+
 			/* Remove mac from struct */
 			adapter.known_peers[i].addr.address.uint64 = 0;
 			g_free(adapter.known_peers[i].alias);
@@ -341,6 +341,30 @@ static gboolean remove_known_device(GDBusConnection *connection,
 			response = TRUE;
 			break;
 		}
+	}
+
+	/* TODO: merge peers and adapter list */
+	for (i = 0; i < MAX_PEERS; i++) {
+		if (dev.address.uint64 != peers[i].mac)
+			continue;
+
+		if (peers[i].socket_fd >= 0) {
+			hal_comm_close(peers[i].socket_fd);
+			peers[i].socket_fd = -1;
+		}
+
+		peers[i].mac = 0;
+
+		if (peers[i].kwatch) {
+			g_source_remove(peers[i].kwatch);
+			peers[i].kwatch = 0;
+		}
+
+		if (peers->ksock >= 0) {
+			close(peers->ksock);
+			peers->ksock = 0;
+		}
+		break;
 	}
 
 	return response;
