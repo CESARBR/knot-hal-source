@@ -32,13 +32,13 @@
 #define BIT_DIRECTION	1
 
 
-static uint8_t gpio_map[HIGHEST_GPIO];
+static struct gpio_map gpio_pin[HIGHEST_GPIO];
 
 static int gpio_export(int pin)
 {
 	char buffer[3], path[35];
 	ssize_t bytes_written;
-	int fd, err = 0;
+	int fd, fd_un, err = 0;
 
 	/* GPIO already exported */
 	snprintf(path, 35, "/sys/class/gpio/gpio%2d", pin);
@@ -49,6 +49,14 @@ static int gpio_export(int pin)
 	if (fd == -1)
 		/* Failed to open export for writing! */
 		return -errno;
+
+	fd_un = open("/sys/class/gpio/unexport", O_WRONLY);
+	if (fd_un == -1) {
+		/* Failed to open unexport for writing! */
+		close(fd);
+		return -errno;
+	}
+	gpio_pin[pin-1].fd_unexport = fd_un;
 
 	bytes_written = snprintf(buffer, 3, "%2d", pin);
 
@@ -64,19 +72,18 @@ static int gpio_unexport(int pin)
 {
 	char buffer[3];
 	ssize_t bytes_written;
-	int fd, err = 0;
-
-	fd = open("/sys/class/gpio/unexport", O_WRONLY);
-	if (fd == -1)
-		/* Failed to open unexport for writing! */
-		return -errno;
+	int err = 0;
 
 	bytes_written = snprintf(buffer, 3, "%2d", pin);
 
-	if (write(fd, buffer, bytes_written) == -1)
+	if (write(gpio_pin[pin-1].fd_unexport, buffer, bytes_written) == -1)
 		err = errno;
 
-	close(fd);
+	close(gpio_pin[pin-1].fd_unexport);
+	close(gpio_pin[pin-1].fd_value);
+
+	gpio_pin[pin-1].fd_unexport = -1;
+	gpio_pin[pin-1].fd_value = -1;
 
 	return -err;
 }
@@ -85,7 +92,6 @@ static int gpio_direction(int pin, int dir)
 {
 	char path[35];
 	int fd, err = 0, delay_ms;
-
 	/*
 	 * Rigth after the GPIO is exported the system have a small
 	 * latency before it grants permission to write.
@@ -98,6 +104,7 @@ static int gpio_direction(int pin, int dir)
 	}
 
 	snprintf(path, 35, "/sys/class/gpio/gpio%2d/direction", pin);
+
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		/* Failed to open gpio direction for writing! */
@@ -107,8 +114,6 @@ static int gpio_direction(int pin, int dir)
 		dir == HAL_GPIO_INPUT ? 2 : 3) == -1)
 		/* Failed to set direction! */
 		err = errno;
-
-	close(fd);
 
 	return -err;
 }
@@ -120,24 +125,26 @@ static int gpio_read(int pin)
 	int fd;
 
 	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
-	fd = open(path, O_RDONLY);
-	if (fd == -1)
-		/* Failed to open gpio value for reading! */
-		return -errno;
 
+	if (gpio_pin[pin-1].fd_value < 0){
+		fd = open(path, O_RDWR);
+		if (fd == -1)
+			/* Failed to open gpio value for reading! */
+			return -errno;
+		gpio_pin[pin-1].fd_value = fd;
+	}
 	/*
 	 * This reading operation returns
 	 * 3 characters wich can be:
 	 * '0', '\n' and '\0' or
 	 * '1', '\n' and '\0'
 	 */
-	if (read(fd, value_str, 3) == -1) {
+	if (read(gpio_pin[pin-1].fd_value, value_str, 3) == -1) {
 		/* Failed to read value! */
-		close(fd);
+		close(gpio_pin[pin-1].fd_value);
+		gpio_pin[pin-1].fd_value = -1;
 		return -errno;
 	}
-
-	close(fd);
 
 	if (value_str[0] == '0' || value_str[0] == '1')
 		return value_str[0] - '0';
@@ -149,17 +156,18 @@ static int gpio_write(int pin, int value)
 	char path[30];
 	int fd, err = 0;
 
-	snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
-	fd = open(path, O_WRONLY);
-	if (fd == -1)
-		/* Failed to open gpio value for writing! */
-		return -errno;
+	if (gpio_pin[pin-1].fd_value < 0){
+		snprintf(path, 30, "/sys/class/gpio/gpio%2d/value", pin);
+		fd = open(path, O_RDWR);
+		if (fd == -1)
+			/* Failed to open gpio value for writing! */
+			return -errno;
+		gpio_pin[pin-1].fd_value = fd;
+	}
 
-	if (write(fd, value == HAL_GPIO_LOW ? "0" : "1", 1) != 1)
+	if (write(gpio_pin[pin-1].fd_value, value == HAL_GPIO_LOW ? "0" : "1", 1) != 1)
 		/* Failed to write value! */
 		err = errno;
-
-	close(fd);
 
 	return -err;
 }
@@ -231,10 +239,15 @@ static int get_gpio_fd(int gpio)
 
 int hal_gpio_setup(void)
 {
-	char *ret;
+	int i;
 
-	ret = memset(gpio_map, 0, sizeof(gpio_map));
-	return (ret == NULL) ? -EAGAIN : 0;
+	for (i = 0; i < HIGHEST_GPIO; i++){
+		gpio_pin[i].status = 0;
+		gpio_pin[i].fd_value = -1;
+		gpio_pin[i].fd_unexport = -1;
+	}
+
+	return 0;
 }
 
 void hal_gpio_unmap(void)
@@ -242,10 +255,10 @@ void hal_gpio_unmap(void)
 	int i;
 
 	for (i = 0; i < HIGHEST_GPIO; ++i)
-		if (CHK_BIT(gpio_map[i], BIT_INITIALIZED))
-			gpio_unexport(i);
+		if (CHK_BIT(gpio_pin[i].status, BIT_INITIALIZED))
+			gpio_unexport(i+1);
 
-	memset(gpio_map, 0, sizeof(gpio_map));
+	memset(gpio_pin, 0, sizeof(gpio_pin));
 }
 
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
@@ -256,13 +269,13 @@ int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 		/* Cannot initialize gpio: maximum gpio exceeded */
 		return -EINVAL;
 
-	if (!CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED)) {
+	if (!CHK_BIT(gpio_pin[gpio-1].status, BIT_INITIALIZED)) {
 
 		err = gpio_export(gpio);
 		if (err < 0)
 			return err;
 
-		SET_BIT(gpio_map[gpio-1], BIT_INITIALIZED);
+		SET_BIT(gpio_pin[gpio-1].status, BIT_INITIALIZED);
 	}
 
 	err = gpio_direction(gpio, mode);
@@ -270,17 +283,17 @@ int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode)
 		return err;
 
 	if (mode == HAL_GPIO_INPUT)
-		CLR_BIT(gpio_map[gpio-1], BIT_DIRECTION);
+		CLR_BIT(gpio_pin[gpio-1].status, BIT_DIRECTION);
 	else
-		SET_BIT(gpio_map[gpio-1], BIT_DIRECTION);
+		SET_BIT(gpio_pin[gpio-1].status, BIT_DIRECTION);
 
 	return 0;
 }
 
 void hal_gpio_digital_write(uint8_t gpio, uint8_t value)
 {
-	if (CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION)
-		&& CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED))
+	if (CHK_BIT(gpio_pin[gpio-1].status, BIT_DIRECTION)
+		&& CHK_BIT(gpio_pin[gpio-1].status, BIT_INITIALIZED))
 		gpio_write(gpio, value);
 	else{
 		/* Changing mode and writing */
@@ -293,8 +306,8 @@ int hal_gpio_digital_read(uint8_t gpio)
 {
 	int ret = 0;
 
-	if (!CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION)
-		&& CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED)) {
+	if (!CHK_BIT(gpio_pin[gpio-1].status, BIT_DIRECTION)
+		&& CHK_BIT(gpio_pin[gpio-1].status, BIT_INITIALIZED)) {
 		ret = gpio_read(gpio);
 		if (ret < 0)
 			return ret;
@@ -339,8 +352,8 @@ int hal_gpio_get_fd(uint8_t gpio, int edge)
 {
 	int err;
 
-	if (!CHK_BIT(gpio_map[gpio-1], BIT_INITIALIZED) ||
-		CHK_BIT(gpio_map[gpio-1], BIT_DIRECTION))
+	if (!CHK_BIT(gpio_pin[gpio-1].status, BIT_INITIALIZED) ||
+		CHK_BIT(gpio_pin[gpio-1].status, BIT_DIRECTION))
 		return -EIO;
 
 	err = gpio_edge(gpio, edge);

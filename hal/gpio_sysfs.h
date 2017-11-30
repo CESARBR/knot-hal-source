@@ -28,6 +28,12 @@ extern "C" {
 #define HAL_GPIO_FALLING 2
 #define HAL_GPIO_BOTH 3
 
+struct gpio_map {
+	uint8_t status:2;
+	int8_t fd_value;
+	int8_t fd_unexport;
+};
+
 int hal_gpio_setup(void);
 void hal_gpio_unmap(void);
 int hal_gpio_pin_mode(uint8_t gpio, uint8_t mode);
