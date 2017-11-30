@@ -14,6 +14,7 @@
 #include "spi_bus.h"
 
 #define CE	25
+#define IRQ	24
 
 /* Time delay in microseconds (us) */
 #define	TPECE2CSN		4
@@ -39,6 +40,7 @@ int io_setup(const char *dev)
 
 	hal_gpio_setup();
 	hal_gpio_pin_mode(CE, HAL_GPIO_OUTPUT);
+	hal_gpio_pin_mode(IRQ, HAL_GPIO_INPUT);
 
 	disable();
 	return spi_bus_init(dev);
