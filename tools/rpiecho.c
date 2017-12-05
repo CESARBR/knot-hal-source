@@ -39,12 +39,12 @@ static int8_t pipe, rx_len, tx_len, tx_status, tx_pipe, err;
 static int32_t tx_stamp, attempt;
 static uint8_t count, spi_fd;
 static uint8_t pipe_addr[PIPE_MAX][NRF24_ADDR_WIDTHS] = {
-	{0x8D, 0xD9, 0xBE, 0x96, 0xDE},
-	{ 1, 0xBE, 0xEF, 0xDE, 0x96 },
-	{ 2, 0xBE, 0xEF, 0xDE, 0x96 },
-	{ 3, 0xBE, 0xEF, 0xDE, 0x96 },
-	{ 4, 0xBE, 0xEF, 0xDE, 0x96 },
-	{ 5, 0xBE, 0xEF, 0xDE, 0x96 }
+	{ 0x8D, 0xD9, 0xBE, 0x96, 0xDE },
+	{ 0x01, 0xBE, 0xEF, 0xDE, 0x96 },
+	{ 0x02, 0xBE, 0xEF, 0xDE, 0x96 },
+	{ 0x03, 0xBE, 0xEF, 0xDE, 0x96 },
+	{ 0x04, 0xBE, 0xEF, 0xDE, 0x96 },
+	{ 0x05, 0xBE, 0xEF, 0xDE, 0x96 }
 };
 
 struct s_msg {
@@ -64,12 +64,11 @@ union {
 	struct s_msg data;
 } tx;
 
-
 static GOptionEntry options[] = {
 	{ "mode", 'm', 0, G_OPTION_ARG_STRING, &opt_mode,
-	"mode", "Operation mode: server or client"},
+		"mode", "Operation mode: server or client" },
 	{ "ack", 'a', 0, G_OPTION_ARG_INT, &aack,
-	"ack", "Connection channel: broadcast or data(auto-ack)"},
+		"ack", "Connection channel: broadcast or data(auto-ack)" },
 	{ NULL },
 };
 
@@ -78,10 +77,9 @@ static GOptionEntry options[] = {
  * enter in server mode and then, in another rpi,
  * run "./rpiecho -m client" to enter in client mode.
  */
-
-static void setup_radio(uint8_t spi_fd, bool server, int8_t aack)
+static void setup_radio(uint8_t spi_fd)
 {
-	/*Raw Setup*/
+	/* Raw Setup */
 	if (aack) {
 		nrf24l01_open_pipe(spi_fd, PIPE, pipe_addr[0]);
 		nrf24l01_set_channel(spi_fd, CH_RAW, aack);
@@ -94,7 +92,7 @@ static void setup_radio(uint8_t spi_fd, bool server, int8_t aack)
 		} else {
 			printf("Data Client Transmitting\n");
 		}
-	/*Broadcast Setup*/
+	/* Broadcast Setup */
 	} else {
 		nrf24l01_open_pipe(spi_fd, 0, pipe_addr[0]);
 		nrf24l01_set_channel(spi_fd, CH_BROADCAST, 0);
@@ -106,7 +104,7 @@ static void setup_radio(uint8_t spi_fd, bool server, int8_t aack)
 			printf("Broadcast Client Transmitting\n");
 		}
 	}
-};
+}
 
 static void print_buffer(bool tx, uint8_t pipe, uint8_t len,
 					uint8_t count, char *msg)
@@ -120,7 +118,7 @@ static void print_buffer(bool tx, uint8_t pipe, uint8_t len,
 	printf("%s\n", msg);
 }
 
-static uint8_t timeout_stamp(bool aack, bool server)
+static uint8_t timeout_stamp(void)
 {
 	uint8_t timeout;
 
@@ -138,10 +136,10 @@ static uint8_t timeout_stamp(bool aack, bool server)
 	return timeout;
 }
 
-static int running(bool server, bool ack)
+static int running(void)
 {
-	/*Timeout treshold for listening/echoing state*/
-	uint8_t timeout = timeout_stamp(aack, server);
+	/* Timeout threshold for listening/echoing state */
+	uint8_t timeout = timeout_stamp();
 
 	if (aack)
 		tx_pipe = PIPE;
@@ -149,9 +147,9 @@ static int running(bool server, bool ack)
 		tx_pipe = 0;
 
 	while (1) {
-		/*Server-side Code*/
+		/* Server-side Code */
 		if (server) {
-			/*Echoing*/
+			/* Echoing */
 			if (tx_len != 0 && (hal_time_ms() - tx_stamp) >
 								 timeout) {
 				memcpy(rx.buffer, tx.buffer, tx_len);
@@ -173,7 +171,7 @@ static int running(bool server, bool ack)
 				nrf24l01_set_prx(spi_fd);
 				tx_stamp = hal_time_ms();
 			}
-			/*Listening*/
+			/* Listening */
 			pipe = nrf24l01_prx_pipe_available(spi_fd);
 			if (pipe != NRF24_NO_PIPE || (pipe == 0 &&
 							 !aack)) {
@@ -190,9 +188,9 @@ static int running(bool server, bool ack)
 
 				}
 			}
-		/*Client-side Code*/
+		/* Client-side Code */
 		} else {
-			/*Broadcasting*/
+			/* Broadcasting */
 			if ((hal_time_ms() - tx_stamp) > timeout) {
 				memcpy(tx.data.msg, MESSAGE, MESSAGE_SIZE);
 				tx.data.count = count;
@@ -215,7 +213,7 @@ static int running(bool server, bool ack)
 				nrf24l01_set_prx(spi_fd);
 				tx_stamp = hal_time_ms();
 			}
-			/*Listening*/
+			/* Listening */
 			pipe = nrf24l01_prx_pipe_available(spi_fd);
 			if (pipe != NRF24_NO_PIPE) {
 				rx_len = nrf24l01_prx_data(spi_fd, rx.buffer,
@@ -227,16 +225,16 @@ static int running(bool server, bool ack)
 			}
 		}
 	}
-	/*To-Do: Return possible errors*/
+
+	/* To-Do: Return possible errors */
 	return 0;
 
-};
-
+}
 
 int main(int argc, char *argv[])
 {
 
-	/*Options parsing*/
+	/* Options parsing */
 	GOptionContext *context;
 	GError *gerr = NULL;
 
@@ -250,25 +248,27 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	/*Reset config*/
+	/* Reset config */
 	tx_stamp = 0;
 	attempt = 0;
 	rx_len = 0;
 	tx_len = 0;
 	count = 0;
 
-	/*Initialize Radio*/
+	/* Initialize Radio */
 	spi_fd = io_setup(DEV);
 	nrf24l01_init(DEV, NRF24_PWR_0DBM);
 	nrf24l01_set_standby(spi_fd);
 
 	if (strcmp(opt_mode, "server") == 0)
-		server = true; /*Server Mode*/
+		server = true; /* Server Mode */
 	else
-		server = false; /*Client Mode*/
+		server = false; /* Client Mode */
 
-	setup_radio(spi_fd, server, aack);
-	err = running(server, aack);
-	/*To-Do: Check for possible errors*/
+	setup_radio(spi_fd);
+	err = running();
+
+	/* To-Do: Check for possible errors */
+
 	return err;
 }
