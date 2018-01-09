@@ -7,8 +7,6 @@
  *
  */
 
-#define NRF24_MTU					32
-
 /* Common to all devices */
 #define NRF24_AA_MGMT_CHANNEL		0xDE96BED98D /* Access Address used for management */
 

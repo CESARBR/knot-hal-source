@@ -14,6 +14,8 @@
 extern "C" {
 #endif
 
+#define NRF24_MTU					32
+
 /*
  * nRF24 64-bits address example (string)
  * 88:77:66:55:44:33:22:11 (On left MSB of the address)
