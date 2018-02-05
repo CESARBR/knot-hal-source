@@ -52,34 +52,33 @@ int main(int argc, char *argv[])
 							settings.spi, settings.channel, settings.dbm, settings.nodes_path);
 	if (err < 0) {
 		hal_log_error("manager_start(): %s(%d)", strerror(-err), -err);
-		g_main_loop_unref(main_loop);
-		hal_log_close();
-		return EXIT_FAILURE;
+		retval = EXIT_FAILURE;
+		goto fail_manager_start;
 	}
 
 	/* Set user id to nobody */
 	if (setuid(65534) != 0) {
 		err = errno;
-		hal_log_error("Set uid to nobody failed. %s(%d). Exiting...",
-							strerror(err), err);
-		manager_stop();
-		hal_log_close();
-		return EXIT_FAILURE;
+		hal_log_error("Set uid to nobody failed. %s(%d).", strerror(err), err);
+		retval = EXIT_FAILURE;
+		goto fail_setuid;
 	}
 
 	if (settings.detach) {
 		if (daemon(0, 0)) {
 			hal_log_error("Can't start daemon!");
 			retval = EXIT_FAILURE;
-			goto done;
+			goto fail_detach;
 		}
 	}
 
 	g_main_loop_run(main_loop);
 
-done:
+fail_detach:
+fail_setuid:
 	manager_stop();
 
+fail_manager_start:
 	hal_log_error("exiting ...");
 	hal_log_close();
 
