@@ -43,7 +43,8 @@ struct nrf24_ll_mgmt_pdu {
  */
 struct nrf24_ll_presence {
 	struct nrf24_mac mac;	/* Source address */
-	uint8_t name[0];		/* Slave name */
+	uint64_t id;		/* Slave ID */
+	uint8_t name[0];	/* Slave name */
 } __attribute__ ((packed));
 
 

@@ -999,6 +999,7 @@ static int radio_init(const char *spi, uint8_t channel, uint8_t rfpwr,
 {
 	const struct nrf24_config config = {
 			.mac = *mac,
+			.id = mac->address.uint64,
 			.channel = channel,
 			.name = "nrf0" };
 	int err;

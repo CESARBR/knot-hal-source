@@ -445,6 +445,7 @@ static int read_mgmt(int spi_fd)
 		mgmtev_hdr->index = 0;
 		/* Copy source address */
 		mgmtev_bcast->mac.address.uint64 = llp->mac.address.uint64;
+		mgmtev_bcast->id = llp->id;
 		/*
 		 * The packet structure contains the
 		 * mgmt_pdu header, the MAC address
@@ -757,6 +758,7 @@ static void presence_connect(int spi_fd)
 		opdu->type = NRF24_PDU_TYPE_PRESENCE;
 		/* Send the mac address and thing name */
 		llp->mac.address.uint64 = mac_local.address.uint64;
+		llp->id = config->id;
 
 		len = sizeof(*opdu) + sizeof(*llp);
 
