@@ -16,6 +16,11 @@ extern "C" {
 
 #define NRF24_MTU					32
 
+#define NRF24_PWR_18DBM		0b00
+#define NRF24_PWR_12DBM		0b01
+#define NRF24_PWR_6DBM		0b10
+#define NRF24_PWR_0DBM		0b11
+
 /*
  * nRF24 64-bits address example (string)
  * 88:77:66:55:44:33:22:11 (On left MSB of the address)

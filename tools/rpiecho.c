@@ -18,6 +18,7 @@
 #include "spi_bus.h"
 #include "nrf24l01.h"
 #include "nrf24l01_io.h"
+#include "hal/nrf24.h"
 #include "hal/time.h"
 
 #define MESSAGE "This is a test message"
@@ -26,7 +27,6 @@
 #define NRF24_ADDR_WIDTHS		5
 #define PIPE				1 // 0 broadcast, 1 to 5 data
 #define PIPE_MAX			6
-#define NRF24_MTU			32
 #define CH_BROADCAST			76
 #define CH_RAW				22
 #define DEV				"/dev/spidev0.0"

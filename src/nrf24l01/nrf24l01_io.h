@@ -167,10 +167,6 @@
  * -12dBm, -6 dBm and 0dBm
  */
 #define NRF24_RF_PWR_RD(v)	((v & NRF24_RF_PWR_MASK) >> 1)
-#define NRF24_PWR_18DBM		0b00
-#define NRF24_PWR_12DBM		0b01
-#define NRF24_PWR_6DBM		0b10
-#define NRF24_PWR_0DBM		0b11
 
 /*
  * RF channel (reset value: 0b00000010),
