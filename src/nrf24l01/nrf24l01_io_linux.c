@@ -37,10 +37,19 @@ void disable(void)
 
 int io_setup(const char *dev)
 {
+	int err;
 
 	hal_gpio_setup();
-	hal_gpio_pin_mode(CE, HAL_GPIO_OUTPUT);
-	hal_gpio_pin_mode(IRQ, HAL_GPIO_INPUT);
+
+	err = hal_gpio_pin_mode(CE, HAL_GPIO_OUTPUT);
+	if (err < 0)
+		return err;
+
+	err = hal_gpio_pin_mode(IRQ, HAL_GPIO_INPUT);
+	if (err < 0){
+		hal_gpio_unmap();
+		return err;
+	}
 
 	disable();
 	return spi_bus_init(dev);
