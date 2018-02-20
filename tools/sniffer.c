@@ -119,6 +119,7 @@ static inline uint8_t decode_mgmt(unsigned long sec, unsigned long usec,
 		i = plen - sizeof(*ipdu) - sizeof(*ll);
 		printf("%05ld.%06ld nRF24: Beacon(0x%02x|P) plen:%zd\n",
 		       sec, usec, ipdu->type, plen);
+		printf("ID: %llu\n", ll->id);
 		printf("  %s %.*s\n", src, i, ll->name);
 		break;
 		/* If is a connect request type */
