@@ -158,7 +158,7 @@ struct mgmt_evt_nrf24_bcast_setup {
 struct mgmt_evt_nrf24_bcast_presence {
 	struct nrf24_mac mac;
 	uint64_t id;
-	uint8_t name[0];
+	char name[0];
 	/* TODO: Add device/service infos? */
 } __attribute__ ((packed));
 
