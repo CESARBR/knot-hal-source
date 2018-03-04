@@ -24,6 +24,7 @@ ltmain.sh
 missing
 stamp-h1
 autom4te.cache
+src/hal.pc
 
 proxy/spiproxyd
 src/nrfd/nrfd

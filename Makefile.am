@@ -10,24 +10,32 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
+lib_LTLIBRARIES = libhal.la
+libhal_la_LIBADD = $(top_srcdir)/src/hal/log/libhallog.la $(top_srcdir)/src/hal/gpio/libhalgpio.la \
+		   $(top_srcdir)/src/hal/comm/libhalcommnrf24.la $(top_srcdir)/src/hal/storage/libhalstorage.la \
+		   $(top_srcdir)/src/hal/time/libhaltime.la $(top_srcdir)/src/drivers/libphy_driver.la \
+		   $(top_srcdir)/src/nrf24l01/libnrf24l01.la $(top_srcdir)/src/spi/libspi.la
+libhal_la_LDFLAGS = $(AM_LDFLAGS)
+libhal_la_SOURCES = $(top_srcdir)/hal/*.h
+
+libhal_includedir = $(includedir)/hal
+libhal_include_HEADERS = $(libhal_la_SOURCES)
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = src/hal.pc
+
 bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/sniffer tools/rpiecho \
 						src/seriald/seriald
 
 proxy_spiproxyd_SOURCES = proxy/main.c
-proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
+proxy_spiproxyd_LDADD = libhal.la @GLIB_LIBS@
 proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
 proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 src_nrfd_nrfd_SOURCES = src/nrfd/main.c \
 				src/nrfd/settings.h src/nrfd/settings.c \
 				src/nrfd/manager.h src/nrfd/manager.c
-src_nrfd_nrfd_LDADD = libs/libhallog.a libs/libhalcommnrf24.a \
-				libs/libphy_driver.a \
-				libs/libhaltime.a \
-				libs/libhalstorage.a \
-				libs/libnrf24l01.a \
-				libs/libspi.a \
-				libs/libhalgpio.a \
+src_nrfd_nrfd_LDADD = libhal.la \
 				@GLIB_LIBS@ @JSON_LIBS@ \
 				@GIO_UNIX_LIBS@
 src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
@@ -46,13 +54,7 @@ src_lorad_lorad_LDFLAGS = $(AM_LDFLAGS)
 src_lorad_lorad_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
 tools_sniffer_SOURCES = tools/sniffer.c
-tools_sniffer_LDADD = libs/libphy_driver.a \
-				libs/libhalcommnrf24.a \
-				libs/libhaltime.a \
-				libs/libnrf24l01.a \
-				libs/libspi.a \
-				libs/libhallog.a \
-				libs/libhalgpio.a \
+tools_sniffer_LDADD = libhal.la \
 				@GLIB_LIBS@
 tools_sniffer_LDFLAGS = $(AM_LDFLAGS)
 tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
@@ -62,10 +64,7 @@ tools_sniffer_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 		-I$(top_srcdir)/src/nrf24l01
 
 tools_rpiecho_SOURCES = tools/rpiecho.c
-tools_rpiecho_LDADD = libs/libphy_driver.a \
-				 libs/libnrf24l01.a libs/libspi.a \
-				 libs/libhalgpio.a \
-				 libs/libhaltime.a \
+tools_rpiecho_LDADD = libhal.la \
 				 @GLIB_LIBS@
 tools_rpiecho_LDFLAGS = $(AM_LDFLAGS)
 tools_rpiecho_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \

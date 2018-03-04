@@ -24,7 +24,6 @@ AC_PROG_CC_PIE
 m4_define([_LT_AC_TAGCONFIG], [])
 m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
 
-AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
 PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.52, dummy=no,
@@ -46,5 +45,5 @@ AC_SUBST(JSON_LIBS)
 AC_CONFIG_FILES([Makefile src/spi/Makefile src/nrf24l01/Makefile \
 		src/hal/storage/Makefile src/hal/time/Makefile \
 		src/hal/log/Makefile src/hal/comm/Makefile src/drivers/Makefile
-		src/hal/gpio/Makefile])
+		src/hal/gpio/Makefile src/hal.pc])
 AC_OUTPUT
