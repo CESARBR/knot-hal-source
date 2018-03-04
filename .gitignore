@@ -1,6 +1,8 @@
 *.a
+*.la
 *.patch
 *.o
+*.lo
 .deps
 .dirstamp
 Makefile
