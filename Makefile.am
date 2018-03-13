@@ -4,7 +4,7 @@ CP=cp
 ZIP=zip
 
 AM_MAKEFLAGS = --no-print-directory
-SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
+SUBDIRS = src/spi src/nrf24l01 src/hal/time src/hal/log \
 					src/hal/comm src/drivers src/hal/gpio
 
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
@@ -12,9 +12,8 @@ AM_LDFLAGS = $(BUILD_LDFLAGS)
 
 lib_LTLIBRARIES = libhal.la
 libhal_la_LIBADD = $(top_srcdir)/src/hal/log/libhallog.la $(top_srcdir)/src/hal/gpio/libhalgpio.la \
-		   $(top_srcdir)/src/hal/storage/libhalstorage.la $(top_srcdir)/src/hal/time/libhaltime.la \
-		   $(top_srcdir)/src/drivers/libphy_driver.la $(top_srcdir)/src/nrf24l01/libnrf24l01.la \
-		   $(top_srcdir)/src/spi/libspi.la
+		   $(top_srcdir)/src/hal/time/libhaltime.la $(top_srcdir)/src/spi/libspi.la \
+		   $(top_srcdir)/src/drivers/libphy_driver.la $(top_srcdir)/src/nrf24l01/libnrf24l01.la
 
 if SERIAL
 libhal_la_LIBADD += $(top_srcdir)/src/hal/comm/libhalcommserial.la
