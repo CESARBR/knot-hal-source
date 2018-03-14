@@ -10,6 +10,19 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/time src/hal/log \
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
+lib_headers =  $(top_srcdir)/hal/comm.h \
+		$(top_srcdir)/hal/gpio.h \
+		$(top_srcdir)/hal/gpio_sysfs.h \
+		$(top_srcdir)/hal/linux_log.h \
+		$(top_srcdir)/hal/nrf24.h \
+		$(top_srcdir)/hal/time.h
+
+extra_headers = $(top_srcdir)/hal/storage.h \
+		 $(top_srcdir)/hal/avr_error.h \
+		 $(top_srcdir)/hal/avr_log.h \
+		 $(top_srcdir)/hal/avr_unistd.h
+
+
 lib_LTLIBRARIES = libhal.la
 libhal_la_LIBADD = $(top_srcdir)/src/hal/log/libhallog.la $(top_srcdir)/src/hal/gpio/libhalgpio.la \
 		   $(top_srcdir)/src/hal/time/libhaltime.la $(top_srcdir)/src/spi/libspi.la \
@@ -22,7 +35,7 @@ libhal_la_LIBADD += $(top_srcdir)/src/hal/comm/libhalcommnrf24.la
 endif
 
 libhal_la_LDFLAGS = $(AM_LDFLAGS)
-libhal_la_SOURCES = $(top_srcdir)/hal/*.h
+libhal_la_SOURCES = $(lib_headers)
 
 libhal_includedir = $(includedir)/hal
 libhal_include_HEADERS = $(libhal_la_SOURCES)
