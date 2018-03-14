@@ -33,8 +33,14 @@ src/lorad/lorad
 tools/rpiecho
 tools/sniffer
 
+.libs
+*/.libs
+*/*/.libs
+libs
+
 cscope.in.out
 cscope.out
 cscope.po.out
 
 include/arduino
+hal/arduino
