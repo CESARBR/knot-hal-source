@@ -912,10 +912,26 @@ static void running(void)
 	}
 }
 
+static uint8_t rand_channel(uint8_t skip, uint8_t min, uint8_t max)
+{
+	uint8_t pick, range;
+	uint16_t rand_value = 0;
+
+	range = max - min;
+
+	/* Choose pseudo aleatory data channel */
+	do {
+		hal_getrandom(&rand_value, sizeof(rand_value));
+		pick = min + (rand_value % range);
+	} while (skip == pick);
+
+	return pick;
+}
+
 /* Global functions */
 int hal_comm_init(const char *pathname, const void *params)
 {
-	uint16_t ch;
+	uint8_t min;
 
 	/* If driver not opened */
 	if (driverIndex != -1)
@@ -933,11 +949,8 @@ int hal_comm_init(const char *pathname, const void *params)
 	if (config->channel > 0)
 		channel_mgmt.value = config->channel;
 
-	/* Choose pseudo aleatory data channel */
-	do {
-		hal_getrandom(&ch, sizeof(ch));
-		channel_raw.value = ch % 125;
-	} while (channel_mgmt.value == channel_raw.value);
+	min = (channel_mgmt.value < 84 ? 0 : 85);
+	channel_raw.value = rand_channel(channel_mgmt.value, min, 125);
 
 	return 0;
 }
