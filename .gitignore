@@ -27,7 +27,6 @@ autom4te.cache
 src/hal.pc
 
 proxy/spiproxyd
-src/nrfd/nrfd
 src/seriald/seriald
 src/lorad/lorad
 tools/rpiecho

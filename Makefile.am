@@ -48,7 +48,6 @@ bin_PROGRAMS = proxy/spiproxyd src/lorad/lorad tools/rpiecho
 if SERIAL
 bin_PROGRAMS += src/seriald/seriald
 else
-bin_PROGRAMS += src/nrfd/nrfd
 bin_PROGRAMS += tools/sniffer
 endif
 
@@ -57,23 +56,6 @@ proxy_spiproxyd_LDADD = libhal.la @GLIB_LIBS@
 proxy_spiproxyd_LDFLAGS = $(AM_LDFLAGS)
 proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@
 
-if !SERIAL
-src_nrfd_nrfd_SOURCES = src/nrfd/main.c \
-				src/nrfd/settings.h src/nrfd/settings.c \
-				src/nrfd/manager.h src/nrfd/manager.c
-src_nrfd_nrfd_LDADD = libhal.la \
-				@GLIB_LIBS@ @JSON_LIBS@ \
-				@GIO_UNIX_LIBS@
-src_nrfd_nrfd_LDFLAGS = $(AM_LDFLAGS)
-src_nrfd_nrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				@GIO_UNIX_CFLAGS@ \
-				-I$(top_srcdir)/src \
-				-I$(top_srcdir)/src/nrf24l01 \
-				-I$(top_srcdir)/src/drivers \
-				-I$(top_srcdir)/src/hal/comm \
-				-I$(top_srcdir)/src/hal/gpio_sysfs \
-				-I$(top_srcdir)/src/nrf24l01 @JSON_CFLAGS@
-endif
 src_lorad_lorad_SOURCES = src/lorad/main.c
 src_lorad_lorad_LDADD = @GLIB_LIBS@
 src_lorad_lorad_LDFLAGS = $(AM_LDFLAGS)
@@ -116,4 +98,4 @@ MAINTAINERCLEANFILES = Makefile.in \
 	ltmain.sh depcomp compile missing install-sh
 
 clean-local:
-	$(RM) -r proxy/spiproxyd src/nrfd/nrfd src/lorad/lorad tools/rpiecho tools/sniffer
+	$(RM) -r proxy/spiproxyd src/lorad/lorad tools/rpiecho tools/sniffer
