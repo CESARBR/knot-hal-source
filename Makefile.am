@@ -11,7 +11,6 @@ AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
 lib_headers =  $(top_srcdir)/hal/comm.h \
-		$(top_srcdir)/hal/gpio.h \
 		$(top_srcdir)/hal/gpio_sysfs.h \
 		$(top_srcdir)/hal/linux_log.h \
 		$(top_srcdir)/hal/nrf24.h \
