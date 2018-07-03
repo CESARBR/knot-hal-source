@@ -16,11 +16,7 @@ lib_headers =  $(top_srcdir)/hal/comm.h \
 		$(top_srcdir)/hal/nrf24.h \
 		$(top_srcdir)/hal/time.h
 
-extra_headers = $(top_srcdir)/hal/storage.h \
-		 $(top_srcdir)/hal/avr_error.h \
-		 $(top_srcdir)/hal/avr_log.h \
-		 $(top_srcdir)/hal/avr_unistd.h
-
+extra_headers = $(top_srcdir)/hal/storage.h
 
 lib_LTLIBRARIES = libhal.la
 libhal_la_LIBADD = $(top_srcdir)/src/hal/log/libhallog.la $(top_srcdir)/src/hal/gpio/libhalgpio.la \
