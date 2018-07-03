@@ -1,9 +1,11 @@
 noinst_LTLIBRARIES = libphy_driver.la
-lib_ARDUINO = phy_driver.c phy_driver_nrf24.c
+lib_ARDUINO = phy_driver.c phy_driver.h phy_driver_private.h phy_driver_nrf24.c phy_driver_nrf24.h
 
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 
-libphy_driver_la_SOURCES = phy_driver.c phy_driver_nrf24.c
+libphy_driver_la_SOURCES = phy_driver.c phy_driver.h phy_driver_private.h \
+			   phy_driver_nrf24.c phy_driver_nrf24.h
+
 libphy_driver_la_CPPFLAGS = $(AM_CFLAGS) -I$(top_srcdir)/src/hal/comm \
 								-I$(top_srcdir)/src/nrf24l01
 
