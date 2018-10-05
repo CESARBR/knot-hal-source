@@ -304,14 +304,14 @@ void setup()
 	conf[0].sensor_id = 30;
 	conf[0].values.event_flags = KNOT_EVT_FLAG_CHANGE;
 	conf[0].values.time_sec = 25;
-	conf[0].values.lower_limit.val_i.value = 5;
-	conf[0].values.upper_limit.val_i.value = 35;
+	conf[0].values.lower_limit.val_i = 5;
+	conf[0].values.upper_limit.val_i = 35;
 
 	conf[1].sensor_id = 99;
 	conf[1].values.event_flags = KNOT_EVT_FLAG_TIME;
 	conf[1].values.time_sec = 11;
-	conf[1].values.lower_limit.val_i.value = 7;
-	conf[1].values.upper_limit.val_i.value = 16;
+	conf[1].values.lower_limit.val_i = 7;
+	conf[1].values.upper_limit.val_i = 16;
 
 	testRead_function();
 	testWrite_function();
